@@ -1,0 +1,68 @@
+<div id="app">
+  <div id="map" data-z="1" aria-label="Peta interaktif Rhykaris"></div>
+
+  <header class="brand" aria-label="Judul peta">
+    <svg class="sigil" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" stroke-opacity=".35"/>
+      <path d="M1.8 16.5c4.2-7.9 9.1-11 14.2-11s10 3.1 14.2 11" fill="none" stroke="#ff6433" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M1.8 16.5c4.2-7.9 9.1-11 14.2-11s10 3.1 14.2 11" fill="none" stroke="#ffab6b" stroke-width=".8" stroke-linecap="round"/>
+      <circle cx="16" cy="21.5" r="1.6" fill="currentColor"/>
+    </svg>
+    <div><h1>Master Map Rhykaris</h1><p id="brand-sub">AS 1647 · equirectangular · seed 1647</p></div>
+  </header>
+
+  <aside id="panel" aria-label="Panel peta">
+    <div class="phead">
+      <button class="iconbtn" id="btn-panel" title="Buka/tutup panel" aria-label="Buka atau tutup panel" aria-expanded="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h12M2 8h12M2 12.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <span class="ptitle">Instrumen kartografer</span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-cari" aria-selected="true" data-sec="sec-cari">Cari</button>
+      <button class="tab" role="tab" id="tab-layer" aria-selected="false" data-sec="sec-layer">Layer</button>
+      <button class="tab" role="tab" id="tab-audit" aria-selected="false" data-sec="sec-audit">Audit<span class="n" id="n-audit"></span></button>
+      <button class="tab" role="tab" id="tab-info" aria-selected="false" data-sec="sec-info">Metode</button>
+    </div>
+    <div class="pbody">
+      <section id="sec-cari" class="on">
+        <div class="search">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.6 10.6l3.4 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input id="q" type="search" placeholder="Cari lokasi, wilayah, faksi…" autocomplete="off" aria-label="Cari lokasi">
+          <kbd>/</kbd>
+        </div>
+        <div class="grp"><h3>Jenis tempat</h3><div class="chips" id="f-cat"></div></div>
+        <div class="grp"><h3>Status koordinat</h3><div class="chips" id="f-epi"></div></div>
+        <div class="grp" style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="margin:0">Hasil</h3><span class="count" id="n-res"></span></div>
+        <ul class="results" id="results"></ul>
+      </section>
+      <section id="sec-layer"></section>
+      <section id="sec-audit"></section>
+      <section id="sec-info"></section>
+    </div>
+  </aside>
+
+  <div class="tools">
+    <button class="tbtn" id="btn-measure" aria-pressed="false" aria-label="Ukur jarak" title="Ukur jarak: ketuk dua titik di peta">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13L13 2M4.5 10.5l1.4 1.4M7 8l1.4 1.4M9.5 5.5l1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="lbl">Ukur</span></button>
+    <button class="tbtn" id="btn-legend" aria-pressed="false" title="Legenda">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="3" height="3" rx=".6" fill="currentColor"/><rect x="2" y="10" width="3" height="3" rx=".6" fill="currentColor"/><path d="M7.5 4.5H14M7.5 11.5H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="lbl">Legenda</span></button>
+    <button class="tbtn" id="btn-theme" title="Ganti tema panel" aria-label="Ganti tema">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8a6.2 6.2 0 1 0 0 12.4z" fill="currentColor"/><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+  </div>
+
+  <div id="mhint" class="mhint" role="status" aria-live="polite" hidden>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13L13 2M4.5 10.5l1.4 1.4M7 8l1.4 1.4M9.5 5.5l1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span id="mhint-t"></span>
+    <button type="button" id="mhint-x" class="mhint-x">Selesai</button>
+  </div>
+
+  <div id="readout" aria-live="off">
+    <div class="row"><span class="k">Koord.</span><span class="v" id="ro-ll">—</span>
+      <select id="ro-frame" aria-label="Kerangka bujur"><option value="h">0° historis</option><option value="r">Meridian resmi</option><option value="e">Meridian Elvari</option></select></div>
+    <div class="row"><span class="k">Scar</span><span class="v scarv" id="ro-scar">—</span></div>
+    <div class="row x"><span class="k">Medan</span><span class="v" id="ro-ter">—</span></div>
+  </div>
+  <div class="scale" id="scale"><span id="scale-t">—</span><div class="bar" id="scale-b"></div></div>
+  <div id="legend" class="hidden" aria-label="Legenda"></div>
+</div>
