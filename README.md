@@ -107,7 +107,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 | Instrument | What it does |
 |---|---|
 | **The Scar** | 13° band, small-circle curve, four arcs with proposed boundaries — Culmen Cicatricis, Latus Orientale, Ima Cicatricis, Latus Occidentale — and the anomaly pockets |
-| **Three meridians** | 0° historic (Litus Primum), the official meridian (through Aurelia, ≈ 8.31° W) and the Elvari meridian (180°, Libbāl) — switch the longitude frame in the readout |
+| **Three meridians** | 0° historic (Litus Primum), the official meridian (through Aurelia — proposed at ≈ 8.31° W, *AI-inferred* until ratified) and the Elvari meridian (180°, Libbāl) — switch the longitude frame in the readout |
 | **Live readout** | Coordinates, distance and side to The Scar, plus elevation and biome for any point, read from a 1024 × 512 data grid |
 | **Measure tool** | Great-circle distance between any two points, with rough travel times on foot, on horseback and by sailing ship |
 | **Cartography layers** | 15° graticule · elevation contours (1,000 / 2,500 / 4,500 m) · bathymetry (−200 / −3,000 / −6,000 m) · six ocean banks · four kinds of route |
@@ -244,29 +244,56 @@ The Python pipeline in [`src/`](src/) needs Python 3.11 with `numpy`, `scipy`, `
 
 ## Worldbuilding Progress / Roadmap
 
-Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule.
+Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **29 Sep 2026**, mirrored from the world's own development backlog.
 
 | Area | Status | Notes |
 |---|---|---|
-| Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Changes only through a new map version (v5 …) with a change-log entry — never silently |
-| Interactive viewer | ✅ **v1.4** | Search, filters, layers, measure tool, audit tab, mobile layout |
-| Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer |
-| Coordinates | 🟡 8 canon · 11 derived · 23 AI-inferred · 1 open *(of 43)* | Locked entry by entry |
-| Proposals | 🟡 10 of 43 entries | On the map, but without an atlas entry yet — flagged with an amber badge |
-| Location-debt ledger | 🟠 14 open slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
+| Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
+| Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
+| Interactive viewer | ✅ **v1.4** · flat map | Search, filters, layers, measure tool, audit tab, mobile layout. A 3D globe is a parked wish — see *Later* below |
+| Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer; individual Interregna kingdoms are added when the story needs them |
+| Coordinates | 🟡 8 canon · 11 derived · 23 AI-inferred · 1 open *(of 43)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
+| Proposals | 🟡 10 of 43 entries | On the map, but without an atlas entry yet — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
+| Atlas ↔ map v4 reconciliation | 🟠 In progress | Scar rings and the Zona Ambang Ellumāt settled on 29 Sep 2026; coordinates and the sea corridor are the next gates |
+| Location-debt ledger | 🟠 14 open of 22 slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
 | Audit findings | 🟠 8 awaiting a decision · 3 closed | 2 frictions · 3 blank spots · 3 patterns — see the Audit tab |
 
-- [x] Physical layer v4 ratified as canon
+**Done**
+
+- [x] Physical layer v4 ratified as canon (29 Sep 2026)
 - [x] Viewer v1.4 — search · filters · layers · measure · audit · dark/light
 - [x] 43 map entries · 24 territories · 4 routes · 3 fronts · 3 anomaly pockets
-- [x] Scar Proximity thresholds ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
+- [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
+- [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
 - [x] Public edition on GitHub, ready for GitHub Pages
-- [ ] Lock the 23 AI-inferred coordinates, entry by entry
-- [ ] Close the 14 open location-debt slots (ports, market hubs, faction HQs, regional communities …)
-- [ ] Give the 10 proposals a real atlas entry — or retire them
-- [ ] Resolve the 2 open frictions between the map and older atlas entries (Hesperia's north coast of Ferria · the west end of Ima Cicatricis)
-- [ ] Fill the 3 blank spots the audit found: the trans-suture supercontinent (≈ 7.6 % of the surface), the aquatic segment of The Scar, and the ocean on the antimeridian side of the Rhykar cap (≈ 9 %)
-- [ ] Extend the political layer — new kingdoms and borders are expected
+
+**Next — reconcile the atlas with map v4**
+
+In the author's order. 🔒 marks a gate: other work waits on it.
+
+- [ ] 🔒 **Ratify coordinates for the macro atlas entries.** Only four carry coordinates so far (Sinus Adventus, Litus Primum, Vastitas, Corona Glacialis). The map proposes the rest, and each stays *AI-inferred* until the author confirms it. This includes the longitude of the official meridian (proposed through Aurelia at ≈ 8.31° W) and where the Zona Ambang Ellumāt point sits. Castra Birath is deliberately skipped.
+- [ ] 🔒 **Ratify the main sea corridor of Tâmtu, the world ocean.** The sea route drawn on the map is a proposal. Several sea-facing ledger slots — trade waypoints, the neutral market hub, coastal communities — wait on it.
+- [ ] **Mare Internum, the inland sea west of the gulf.** Its body of water became physical canon with v4; its name, its atlas entry and how Hesperia's north coast relates to it are still open. *(Closes one of the two open frictions.)*
+- [ ] **Mass-anomaly pockets.** Three are mapped; up to two more are possible. Their positions wait on the coordinate pass, and the wider question is deliberately deferred (review due 31 Dec 2026).
+- [ ] **Clean-up of pre-v4 atlas entries** — two of six sub-tasks done. Next: move the west boundary of Latus Occidentale to azimuth −166°, which can close the second open friction (the west end of Ima Cicatricis).
+
+**Also open**
+
+- [ ] **Close the 14 open location-debt slots** — ports (Portus, the main port of Peratēs), the neutral market hub Emporys, faction HQs, regional communities, religious sites …
+- [ ] **The aquatic segment of The Scar** — about 62 % of the curve crosses sea. The ledger slot was unblocked on 29 Sep 2026; still to decide: an atlas entry of its own, or just an attribute of Tâmtu.
+- [ ] **The trans-suture supercontinent** (≈ 7.6 % of the surface) — the largest landmass without a name or an atlas entry. Who lives there is a major lore decision; parked.
+- [ ] **The ocean on the antimeridian side of the Rhykar cap** (≈ 9 %) — flagged by the audit; no sub-entry yet.
+- [ ] **Extend the political layer** — more Interregna kingdoms and borders, when the story calls for them.
+
+**Later — Interactive Map v2** *(parked wishlist — no commitment yet)*
+
+The flat v1.4 viewer stays the baseline; stages are numbered as in the author's backlog.
+
+- [ ] **Stage 2 — 3D globe:** relief, rotation, moons, compass, presets. Waits on the moon parameters.
+- [ ] **Stage 3 — new layers:** hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2 and an open consistency question about monster habitats.
+- [ ] **Stage 4 — fine detail** for chosen regions (rivers, trees, smooth coastlines). Proposed first regions: Sinus Adventus, Hesperia, Ellumāt. Comes last, and fine detail does not become canon unless the author ratifies it.
+
+Every new parameter — moons, axial tilt, tides, fine detail — stays *AI-inferred* until ratified.
 
 **Known limitations**
 
