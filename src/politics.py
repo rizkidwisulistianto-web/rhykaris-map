@@ -92,7 +92,13 @@ POL = [
  ('nundina', 'Nundina (kota merdeka)', [(-9.80, 1.19)], 400, 95, ((-9.8, 1.19), 0.8), ~silva),
  ('foedera', 'Foedera', [(3.03, 25.53), (-8.13, 5.05), (-3.5, 13.0), (-12.0, 17.0), (3.5, 12.0), (-16.0, 22.0)], 700, 2300, ((-4.0, 18.0), 13.5), notband & ~silva),
  ('liminara', 'Liminara', [(-3.0, 37.5), (-8.5, 38.5)], 300, 1000, ((-4.0, 38.0), 6.5), notband),
- ('ktonia', 'Ktonia', [(-45.0, -12.0)], 0, 800, ((-45.0, -12.0), 6.0), None),
+ # Ktonia direlokasi (ketok A, 01 Okt 2026): titik lama Altiplano (-45.0, -12.0) jatuh 8.715 km dari Liminara dan
+ # bertentangan dengan Ecology §3 (iridescent "ditambang dari zona yang bersinggungan dengan The Scar"). Titik baru =
+ # massif timur-dalam Ferria, d = -12,26 deg (Adjacent), ~400 km dari Liminara. [Inferensi AI]
+ # CATATAN: ring final di data/politics.json digambar manual dari raster tanah bebas (d -19..-7, elev >= 1800 m,
+ # >= 150 km dari laut, CNT == 0, bebas dari wilayah lain) -- pipeline Dijkstra ini belum dijalankan ulang untuk Ktonia,
+ # dan dengan bias Liminara 300 km ia mungkin tidak mereproduksi ring itu. Cek dulu sebelum rebuild penuh.
+ ('ktonia', 'Ktonia', [(-4.39, 39.90)], 0, 350, ((-4.39, 39.90), 3.0), notband),
 ]
 
 t0 = time.time()
