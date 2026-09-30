@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # Public URL of the deployed map. Used only for Open Graph / Twitter card tags.
 # Change it if you fork the repository under another name.
-SITE_URL = "https://rizkidwisulistianto-web.github.io/rhykaris-master-map"
+SITE_URL = "https://rizkidwisulistianto-web.github.io/rhykaris-map"
 
 FONTS = ('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700'
          '&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600'

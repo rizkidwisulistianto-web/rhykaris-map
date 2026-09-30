@@ -6,7 +6,7 @@
 
 <br>
 
-[![Live demo](https://img.shields.io/badge/▶%20live%20demo-GitHub%20Pages-2ea44f?style=for-the-badge)](https://rizkidwisulistianto-web.github.io/rhykaris-master-map/)
+[![Live demo](https://img.shields.io/badge/▶%20live%20demo-GitHub%20Pages-2ea44f?style=for-the-badge)](https://rizkidwisulistianto-web.github.io/rhykaris-map/)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
 ![Leaflet](https://img.shields.io/badge/Leaflet-1.9.4-199900?logo=leaflet&logoColor=white)
@@ -143,14 +143,14 @@ The whole map is one file — no build step, no install.
 
 1. Download this repo (**Code → Download ZIP**) or clone it:
    ```bash
-   git clone https://github.com/rizkidwisulistianto-web/rhykaris-master-map.git
+   git clone https://github.com/rizkidwisulistianto-web/rhykaris-map.git
    ```
 2. Double-click **`index.html`**.
 
 **Option B — serve it locally** (VS Code *Live Server*, or any static server)
 
 ```bash
-cd rhykaris-master-map
+cd rhykaris-map
 python3 -m http.server 8080      # then open http://localhost:8080
 ```
 
@@ -188,7 +188,7 @@ flowchart LR
 <summary><b>Repository layout</b></summary>
 
 ```text
-rhykaris-master-map/
+rhykaris-map/
 ├── index.html                 the whole map in one file (open me · GitHub Pages entry point)
 ├── app/                       viewer source: body.html · app.js · style.css
 ├── data/                      data.json (places, powers, audit …) · politics.json (territory geometry)

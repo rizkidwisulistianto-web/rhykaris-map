@@ -31,7 +31,7 @@ You may **share** — copy and redistribute — this material in any medium or f
 
 Suggested credit line:
 
-> Rhykaris Master Map © 2026 rizkidwisulistianto-web · CC BY-NC-ND 4.0 · <https://github.com/rizkidwisulistianto-web/rhykaris-master-map>
+> Rhykaris Master Map © 2026 rizkidwisulistianto-web · CC BY-NC-ND 4.0 · <https://github.com/rizkidwisulistianto-web/rhykaris-map>
 
 Separately from this license, GitHub's Terms of Service allow other users to view and fork public repositories on GitHub.
 
