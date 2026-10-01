@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a) and **v1.6** (stage 2b + the optional dual-disk view). Branch `feat/stage-2-globe`; the backlog item becomes *Executed* only when its pull request is merged.
+Viewer **v1.5** (stage 2a) and **v1.6** (stage 2b + the optional dual-disk view). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
