@@ -397,7 +397,7 @@ function main() {
     if (p.canon && p.canon !== '—') tags.push('Canon: ' + esc(p.canon));
     if (p.status && p.status !== '—') tags.push(esc(p.status));
     if (p.access) tags.push('Akses: ' + esc(p.access));
-    var ptag = p.proposal ? '<span class="tag bad">Usulan — tanpa entri Atlas / slot ledger Open</span>' : '';
+    var ptag = p.proposal ? '<span class="tag bad">Usulan — posisi belum dikunci · entri Atlas masih Draft</span>' : '';
     var coord = p.zone_r ? 'zona ± ' + fmt(p.zone_r, 1) + '° di sekitar ' + fLat(p.lat) + ' · ' + fLon(p.lon) : (p.label_only ? 'titik label ' : '') + fLat(p.lat) + ' · ' + fLon(p.lon);
     var dd = p.d, dcalc = prox(dd), scarLine;
     var dtxt = fmt(Math.abs(dd), 1) + '° (' + fint(Math.abs(dd) * KM_DEG) + ' km) dari kurva, sisi ' + (dd < 0 ? 'Rhykar' : 'Aëris');
@@ -475,7 +475,7 @@ function main() {
   ['kanon', 'turunan', 'inferensi', 'terbuka'].forEach(function (k) { var b = document.createElement('button'); b.className = 'chip'; b.type = 'button';
     b.innerHTML = '<span class="sw" style="background:' + EPICOL[k] + '"></span>' + EPI[k]; b.setAttribute('aria-pressed', String(fEpi.indexOf(k) >= 0));
     b.addEventListener('click', function () { var i = fEpi.indexOf(k); if (i >= 0) fEpi.splice(i, 1); else fEpi.push(k); b.setAttribute('aria-pressed', String(i < 0)); LS.set('rh-fepi', fEpi); applyFilters(); }); fepiEl.appendChild(b); });
-  var bp = document.createElement('button'); bp.className = 'chip'; bp.type = 'button'; bp.innerHTML = '<span class="sw" style="background:#f2b25a"></span>Usulan tanpa entri'; bp.setAttribute('aria-pressed', String(fProp));
+  var bp = document.createElement('button'); bp.className = 'chip'; bp.type = 'button'; bp.innerHTML = '<span class="sw" style="background:#f2b25a"></span>Usulan (belum dikunci)'; bp.setAttribute('aria-pressed', String(fProp));
   bp.addEventListener('click', function () { fProp = !fProp; bp.setAttribute('aria-pressed', String(fProp)); LS.set('rh-fprop', fProp); applyFilters(); }); fepiEl.appendChild(bp);
   var qEl = document.getElementById('q'), resEl = document.getElementById('results');
   var INDEX = DATA.places.map(function (p) { return { id: p.id, kind: 'place', s: norm([p.name, p.aka, p.type, p.region, p.parent].join(' ')), p: p }; })
@@ -566,7 +566,7 @@ function main() {
   function refreshLegend() {
     var h = '<h3>Status koordinat</h3>';
     ['kanon', 'turunan', 'inferensi', 'terbuka'].forEach(function (k) { var r = RING[k]; h += '<div class="li"><svg width="18" height="18" viewBox="0 0 24 24">' + glyph(k === 'terbuka' ? 'zone' : 'city', r[0], r[1]) + '</svg>' + EPI[k] + '</div>'; });
-    h += '<div class="li"><svg width="18" height="18" viewBox="0 0 24 24">' + glyph('city', RING.inferensi[0], RING.inferensi[1]) + '<circle cx="19.6" cy="4.6" r="2.6" fill="#f2b25a"/></svg>Usulan tanpa entri Atlas</div>';
+    h += '<div class="li"><svg width="18" height="18" viewBox="0 0 24 24">' + glyph('city', RING.inferensi[0], RING.inferensi[1]) + '<circle cx="19.6" cy="4.6" r="2.6" fill="#f2b25a"/></svg>Usulan — posisi belum dikunci (entri Atlas Draft)</div>';
     h += '<h3>The Scar</h3><div class="li"><svg width="30" height="12"><rect y="1" width="30" height="10" fill="#ff5a24" fill-opacity=".25"/><path d="M0 6h30" stroke="#ff7a3d" stroke-width="2.2"/></svg>Pita 13,0° & kurva</div>';
     var act = [['t_hes', '#c0394b', 'Hesperia / vasal'], ['t_foe', '#2aa38a', 'Foedera'], ['t_int', '#e0a33a', 'Interregna'], ['t_ana', '#ff6a2b', 'Anabasim'], ['mandala', '#e6d47a', 'Anušarri (gradasi)'], ['t_elv', '#4cc3a8', 'Andurā'], ['t_lain', '#9b6fd6', 'Faksi lain']]
       .filter(function (a) { return LAYERS[a[0]] && LAYERS[a[0]].on; });
