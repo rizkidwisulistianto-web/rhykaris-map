@@ -1,0 +1,57 @@
+{
+ "version": 1,
+ "epi": "turunan",
+ "label": "Turunan",
+ "note": "Relief of the globe is DERIVED from the physical layer v4 (seed 1647); it is not a new canon claim. Vertical exaggeration in the viewer is for legibility and is not to scale: real relief is about +-10 km on a radius of 8,282 km (~0.1 %).",
+ "source": "terrain.py regenerated (seed 1647), verified against datagrid.png",
+ "seed": 1647,
+ "generator": "src/terrain.py + src/make_relief.py",
+ "verification": {
+  "against": "assets/datagrid.png (R channel)",
+  "exact": 1.0,
+  "within1": 1.0,
+  "max_diff": 0,
+  "threshold": 0.995,
+  "passed": true
+ },
+ "height": {
+  "file": "height_4096.png",
+  "width": 4096,
+  "height": 2048,
+  "packing": "R = high byte, G = low byte, B = 0; value = (R*256+G)/65535*hmax_m",
+  "hmax_m": 8192.0,
+  "step_m": 0.125,
+  "land_only": true,
+  "max_land_m": 7362.6
+ },
+ "slope": {
+  "file": "slope.webp",
+  "width": 4096,
+  "height": 2048,
+  "smax": 0.35,
+  "encoding": "sqrt: b = 127 + 127*sign(v)*sqrt(|v|), v = clip(s/smax,-1,1); R = d(h)/d(east), G = d(h)/d(north)",
+  "sea_gain": 0.3,
+  "lossless": true
+ },
+ "albedo": {
+  "file": "albedo_q84.webp",
+  "width": 4096,
+  "height": 2048,
+  "note": "v4 palette without baked hillshade"
+ },
+ "radius_km": 8282.300000000001,
+ "files": {
+  "albedo_q84.webp": {
+   "bytes": 333602,
+   "sha256": "14d2564d959f2cebbed9eb118efedc47b3bc1132122578794bd571c9b2152b1a"
+  },
+  "height_4096.png": {
+   "bytes": 5032876,
+   "sha256": "fc760259a83798abcfdf35d2c39f546c7bc95eaf28a4abe1c64fe223752f1ae0"
+  },
+  "slope.webp": {
+   "bytes": 3712806,
+   "sha256": "7446b386cdf8a1d487fd7c1b61eb9de24390525789285dfe890647877e9add6a"
+  }
+ }
+}

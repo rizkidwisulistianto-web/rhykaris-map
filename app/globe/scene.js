@@ -40,19 +40,23 @@ var VERT = [
 var FRAG = [
   'precision highp float;',
   'uniform sampler2D uAlbedo; uniform sampler2D uOverlay; uniform sampler2D uSlope;',
-  'uniform float uOverlayOn; uniform float uRelief; uniform float uExag; uniform float uSlopeMax;',
-  'uniform vec3 uLightDir; uniform float uAmb; uniform float uDif;',
+  'uniform float uOverlayOn; uniform float uRelief; uniform float uExag; uniform float uSlopeMax; uniform float uRel;',
+  'uniform vec3 uLightDir; uniform vec3 uRelLight; uniform float uAmb; uniform float uDif;',
   'varying vec2 vUv; varying vec3 vN; varying vec3 vE; varying vec3 vNo;',
   'void main() {',
   '  vec3 base = texture2D(uAlbedo, vUv).rgb;',
   '  vec4 ov = texture2D(uOverlay, vUv);',
   '  base = mix(base, ov.rgb, ov.a * uOverlayOn);',
-  '  vec3 n = normalize(vN);',
+  '  vec3 ng = normalize(vN);',
+  '  float light = uAmb + uDif * max(dot(ng, uLightDir), 0.0);',
   '  if (uRelief > 0.5) {',
-  '    vec2 s = (texture2D(uSlope, vUv).rg - 0.5) * 2.0 * uSlopeMax;',
-  '    n = normalize(n - uExag * (s.x * normalize(vE) + s.y * normalize(vNo)));',
+  // slope map is square-root encoded (127 = flat): s = smax * sign(x) * x^2. Relief shading is a zero-mean PERTURBATION of the neutral
+  // light (oblique light minus the same light on the unperturbed sphere), so the globe never gets a day/night gradient.
+  '    vec2 e = (texture2D(uSlope, vUv).rg * 255.0 - 127.0) / 127.0;',
+  '    vec2 s = sign(e) * e * e * uSlopeMax;',
+  '    vec3 np = normalize(ng - uExag * (s.x * normalize(vE) + s.y * normalize(vNo)));',
+  '    light += uRel * (dot(np, uRelLight) - dot(ng, uRelLight));',
   '  }',
-  '  float light = uAmb + uDif * max(dot(n, uLightDir), 0.0);',
   '  gl_FragColor = vec4(base * light, 1.0);',
   '}'
 ].join('\n');
@@ -108,7 +112,7 @@ G.createScene = function (rootEl, ctx) {
     uniforms: {
       uAlbedo: { value: blank }, uOverlay: { value: clearTex }, uOverlayOn: { value: 0 },
       uHeight: { value: blank }, uHeightSize: { value: new T.Vector2(1, 1) }, uHMax: { value: 1 }, uDisp: { value: 0 }, uRelief: { value: 0 },
-      uSlope: { value: blank }, uSlopeMax: { value: 0.5 }, uExag: { value: 0 },
+      uSlope: { value: blank }, uSlopeMax: { value: 0.35 }, uExag: { value: 0 }, uRel: { value: 2.4 }, uRelLight: { value: new T.Vector3(-0.62, 0.55, 0.56).normalize() },
       uLightDir: { value: new T.Vector3(LIGHT[0], LIGHT[1], LIGHT[2]).normalize() }, uAmb: { value: G.AMB }, uDif: { value: G.DIF }
     }
   });

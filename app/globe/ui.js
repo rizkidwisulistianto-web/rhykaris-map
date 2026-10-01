@@ -29,8 +29,8 @@ RH.globe = {
 
     // ------------------------------------------------------------ strip epistemik (selalu terlihat di 3D)
     function renderEpi() {
-      var rel = G.relief && G.relief.isOn && G.relief.isOn();
-      epiEl.innerHTML = '<span>Peta fisik v4 ' + C.chip('kanon') + '</span>' + (rel ? '<span>Relief ' + C.chip('turunan') + '</span>' : '') +
+      var rel = G.relief && G.relief.isOn && G.relief.isOn(), interp = rel && G.relief.label && G.relief.label() !== 'Turunan';
+      epiEl.innerHTML = '<span>Peta fisik v4 ' + C.chip('kanon') + '</span>' + (rel ? '<span>Relief ' + C.chip('turunan') + (interp ? ' <small>(diinterpolasi)</small>' : '') + '</span>' : '') +
         '<span>Dua bulan ' + C.chip('inferensi') + ' · jarak tidak berskala</span><span>Kemiringan sumbu ' + C.chip('terbuka') + '</span>';
     }
     G.renderEpi = renderEpi; renderEpi();
