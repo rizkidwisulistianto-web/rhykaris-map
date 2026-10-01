@@ -28,7 +28,7 @@ function main() {
   var TH = DATA.thresholds;
   var OFFS = [-360, 0, 360];
   var AUR = DATA.stats.aurelia_lon;
-  var measuring = false, mA = null;
+  var measuring = false, mA = null, lastMeas = null;   // lastMeas: hasil ukur terakhir {a:[lat,lon], b:[lat,lon]|null}, dibawa antar tampilan
   var viewMode = '2d', compass = null, hoverOn = false;   // v1.5: tampilan aktif, kompas, apakah kursor di atas peta
   var placeById = {}; DATA.places.forEach(function (p) { placeById[p.id] = p; });
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -457,7 +457,7 @@ function main() {
     if (t.hasAttribute('data-copy')) { ev.preventDefault(); var txt = t.getAttribute('data-copy');
       var done = function () { t.textContent = 'Tersalin ✓'; setTimeout(function () { t.textContent = 'Salin koordinat'; }, 1400); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, function () { t.textContent = txt; }); else t.textContent = txt; }
-    if (t.hasAttribute('data-measure')) { ev.preventDefault(); var p = placeById[t.getAttribute('data-measure')]; if (viewMode !== '2d') leaveToFlat(); startMeasure([p.lat, nearestX(p.lon)]); }
+    if (t.hasAttribute('data-measure')) { ev.preventDefault(); var p = placeById[t.getAttribute('data-measure')]; startMeasure([p.lat, viewMode === '2d' ? nearestX(p.lon) : lonN(p.lon)]); }
     if (t.hasAttribute('data-fac')) { ev.preventDefault(); if (cur()) cur().openFaction(t.getAttribute('data-fac')); else openFaction(t.getAttribute('data-fac'), popup.getLatLng()); }
   }
   map.getContainer().addEventListener('click', cardAction);
@@ -635,30 +635,65 @@ function main() {
   function measDot(p) { OFFS.forEach(function (dx) { gMeas.addLayer(L.circleMarker([p[0], p[1] + dx], { renderer: svgMeas, radius: 5, color: '#fff', weight: 2, fillColor: '#ff7a3d', fillOpacity: 1 })); }); }
   // Petunjuk langkah (penting di layar sentuh: tidak ada kursor, label tombol tersembunyi)
   var hintEl = document.getElementById('mhint'), hintT = document.getElementById('mhint-t');
-  function hint(html) { if (!html) { hintEl.hidden = true; return; } hintT.innerHTML = html; hintEl.hidden = false; }
-  function startMeasure(a) {
-    measuring = true; btnMeas.setAttribute('aria-pressed', 'true'); map.getContainer().style.cursor = 'crosshair'; gMeas.clearLayers(); mA = a || null; map.closePopup();
-    if (window.innerWidth <= 760 && panelOpen) setPanel(false);
-    if (mA) { measDot(mA); hint('Titik awal terpasang. Ketuk <b>titik tujuan</b> di peta.'); }
-    else hint('Mode ukur aktif. Ketuk <b>titik awal</b> di peta. Ikon kota juga bisa diketuk.');
+  function hint(html) {
+    if (!html) { hintEl.hidden = true; document.body.classList.remove('has-mhint'); return; }
+    hintT.innerHTML = html; hintEl.hidden = false;
+    if (viewMode !== '2d') { document.body.style.setProperty('--mhint-h', hintEl.offsetHeight + 'px'); document.body.classList.add('has-mhint'); }   // globe/peta kerja: strip epistemik turun di bawah kartu hasil (layar sempit)
   }
-  function stopMeasure() { measuring = false; btnMeas.setAttribute('aria-pressed', 'false'); map.getContainer().style.cursor = ''; mA = null; hint(null); }
-  btnMeas.addEventListener('click', function () { if (measuring) { stopMeasure(); gMeas.clearLayers(); } else startMeasure(); });
-  document.getElementById('mhint-x').addEventListener('click', function () { stopMeasure(); gMeas.clearLayers(); });
+  // teks hasil ukur: dipakai bersama oleh peta datar, globe 3D, dan peta kerja dual-disk
+  function measTipHTML(r) { return '<b>' + fint(r.km) + ' km</b> · ' + fmt(r.deg, 1) + '° busur<br>jalan kaki ≈ ' + fint(r.km / 25) + ' hari · berkuda ≈ ' + fint(r.km / 50) + ' hari<br>kapal layar ≈ ' + fint(r.km / 130) + ' hari <span style="opacity:.7">(estimasi kasar)</span>'; }
+  function measHintHTML(r) { return '<b>' + fint(r.km) + ' km</b> · ' + fmt(r.deg, 1) + '° busur' +
+      '<small>Jalan kaki ≈ ' + fint(r.km / 25) + ' hari · berkuda ≈ ' + fint(r.km / 50) + ' hari · kapal layar ≈ ' + fint(r.km / 130) + ' hari (estimasi kasar). Ketuk titik baru untuk mengukur lagi.</small>'; }
+  function where() { return viewMode === '3d' ? 'globe' : 'peta'; }
+  function measTitle() { btnMeas.title = 'Ukur jarak: ketuk dua titik di ' + where(); }
+  function startMeasure(a) {
+    measuring = true; btnMeas.setAttribute('aria-pressed', 'true'); mA = a || null; map.closePopup();
+    lastMeas = a ? { a: [a[0], lonN(a[1])], b: null } : null;
+    if (viewMode === '2d') { map.getContainer().style.cursor = 'crosshair'; gMeas.clearLayers(); }
+    else { var v = cur(); v.closeCard(); v.setMeasure(a ? { a: [a[0], lonN(a[1])] } : null); v.setMeasureMode(true); }
+    if (window.innerWidth <= 760 && panelOpen) setPanel(false);
+    if (mA) { if (viewMode === '2d') measDot(mA); hint('Titik awal terpasang. Ketuk <b>titik tujuan</b> di ' + where() + '.'); }
+    else hint(viewMode === '2d' ? 'Mode ukur aktif. Ketuk <b>titik awal</b> di peta. Ikon kota juga bisa diketuk.' : 'Mode ukur aktif. Ketuk <b>titik awal</b> di ' + where() + '. Marker juga bisa diketuk.');
+  }
+  function stopMeasure() { measuring = false; btnMeas.setAttribute('aria-pressed', 'false'); map.getContainer().style.cursor = ''; mA = null; hint(null); if (cur()) cur().setMeasureMode(false); }
+  function clearMeasure() { stopMeasure(); gMeas.clearLayers(); lastMeas = null; if (cur()) cur().setMeasure(null); }
+  btnMeas.addEventListener('click', function () { if (measuring) clearMeasure(); else startMeasure(); });
+  document.getElementById('mhint-x').addEventListener('click', clearMeasure);
   function measureAt(ll) {
     var p = [ll.lat, ll.lng];
-    if (!mA) { mA = p; gMeas.clearLayers(); measDot(p); hint('Titik awal terpasang. Ketuk <b>titik tujuan</b>.'); return; }
+    if (!mA) { mA = p; lastMeas = { a: [p[0], lonN(p[1])], b: null }; gMeas.clearLayers(); measDot(p); hint('Titik awal terpasang. Ketuk <b>titik tujuan</b>.'); return; }
     var r = gcPath(mA, p, 96), end = r.pts[r.pts.length - 1];
-    var tipHTML = '<b>' + fint(r.km) + ' km</b> · ' + fmt(r.deg, 1) + '° busur<br>jalan kaki ≈ ' + fint(r.km / 25) + ' hari · berkuda ≈ ' + fint(r.km / 50) + ' hari<br>kapal layar ≈ ' + fint(r.km / 130) + ' hari <span style="opacity:.7">(estimasi kasar)</span>';
+    lastMeas = { a: [mA[0], lonN(mA[1])], b: [p[0], lonN(p[1])] };
+    var tipHTML = measTipHTML(r);
     OFFS.forEach(function (dx) {
       gMeas.addLayer(L.polyline(shift(r.pts, dx), { renderer: svgMeas, color: '#000', weight: 5, opacity: 0.35 }));
       gMeas.addLayer(L.polyline(shift(r.pts, dx), { renderer: svgMeas, color: '#fff3d6', weight: 2.2, dashArray: '6 5' }));
       var cm = L.circleMarker([end[0], end[1] + dx], { renderer: svgMeas, radius: 5, color: '#fff', weight: 2, fillColor: '#ff7a3d', fillOpacity: 1 }); gMeas.addLayer(cm);
       cm.bindTooltip(tipHTML, { permanent: true, direction: 'right', className: 'rt measure-tip', offset: [8, 0] }).openTooltip();
     });
-    hint('<b>' + fint(r.km) + ' km</b> · ' + fmt(r.deg, 1) + '° busur' +
-      '<small>Jalan kaki ≈ ' + fint(r.km / 25) + ' hari · berkuda ≈ ' + fint(r.km / 50) + ' hari · kapal layar ≈ ' + fint(r.km / 130) + ' hari (estimasi kasar). Ketuk titik baru untuk mengukur lagi.</small>');
+    hint(measHintHTML(r));
     mA = null;
+  }
+  // globe 3D dan peta kerja: titik yang diketuk datang dari modul tampilan; penggambaran garis dan titik juga di modul tampilan
+  function measPayload(m) {
+    if (!m) return null; if (!m.b) return { a: m.a };
+    var r = gcPath(m.a, m.b, 240); return { a: m.a, b: m.b, pts: r.pts, km: r.km, deg: r.deg, tip: measTipHTML(r), label: fint(r.km) + ' km · ' + fmt(r.deg, 1) + '° busur' };
+  }
+  function viewMeasureAt(lat, lon) {
+    var v = cur(); if (!v || !measuring) return;
+    var p = [lat, lonN(lon)];
+    if (!mA) { mA = p; lastMeas = { a: p, b: null }; v.setMeasure(measPayload(lastMeas)); hint('Titik awal terpasang. Ketuk <b>titik tujuan</b> di ' + where() + '.'); return; }
+    lastMeas = { a: mA, b: p }; var pl = measPayload(lastMeas);
+    v.setMeasure(pl); hint(measHintHTML({ km: pl.km, deg: pl.deg })); mA = null;
+  }
+  // hasil ukur ikut berpindah antar tampilan (titik yang sama, digambar ulang oleh tampilan tujuan)
+  function redrawMeasIn(mode) {
+    if (!lastMeas) return;
+    if (mode === '2d') {
+      gMeas.clearLayers(); mA = [lastMeas.a[0], nearestX(lastMeas.a[1])];
+      if (lastMeas.b) measureAt({ lat: lastMeas.b[0], lng: nearestX(lastMeas.b[1]) }); else measDot(mA);
+      mA = null; hint(null);
+    } else if (views[mode]) views[mode].setMeasure(measPayload(lastMeas));
   }
   map.on('click', function (e) { if (measuring) measureAt(e.latlng); });
 
@@ -762,6 +797,7 @@ function main() {
   };
   cardEl.addEventListener('click', cardAction);
   function setViewButton() {
+    measTitle();
     vtBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(viewMode === '3d')); b.title = viewMode === '3d' ? 'Kembali ke peta datar 2D' : 'Tampilkan globe 3D (peta datar 2D tetap menjadi tampilan utama)'; });
     dkBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(viewMode === 'disk')); b.title = viewMode === 'disk' ? 'Kembali ke peta datar 2D' : 'Tampilkan peta kerja dual-disk (Lambert equal-area, luas benar)'; });
   }
@@ -788,7 +824,8 @@ function main() {
       cards: { place: placeHTML, faction: factionHTML, mandala: mandalaHTML, route: routeHTML, bank: BANK_HTML },
       readout: function (ll) { lastLL = ll; updRO(ll); }, compass: compass, insets: insets, panelOpen: function () { return panelOpen; },
       onEvent: onLayerEvent, setLayer: setLayer, syncLayerUI: syncLayerUI, toast: toast, esc: esc, setHash: setHash,
-      to2D: function () { return leaveToFlat(); }
+      to2D: function () { return leaveToFlat(); },
+      measuring: function () { return measuring; }, measureAt: viewMeasureAt
     };
   }
   function injectModule(id) { var sc = document.createElement('script'); sc.textContent = document.getElementById(id).textContent; document.head.appendChild(sc); }
@@ -829,21 +866,20 @@ function main() {
       if (from) from.hide();
       viewMode = mode; document.body.classList.remove('in-3d', 'in-disk'); document.body.classList.add('in-' + mode);
       tabGlobe.hidden = mode !== '3d'; if (mode !== '3d' && tabGlobe.getAttribute('aria-selected') === 'true') document.getElementById('tab-layer').click();
-      map.closePopup(); stopMeasure(); btnMeas.disabled = true; btnMeas.title = 'Ukur jarak tersedia di tampilan 2D';
+      map.closePopup(); stopMeasure();
       LS.set('rh-view', mode); setViewButton(); syncLayerUI();
-      return Promise.resolve(v.show(focus, { instant: REDUCED || !!opts.instant })).then(function () { return true; });
+      return Promise.resolve(v.show(focus, { instant: REDUCED || !!opts.instant })).then(function () { redrawMeasIn(mode); return true; });
     }).catch(function (e) { console.error(e); toast(VIEW_ERR[mode]); return false; }).then(function (ok) { busy(false); return ok; });
   }
   function leaveToFlat() {
     var v = cur(); if (!v) return;
-    var f = v.getFocus(); v.hide();
+    stopMeasure(); var f = v.getFocus(); v.hide();
     viewMode = '2d'; document.body.classList.remove('in-3d', 'in-disk'); tabGlobe.hidden = true;
     if (tabGlobe.getAttribute('aria-selected') === 'true') document.getElementById('tab-layer').click();
-    btnMeas.disabled = false; btnMeas.title = 'Ukur jarak: ketuk dua titik di peta';
     LS.set('rh-view', '2d'); setViewButton(); syncLayerUI();
     map.invalidateSize(); map.setView([f.lat, nearestX(f.lon)], Math.max(map.getMinZoom(), Math.min(6, f.zoom)), { animate: false });
     var ins = insets(); map.panBy([-ins.l / 2, ins.b / 2], { animate: false });   // fokus tampilan lain → pusat area bebas peta datar
-    hoverOn = false; updRO(map.getCenter()); drawGratLabels(); queueDeclutter();
+    hoverOn = false; updRO(map.getCenter()); drawGratLabels(); queueDeclutter(); redrawMeasIn('2d');
   }
   vtBtns.forEach(function (b) { b.addEventListener('click', function () { switchTo(viewMode === '3d' ? '2d' : '3d'); }); });
   dkBtns.forEach(function (b) { b.addEventListener('click', function () { switchTo(viewMode === 'disk' ? '2d' : 'disk'); }); });

@@ -58,10 +58,14 @@ G.createLayers = function (S, ctx, labelsEl) {
     pend = false; needs = false;
     g.clearRect(0, 0, OW, OH);
     order.forEach(function (k) { if (LAY[k] && LAY[k].on) { g.save(); A[k].paint(); g.restore(); } });
+    if (meas && meas.pts) { g.save(); paintMeas(); g.restore(); }   // hasil ukur selalu paling atas
     tex.needsUpdate = true; S.dirty();
   }
   function schedule() { if (!shown) { needs = true; return; } if (!pend) { pend = true; requestAnimationFrame(repaint); } }
   var order = [];
+  // ------------------------------------------------------------------ ukur jarak (bukan layer di panel: tampil selama ada hasil ukur)
+  var meas = null;
+  function paintMeas() { shape([meas.pts], { close: false, stroke: '#fff3d6', sa: 1, w: 2.2, dash: '6 5', under: { stroke: '#000', sa: 0.35, w: 5 } }); }
   function add(key, o) { A[key] = o; if (LAY[key]) { LAY[key].adapter3D = o; } }
 
   // ------------------------------------------------------------------ DOM terproyeksi
@@ -259,7 +263,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       var sz = p.cat === 'capital' ? 26 : (p.cat === 'town' ? 20 : 23);
       var me = G.el('div', null, ctx.markerHTML(p, sz)), mk = me.firstChild;
       mk.setAttribute('role', 'button'); mk.tabIndex = 0; mk.setAttribute('aria-label', p.name + (p.proposal ? ' (usulan)' : '') + ', status koordinat ' + C.EPI[p.epi]); mk.title = p.name;
-      var open = function (e) { e.stopPropagation(); G.openHit({ type: 'place', id: p.id }); };
+      var open = function (e) { e.stopPropagation(); if (ctx.measuring && ctx.measuring()) ctx.measureAt(p.lat, p.lon); else G.openHit({ type: 'place', id: p.id }); };
       mk.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
       var mp = pin({ el: me, vec: v, layer: 'markers', p: p, kind: 'marker', size: sz, ox: sz / 2, oy: sz / 2, minCos: 0.05, fade: 0.12 });
       mp.nm = mk.querySelector('.mk-name'); markerPins.push(mp);
@@ -268,11 +272,24 @@ G.createLayers = function (S, ctx, labelsEl) {
   DATA.anomalies.forEach(function (a) {
     var el = G.el('div', 'g-anom', '<b></b><i role="button" tabindex="0" aria-label="' + C.esc(a.name) + '"></i>');
     var ring = el.querySelector('i'); ring.title = a.name;
-    var open = function (e) { e.stopPropagation(); G.openHit({ type: 'place', id: a.id }); };
+    var open = function (e) { e.stopPropagation(); if (ctx.measuring && ctx.measuring()) ctx.measureAt(a.lat, a.lon); else G.openHit({ type: 'place', id: a.id }); };
     ring.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
     pin({ el: el, vec: G.vec(a.lat, a.lon), layer: 'anom', p: { isAnomaly: true }, a: a, kind: 'anom', minCos: 0.08 });
   });
   add('markers', { z: 0 }); add('labels', { z: 0 }); add('anom', { z: 0 });
+
+  // titik awal, titik tujuan, dan kotak hasil di titik tujuan (pin DOM tak interaktif, tampil hanya di sisi globe yang menghadap kamera)
+  var mDot = [0, 1].map(function (i) { return pin({ el: G.el('div', 'g-mdot ' + (i ? 'b' : 'a')), vec: null, kind: 'meas', minCos: 0.03, ox: 7, oy: 7 }); });
+  var mTip = pin({ el: G.el('div', 'g-mtip'), vec: null, kind: 'meas', minCos: 0.12, ox: -12, oy: 16,
+    dyn: function (n) { var w = n.el.offsetWidth || 270; n.ox = n.sx != null && n.sx + w + 28 > S.W ? w + 12 : -12; } });   // kotak hasil pindah ke kiri titik bila hampir menyentuh tepi kanan
+  mDot.concat([mTip]).forEach(function (n) { n.wrap.classList.add('g-mpin'); });
+  function setMeasure(m) {
+    meas = m && m.a ? m : null;
+    mDot[0].vec = meas ? G.vec(meas.a[0], meas.a[1]) : null;
+    mDot[1].vec = meas && meas.b ? G.vec(meas.b[0], meas.b[1]) : null;
+    mTip.vec = mDot[1].vec; if (meas && meas.tip) mTip.el.innerHTML = meas.tip;
+    schedule(); S.dirty();
+  }
 
   order = Object.keys(A).filter(function (k) { return A[k].paint; }).sort(function (a, b) { return A[a].z - A[b].z; });
 
@@ -363,7 +380,7 @@ G.createLayers = function (S, ctx, labelsEl) {
   }
 
   return {
-    hit: hit, pinAt: pinAt, A: A, pins: pins, repaint: repaint, overlaySize: OW,
+    hit: hit, pinAt: pinAt, A: A, pins: pins, repaint: repaint, overlaySize: OW, setMeasure: setMeasure, measure: function () { return meas; },
     onShow: function () { shown = true; repaint(); },
     onHide: function () { shown = false; },
     status: function () { var o = {}; Object.keys(LAY).forEach(function (k) { o[k] = !!LAY[k].adapter3D; }); return o; }

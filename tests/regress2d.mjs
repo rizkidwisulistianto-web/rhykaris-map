@@ -1,6 +1,7 @@
 // 2D regression guard.
 //   node regress2d.mjs capture <dir>   → write baseline PNGs + facts.json into <dir>
 //   node regress2d.mjs compare <dir>   → re-shoot, diff against <dir> (new v2 chrome is hidden with .v2-chrome), write diffs
+// RH_ROOT=<folder> points the tests at another checkout of the site (e.g. an old main) instead of this repository.
 // Run "capture" on a clean checkout of main, "compare" on the feature branch.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,13 +13,25 @@ import { launch, newPage, waitForMap } from './lib/browser.mjs';
 
 const [mode, dirArg] = process.argv.slice(2);
 if (!['capture', 'compare'].includes(mode) || !dirArg) { console.error('usage: regress2d.mjs capture|compare <dir>'); process.exit(2); }
-const DIR = path.resolve(dirArg);
+const DIR = path.resolve(dirArg), SITE = process.env.RH_ROOT ? path.resolve(process.env.RH_ROOT) : ROOT;
 fs.mkdirSync(DIR, { recursive: true });
 
 const HIDE_V2 = '.v2-chrome{display:none !important}';
 const PRESETS = { cland: true, csea: true, banks: true };
 const view = (la, lo, z) => (p) => p.evaluate(([a, b, c]) => { window.__rhMap.setView([a, b], c, { animate: false }); }, [la, lo, z]);
 const wait = (ms) => (p) => p.waitForTimeout(ms);
+// measure tool on the flat map: two marker taps, so the dashed line, the dots, the tooltips and the hint card are all in the picture
+const PLACES = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(ROOT, 'data/data.json'), 'utf8')).places.map((q) => [q.id, q]));
+const measure = (a, b, z) => async (p) => {
+  const A = PLACES[a], B = PLACES[b];
+  await p.evaluate(([x, y, zz]) => { window.__rhMap.setView([(x[0] + y[0]) / 2, (x[1] + y[1]) / 2], zz, { animate: false }); }, [[A.lat, A.lon], [B.lat, B.lon], z]);
+  await p.waitForTimeout(500); await p.click('#btn-measure'); await p.waitForTimeout(150);
+  for (const q of [A, B]) {
+    const pt = await p.evaluate(([la, lo]) => { const m = window.__rhMap, c = m.latLngToContainerPoint([la, lo]), r = m.getContainer().getBoundingClientRect(); return { x: r.x + c.x, y: r.y + c.y }; }, [q.lat, q.lon]);
+    await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(250);
+  }
+  await p.waitForTimeout(300);
+};
 const SCENES = [
   { n: 'd-dark-world', vp: [1440, 900], scheme: 'dark' },
   { n: 'd-dark-sinus', vp: [1440, 900], scheme: 'dark', run: [view(-2.3, 0, 5), wait(500)] },
@@ -34,15 +47,17 @@ const SCENES = [
   { n: 'm-dark-world', vp: [390, 844], scheme: 'dark', mobile: true },
   { n: 'm-light-world', vp: [390, 844], scheme: 'light', mobile: true },
   { n: 'm-dark-panel', vp: [390, 844], scheme: 'dark', mobile: true, run: [(p) => p.click('#btn-panel'), wait(400)] },
+  { n: 'd-dark-measure', vp: [1440, 900], scheme: 'dark', run: [measure('litus_primum', 'aventalia', 4)] },
+  { n: 'd-light-measure', vp: [1440, 900], scheme: 'light', run: [measure('aurelia', 'dies_ignis', 5)] },
 ];
 
 const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 function walk(d) { return fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]); }
 
-const srv = await startServer();
+const srv = await startServer({ root: SITE });
 const browser = await launch();
 const facts = { hashes: {}, scenes: {}, data: null, load: null, requests2D: null };
-for (const dirName of ['assets', 'data']) for (const f of walk(path.join(ROOT, dirName)).sort()) facts.hashes[path.relative(ROOT, f)] = sha(f);
+for (const dirName of ['assets', 'data']) for (const f of walk(path.join(SITE, dirName)).sort()) facts.hashes[path.relative(SITE, f)] = sha(f);
 
 let totalDiff = 0, failures = 0;
 for (const s of SCENES) {

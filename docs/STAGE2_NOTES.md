@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a) and **v1.6** (stage 2b + the optional dual-disk view). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
+Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view) and **v1.6.1** (measure tool in every view, §11). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
@@ -11,7 +11,7 @@ This file records what was built, **why each judgment call went the way it did**
 | **Canon files — byte-identical to `main`** | `assets/base_4096.png`, `assets/base_q84.webp`, `assets/inset_40*`, `assets/datagrid.png`, the SVG preview, `data/data.json`, `data/politics.json` (hashes in `tests/canon-hashes.json`, checked by `tests/regress2d.mjs`) |
 | **New files** | `app/core.js`, `app/moons.js`, `app/compass.js`, `app/disk.js`, `app/globe/*`, `data/moons.json`, `assets/3d/*`, `vendor/three/*`, `src/paths.py`, `src/make_relief.py`, `tests/*`, this file |
 | **Modified** | `app/app.js` (layer registry with per-view adapters, view controller, card builders extracted), `app/body.html` (toggle buttons, globe tab — all inside `.v2-chrome`), `app/style.css` (a block appended; no pre-existing rule changed), `src/terrain.py` and `src/render.py` (repo-relative paths; `render.py --albedo`), `scripts/build_index.py` |
-| **2D regression** | 14 scenes (both themes, desktop and phone, layer combinations, popups, measure tool, search, audit tab) compared pixel by pixel against a baseline captured on `main` before any change: **0 differing pixels**; the console stays clean; **no request to three.js or to `assets/3d/` is made in 2D** |
+| **2D regression** | 16 scenes (both themes, desktop and phone, layer combinations, popups, readout, audit tab, and — since v1.6.1 — the measure tool) compared pixel by pixel against a baseline captured on `main` before any change: **0 differing pixels**; the console stays clean; **no request to three.js or to `assets/3d/` is made in 2D** |
 | **Load cost in 2D** | `index.html` 1.68 → 1.86 MB (the lazy 3D code is inlined as inert `text/plain` blocks and never evaluated in 2D). Time until the map is ready, median of 25 cold loads: `main` 287 ms, branch 290 ms (+1.0 %, within noise) |
 | **3D asset budget** | `assets/3d/` 9.08 MB (height 5.03 · slope 3.71 · albedo 0.33 · manifest) + three.js 0.67 MB = **9.75 MB**, under the ≈ 15 MB cap; downloaded only when a visitor enters 3D |
 
@@ -144,7 +144,8 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 | `relief.mjs` | 33 | Manifest, verification result, 16-bit round trip, slope decode, sea flat, exaggeration slider, fallback path (`--force-fallback`) |
 | `disk.mjs` | 62 | Disk maths in the browser, layout in both orientations, layer adapters, equal-area ratio, Castra zone, compass |
 | `a11y.mjs` | 22 | Names, roles, focus, keyboard reachability and contrast of the new controls in both themes |
-| `regress2d.mjs` | 14 scenes | **Pixel-identical 2D** against the `main` baseline, canon file hashes, no console errors (needs `RH_BASELINE`) |
+| `measure.mjs` | 46 | The measure tool in every view (see §11): exact marker distances, great-circle line, dots and result box, antimeridian, rims of the working map, keyboard, phone layout, carrying a result between views |
+| `regress2d.mjs` | 16 scenes | **Pixel-identical 2D** against the `main` baseline, canon file hashes, no console errors (needs `RH_BASELINE`) |
 
 ## 10. Known limitations and open items
 
@@ -157,3 +158,20 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 - Tested under SwiftShader (software GL), not on a physical GPU or phone; frame rate on real devices is unmeasured. Two moons plus a 4096 × 2048 height texture and slope map are modest, but a low-end phone may prefer relief off.
 
 **Out of scope here (by the brief):** layer presets, hotspots, habitats, cover, the day/night terminator and tides → Stage 3; regional detail, rivers and trees → Stage 4.
+
+## 11. Follow-up v1.6.1 — the measure tool in every view
+
+**What was wrong.** In v1.5–v1.6 the **Ukur** button was disabled in the globe and on the working map (the tests even asserted it), and "Ukur dari sini" on a place card threw the visitor back to the flat map. The 14 regression scenes did not include the measure tool, so nothing flagged it.
+
+**What it does now.** The button is enabled in all three views. The state machine (two points, hint card, result text, travel times) lives once in `app/app.js`; the globe (`app/globe/`) and the working map (`app/disk.js`) only (1) report the tapped point through `ctx.measureAt(lat, lon)` and (2) draw what `setMeasure(m)` hands them. The result text is built by the same two helpers as on the flat map, so the wording is identical in every view.
+
+- **Points.** A tap on a marker (not a region label) uses the marker's exact coordinates; elsewhere it is the point under the pointer (`S.pick` on the globe, the inverse Lambert projection on the disks). Taps outside both disks are ignored. With a keyboard, Enter on a focused marker picks it while measuring instead of opening its card.
+- **Line.** The great circle is sampled at 241 points (96 on the flat map, unchanged). On the globe it is painted into the overlay texture on top of every layer, with the same dashed style as the flat map, and the dots and result box are projected DOM pins that hide on the far side of the planet. On the working map the polyline is drawn per disk and stops at a rim, like the graticule; the distance is printed next to the destination.
+- **Distance is the sphere's, not the picture's.** On the working map the on-screen distance is distorted (equal-area, not distance-true), so the number always comes from the great-circle formula on the two coordinates, never from pixels.
+- **Between views.** A finished measurement is kept in `lastMeas` and redrawn when the visitor switches view; entering another view ends measure mode (no hint), and "Selesai" clears it everywhere. The result box on the flat map is re-created with the same code path as a live measurement.
+- **Phones.** The hint card is long, so while it is open the epistemic chips move below it (`--mhint-h`) instead of hiding under it, and the duplicate result box on the globe is hidden.
+- **Autonomous decisions.** Entering measure mode on the globe stops auto-rotation (aiming at a moving planet is hopeless); "Ukur dari sini" stays in the current view; the 2D code path was only refactored to share text builders — the new 2D scenes (`d-dark-measure`, `d-light-measure`) are pixel-identical to a baseline captured on the pre-Stage-2 `main`.
+
+**Tests.** `tests/measure.mjs` (46 checks) plus the two measure scenes in `tests/regress2d.mjs`. `RH_ROOT=<folder>` lets `regress2d.mjs` capture a baseline from any other checkout.
+
+**Known limits.** Travel times are the flat map's rough estimates (25 / 50 / 130 km per day). The measure line is not clipped to land or sea. A measurement started in one view is redrawn in the other views only after the switch completes (the working map rebuilds its texture first).

@@ -21,7 +21,7 @@ RH.globe = {
     var dockEl = G.el('div', 'v2-chrome'); dockEl.id = 'g-dock'; dockEl.hidden = true; dockEl.setAttribute('role', 'group'); dockEl.setAttribute('aria-label', 'Kontrol globe');
     app.appendChild(dockEl);
 
-    var st = { spin: false, period: LS.get('rh-g-period', 90), hover: null, shown: false, cardKey: null };
+    var st = { spin: false, period: LS.get('rh-g-period', 90), hover: null, shown: false, cardKey: null, meas: false };
     var layers = G.createLayers ? G.createLayers(S, ctx, labelsEl) : null; G.layers = layers;
     var bodies = G.createBodies ? G.createBodies(S, ctx, labelsEl) : null; G.bodies = bodies;
     if (G.createRelief) G.relief = G.createRelief(S, ctx);
@@ -108,6 +108,11 @@ RH.globe = {
     S.onHover = function (e, p) { hoverPx = p; if (!hoverRaf) hoverRaf = requestAnimationFrame(trackHover); };
     S.onLeave = function () { hoverPx = null; st.hover = null; hideTip(); updateCompass(); };
     S.onClick = function (e, p) {
+      if (st.meas) {   // mode ukur: marker (bukan label wilayah) menjadi titik tepat; selain itu titik di permukaan bola
+        var mpn = layers && layers.pinAt(p.x, p.y, e.pointerType === 'touch' ? 1.9 : 1), mpl = mpn && ctx.placeById[mpn.id], mll = S.pick(p.x, p.y);
+        if (mpl && !mpl.label_only) ctx.measureAt(mpl.lat, mpl.lon); else if (mll) ctx.measureAt(mll.lat, mll.lon);
+        return;
+      }
       var moon = bodies && bodies.moonAt(p.x, p.y), ll = S.pick(p.x, p.y);
       if (moon) { openHit({ type: 'moon', moon: moon }); return; }
       var pn = layers && layers.pinAt(p.x, p.y, e.pointerType === 'touch' ? 1.9 : 1);
@@ -177,11 +182,11 @@ RH.globe = {
         updateCompass(); ctx.syncLayerUI();
         tabInit();
       },
-      hide: function () { st.shown = false; S.stop(); setSpin(false); if (layers) layers.onHide(); rootEl.hidden = true; dockEl.hidden = true; closeCard(); hideTip(); rootEl.classList.remove('fade', 'in'); },
+      hide: function () { st.shown = false; st.meas = false; rootEl.classList.remove('meas'); S.stop(); setSpin(false); if (layers) layers.onHide(); rootEl.hidden = true; dockEl.hidden = true; closeCard(); hideTip(); rootEl.classList.remove('fade', 'in'); },
       getFocus: function () { var v = S.view; return { lat: clamp(v.lat, -85, 85), lon: C.lonN(v.lon), dist: v.dist, zoom: clamp(S.zoomOf(v.dist), 0.5, 6) }; },
       goPlace: function (p) {
         setSpin(false);
-        S.flyTo({ lat: clamp(p.lat, -80, 80), lon: p.lon, dist: p.cat === 'continent' ? S.distOf(2.2) : (p.label_only ? S.distOf(3.2) : S.distOf(4.2)) }, 900, function () { openHit({ type: 'place', id: p.id }); });
+        S.flyTo({ lat: clamp(p.lat, -80, 80), lon: p.lon, dist: p.cat === 'continent' ? S.distOf(2.2) : (p.label_only ? S.distOf(3.2) : S.distOf(4.2)) }, 900, function () { if (!st.meas) openHit({ type: 'place', id: p.id }); });
       },
       goFaction: function (id, pts) {
         var la = 0, lo = [0, 0], n = pts.length; pts.forEach(function (q) { la += q[0]; var a = q[1] * D2R; lo[0] += Math.cos(a); lo[1] += Math.sin(a); });
@@ -193,6 +198,9 @@ RH.globe = {
       viewMoonSystem: function () { setSpin(false); S.flyTo({ lat: 20, lon: S.view.lon, dist: bodies ? bodies.systemDist() : 9 }, 1000); },
       openMoon: function (id) { var m = bodies && bodies.byId(id); if (m) openHit({ type: 'moon', moon: m }); },
       closeCard: closeCard,
+      /** Ukur jarak: app.js memegang keadaan (dua titik, hasil); modul ini hanya menangkap ketukan dan menggambar garis, titik, dan kotak hasil. */
+      setMeasure: function (m) { if (layers) layers.setMeasure(m); },
+      setMeasureMode: function (on) { st.meas = !!on; rootEl.classList.toggle('meas', st.meas); if (st.meas) { setSpin(false); hideTip(); } },
       openFaction: function (id) { openCard(ctx.cards.faction(id), 'fac:' + id); },
       relayout: function () { if (st.shown) S.resize(); },
       /** Status adapter3D per layer (paritas 2D/3D): {key: {on, adapter3D, reason}}. */

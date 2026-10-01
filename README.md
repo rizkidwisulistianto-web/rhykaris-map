@@ -105,7 +105,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 - **Instant, accent-insensitive search** across places, regions, factions and anomaly pockets — press <kbd>/</kbd> anywhere to jump in, <kbd>Enter</kbd> to fly to the first hit.
 - **Filter by place type** (seven groups) and by **epistemic status**, including "proposals without an atlas entry". Filters and layer choices are remembered in your browser.
 
-### 3D globe (viewer v1.5 – v1.6)
+### 3D globe (viewer v1.5 – v1.6.1)
 
 A second view of the **same data**, behind one button (**Globe 3D**, next to the Ukur button; or open `index.html?view=3d`, optionally with a place such as `index.html?view=3d#litus_primum`). The flat map is the default for new visitors (the viewer remembers the last view you used) and is untouched: it never downloads three.js, and its pixels are identical to v1.4.
 
@@ -114,6 +114,7 @@ A second view of the **same data**, behind one button (**Globe 3D**, next to the
 - **Two moons.** *Bulan Besar* and *Bulan Kecil* orbit on Kepler ellipses, drawn **not to scale**: true relative radii (0.2415 : 0.0604), distances compressed monotonically (the label says *jarak tidak berskala*), orbit periods in the real ratio 3.41 : 1. Click a moon for its parameters. **All moon parameters are *Inferensi AI*, not canon.** The small moon's mean distance stays ≤ 125,000 km (the stability cliff is ≈ 131,000 km); eccentricity and inclination ranges are shown as ranges, never animated.
 - **Working compass.** A north needle and a **second needle that points to The Scar** (bearing and great-circle distance to the curve; it deliberately has no direction at the pole of the circle). Works in 2D, 3D and the disk view, from the point under the cursor or the centre of the view.
 - **Relief (2b).** Heights from a **regenerated 16-bit heightmap** (checked against the canon data grid: 100 % of pixels identical), a slope map for per-pixel lighting, and an albedo texture **without baked-in hillshade**. A slider sets the **vertical exaggeration** (0–60×, default 15×; real relief is ≈ ±10 km on an 8,282 km radius — about 0.1 %, so the exaggeration is for legibility only and is labelled *tidak berskala*). Relief is *Turunan*.
+- **Measure tool in every view (v1.6.1).** **Ukur** works on the flat map, the globe and the working map: tap two points (a marker is taken at its exact position, anywhere else the point under the finger) and the viewer draws the **great-circle line**, the two dots and a result box with the distance and rough travel times — the same wording as on the flat map. "Ukur dari sini" on a place card starts from that place without leaving the view, and a finished measurement follows you when you switch views. On the working map the line is drawn per disk, so it stops at a rim and continues on the other disk.
 - **Honest 3D.** Epistemic chips stay on screen; Castra Birath is still a fading zone, never a point; nothing on the globe predicts or schedules the Great Wave. The axis is drawn upright with a neutral, camera-attached light — there is **no terminator, night side or seasons** because the axial tilt is still *Terbuka*.
 - **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work; it supports graticule, meridians, band, curve, arcs, markers, anomalies and the Castra zone.
 
@@ -164,7 +165,7 @@ Design notes, every autonomous decision, the moon provenance and the regeneratio
 | <kbd>Esc</kbd> | Close popup · leave measure mode |
 | Drag · scroll · pinch | Pan · zoom — the world wraps around (in 3D: rotate · zoom) |
 | **Globe 3D** · **Peta kerja** | Switch to the 3D globe · to the dual-disk working map (press again to return to the flat map) |
-| **Ukur** | Measure: tap two points (city icons work as start points) |
+| **Ukur** | Measure: tap two points (city icons work as start points) — flat map, globe and working map |
 
 ---
 
@@ -201,7 +202,7 @@ python3 scripts/build_index.py
 
 ```bash
 cd tests && npm install
-node run-all.mjs                    # unit · 3D features · relief · dual-disk · accessibility
+node run-all.mjs                    # unit · 3D features · relief · dual-disk · accessibility · measure tool
 RH_BASELINE=/path/to/baseline node run-all.mjs   # + pixel-identical 2D regression against a baseline captured on main
 ```
 
@@ -303,7 +304,7 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 |---|---|---|
 | Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
 | Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
-| Interactive viewer | ✅ **v1.6** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
+| Interactive viewer | ✅ **v1.6.1** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
 | Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer; individual Interregna kingdoms are added when the story needs them |
 | Coordinates | 🟡 8 canon · 11 derived · 24 AI-inferred · 1 open *(of 44)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
 | Proposals | 🟡 11 of 44 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
@@ -317,6 +318,7 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 - [x] Viewer v1.4 — search · filters · layers · measure · audit · dark/light
 - [x] Viewer v1.5 — 3D globe, auto-rotation, two moons *(AI-inferred)*, working compass, all 25 layers in 3D
 - [x] Viewer v1.6 — relief from a regenerated 16-bit heightmap *(Turunan)*, vertical-exaggeration slider, dual-disk Lambert working map
+- [x] Viewer v1.6.1 — the measure tool works on the globe and on the working map (it was flat-map only in v1.6)
 - [x] 44 map entries · 25 territories · 4 routes · 3 fronts · 3 anomaly pockets
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
 - [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
