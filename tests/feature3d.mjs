@@ -465,7 +465,8 @@ await run('console clean, render pauses when hidden', async () => {
   const h0 = await page.evaluate(() => ({ f: window.__rhGlobe.info().frames, lon: window.__rhGlobe._S.view.lon })); await page.waitForTimeout(900);
   const h1 = await page.evaluate(() => ({ f: window.__rhGlobe.info().frames, lon: window.__rhGlobe._S.view.lon }));
   t(`hidden tab: rendering and rotation stop (frames ${h0.f}→${h1.f}, lon ${h0.lon.toFixed(2)}→${h1.lon.toFixed(2)})`, h1.f === h0.f && near(h1.lon, h0.lon, 1e-9));
-  await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); }); await page.waitForTimeout(900);
+  await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
+  await page.waitForFunction((f) => window.__rhGlobe.info().frames >= f + 4, h1.f, { timeout: 30000 }).catch(() => {});
   const h2 = await page.evaluate(() => ({ f: window.__rhGlobe.info().frames, lon: window.__rhGlobe._S.view.lon }));
   t('visible again: rendering resumes and the rotation did not jump', h2.f > h1.f && Math.abs(((h2.lon - h1.lon + 540) % 360) - 180) < 12, JSON.stringify([h1, h2]));
   // WebGL context loss: friendly toast, no crash, recovers
