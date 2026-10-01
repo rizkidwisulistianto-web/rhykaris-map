@@ -26,7 +26,7 @@
 :root{
   --bg:#0f1317; --void:#0b1016; --panel:rgba(18,23,29,.92); --panel-2:#1a2129; --line:rgba(160,182,190,.16); --line-2:rgba(160,182,190,.28);
   --ink:#e8e3d7; --ink-2:#a9b1b3; --ink-3:#7b8588;
-  --sea:#62bccb; --sea-2:#2f8fa0; --iron:#c07352; --scar:#ff6433; --scar-2:#ffab6b; --brass:#d7b56d;
+  --sea:#62bccb; --sea-2:#2f8fa0; --on-sea:#0f1317; --on-sea-2:#0f1317; --iron:#c07352; --scar:#ff6433; --scar-2:#ffab6b; --brass:#d7b56d;
   --ok:#86c79a; --warn:#e8b75a; --bad:#ee7a67; --hover:rgba(98,188,203,.10); --shadow:0 10px 30px rgba(0,0,0,.45);
   --lbl-ink:#f4eee1; --lbl-halo:rgba(8,12,16,.92); --lbl-sea:#cfe8ee;
   --f-display:"Cinzel", "Trajan Pro", "Times New Roman", serif;
@@ -39,19 +39,19 @@
 @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
   --bg:#e9efee; --void:#cfdcdd; --panel:rgba(250,252,251,.94); --panel-2:#eef4f3; --line:rgba(22,52,62,.14); --line-2:rgba(22,52,62,.26);
   --ink:#16222a; --ink-2:#48595f; --ink-3:#6f7f84;
-  --sea:#1d7f90; --sea-2:#15606d; --iron:#8f4a2f; --scar:#d4431a; --scar-2:#b9531f; --brass:#86672a;
+  --sea:#1d7f90; --sea-2:#15606d; --on-sea:#fff; --on-sea-2:#fff; --iron:#8f4a2f; --scar:#d4431a; --scar-2:#b9531f; --brass:#86672a;
   --ok:#2f7d4a; --warn:#9a6a12; --bad:#b53c2a; --hover:rgba(29,127,144,.09); --shadow:0 10px 26px rgba(20,40,50,.18);
   color-scheme:light; } }
 :root[data-theme="light"]{
   --bg:#e9efee; --void:#cfdcdd; --panel:rgba(250,252,251,.94); --panel-2:#eef4f3; --line:rgba(22,52,62,.14); --line-2:rgba(22,52,62,.26);
   --ink:#16222a; --ink-2:#48595f; --ink-3:#6f7f84;
-  --sea:#1d7f90; --sea-2:#15606d; --iron:#8f4a2f; --scar:#d4431a; --scar-2:#b9531f; --brass:#86672a;
+  --sea:#1d7f90; --sea-2:#15606d; --on-sea:#fff; --on-sea-2:#fff; --iron:#8f4a2f; --scar:#d4431a; --scar-2:#b9531f; --brass:#86672a;
   --ok:#2f7d4a; --warn:#9a6a12; --bad:#b53c2a; --hover:rgba(29,127,144,.09); --shadow:0 10px 26px rgba(20,40,50,.18);
   color-scheme:light; }
 :root[data-theme="dark"]{
   --bg:#0f1317; --void:#0b1016; --panel:rgba(18,23,29,.92); --panel-2:#1a2129; --line:rgba(160,182,190,.16); --line-2:rgba(160,182,190,.28);
   --ink:#e8e3d7; --ink-2:#a9b1b3; --ink-3:#7b8588;
-  --sea:#62bccb; --sea-2:#2f8fa0; --iron:#c07352; --scar:#ff6433; --scar-2:#ffab6b; --brass:#d7b56d;
+  --sea:#62bccb; --sea-2:#2f8fa0; --on-sea:#0f1317; --on-sea-2:#0f1317; --iron:#c07352; --scar:#ff6433; --scar-2:#ffab6b; --brass:#d7b56d;
   --ok:#86c79a; --warn:#e8b75a; --bad:#ee7a67; --hover:rgba(98,188,203,.10); --shadow:0 10px 30px rgba(0,0,0,.45);
   color-scheme:dark; }
 html,body{height:100%;margin:0}
@@ -77,8 +77,8 @@ body.panel-closed .brand{left:calc(var(--gut) + 56px)}
 .tbtn{height:34px;min-width:34px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;border-radius:8px;border:1px solid var(--line);
   background:var(--panel);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);font-size:12.5px;backdrop-filter:blur(8px)}
 .tbtn:hover{border-color:var(--line-2);background:var(--panel-2)}
-.tbtn[aria-pressed="true"]{background:var(--sea);border-color:var(--sea);color:var(--bg)}
-.tbtn[aria-pressed="true"]:hover{background:var(--sea-2);border-color:var(--sea-2);color:#fff}
+.tbtn[aria-pressed="true"]{background:var(--sea);border-color:var(--sea);color:var(--on-sea)}   /* --on-sea: teks di atas --sea; ≥ 4,5 : 1 di kedua tema (tema terang dulu memakai --bg = 4,02 : 1) */
+.tbtn[aria-pressed="true"]:hover{background:var(--sea-2);border-color:var(--sea-2);color:var(--on-sea-2)}   /* tema gelap dulu putih di atas --sea-2 = 3,78 : 1 */
 .tbtn svg{width:16px;height:16px}
 .leaflet-top.leaflet-right{top:calc(env(safe-area-inset-top,0px));}
 .leaflet-control-zoom{margin-top:12px!important;margin-right:var(--gut)!important;border:1px solid var(--line)!important;box-shadow:var(--shadow)!important;border-radius:8px!important;overflow:hidden}
@@ -425,12 +425,8 @@ body.in-disk #map .leaflet-map-pane{visibility:hidden}
 @media (max-width:760px){ #disk .g-epi{left:var(--gut)!important;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));gap:4px} #disk .g-epi span{font-size:9.5px;padding:2px 6px} }
 @media (max-width:760px){ #disk .d-note{top:auto!important;bottom:calc(124px + env(safe-area-inset-bottom,0px))!important} #disk .d-note span:nth-child(n+2){display:none} }
 
-/* ---------- kontras (WCAG AA) untuk UI baru di tema terang: --ink-3 ≈ 4,0 : 1 dan teks putih di atas --sea ≈ 4,0 : 1 ---------- */
+/* ---------- kontras (WCAG AA) untuk UI baru di tema terang: --ink-3 ≈ 4,0 : 1 (teks tombol aktif memakai --on-sea, lihat .tbtn[aria-pressed]) ---------- */
 #sec-globe .gctl .note, #sec-globe .gctl .val, #sec-globe .grp h3, #compass .cp-l3, #compass .cp-key, #globe .g-epi span small, #disk .g-epi span small{color:var(--ink-2)}
-:root[data-theme="light"] .tbtn.v2-chrome[aria-pressed="true"], :root[data-theme="light"] #g-dock .tbtn[aria-pressed="true"]{background:var(--sea-2);border-color:var(--sea-2);color:#fff}
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]) .tbtn.v2-chrome[aria-pressed="true"], :root:not([data-theme="dark"]) #g-dock .tbtn[aria-pressed="true"]{background:var(--sea-2);border-color:var(--sea-2);color:#fff}
-}
 
 /* ---------- ukur jarak di globe 3D dan peta kerja (v1.6.1) ---------- */
 #globe .g-mdot{width:14px;height:14px;box-sizing:border-box;border-radius:50%;background:#ff7a3d;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
@@ -2221,7 +2217,7 @@ RH.globe = {
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
-window.RH = { version: "1.6.1" };
+window.RH = { version: "1.6.2" };
 /* Master Map Rhykaris — modul bersama (v1.5): matematika bola, geometri Scar, pembaca datagrid, label epistemik,
    util state dan pemuat three.js. Dipakai tampilan 2D (Leaflet) dan 3D (globe) — satu sumber, tanpa duplikasi.
    Modul ini murni (tanpa akses DOM saat dimuat) supaya bisa diuji di Node; bagian yang menyentuh DOM ada di fungsi tersendiri. */
