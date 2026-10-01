@@ -91,6 +91,10 @@ POL = [
  ('ir_7', 'Kerajaan Interregna (tak bernama) VII', [(-8.3, -3.2)], 0, 450, ((-8.3, -3.2), 2.6), ~silva),
  ('nundina', 'Nundina (kota merdeka)', [(-9.80, 1.19)], 400, 95, ((-9.8, 1.19), 0.8), ~silva),
  ('foedera', 'Foedera', [(3.03, 25.53), (-8.13, 5.05), (-3.5, 13.0), (-12.0, 17.0), (3.5, 12.0), (-16.0, 22.0)], 700, 2300, ((-4.0, 18.0), 13.5), notband & ~silva),
+ # Liminara landlocked (P&F: "kondisi landlocked"): ring final di data/politics.json dipangkas manual (ketok 01 Okt 2026) --
+ # lobus pesisir dibuang sehingga batas poligon >= ~125 km dari sel laut mana pun (sebelumnya simpul terdekat ~7 km dari laut).
+ # Pipeline Dijkstra ini belum dijalankan ulang; rebuild penuh perlu batasan keras jarak-ke-laut (>= 150 km) agar tidak
+ # menumbuhkan lobus pesisir lagi. Luas ring: ~1,25 juta km2 (86% dari semula).
  ('liminara', 'Liminara', [(-3.0, 37.5), (-8.5, 38.5)], 300, 1000, ((-4.0, 38.0), 6.5), notband),
  # Ktonia direlokasi (ketok A, 01 Okt 2026): titik lama Altiplano (-45.0, -12.0) jatuh 8.715 km dari Liminara dan
  # bertentangan dengan Ecology §3 (iridescent "ditambang dari zona yang bersinggungan dengan The Scar"). Titik baru =
