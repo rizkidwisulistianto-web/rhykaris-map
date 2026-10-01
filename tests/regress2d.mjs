@@ -68,7 +68,7 @@ for (const s of SCENES) {
   }, [s.layers || null, !!s.mobile]);
   if (mode === 'compare') await page.addStyleTag({ content: '' }).catch(() => {});
   await page.goto(srv.url + (s.hash || ''), { waitUntil: 'load' });
-  if (mode === 'compare') await page.addStyleTag({ content: HIDE_V2 });
+  await page.addStyleTag({ content: HIDE_V2 });   // both modes: a baseline captured on code that already has the v2 chrome must hide it too (older checkouts have none, so it is a no-op there)
   await waitForMap(page);
   for (const step of s.run || []) await step(page);
   await page.waitForTimeout(250);
