@@ -309,11 +309,6 @@ body.in-3d .grp.only2d{display:none}
 #globe .g-note{position:absolute;left:0;top:0;white-space:nowrap;font:italic 500 11px/1.2 var(--f-water);color:#cfe3ea;opacity:.9;pointer-events:none;will-change:transform;
   text-shadow:0 0 3px var(--lbl-halo),0 0 6px var(--lbl-halo)}
 #globe .g-tip{position:absolute;left:0;top:0;z-index:5;pointer-events:none;padding:5px 8px;border-radius:7px;background:var(--panel);color:var(--ink);border:1px solid var(--line-2);box-shadow:var(--shadow);font:500 12px var(--f-ui);white-space:nowrap}
-#globe .g-epi{position:absolute;left:calc(var(--gut) + 348px + 12px);bottom:calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;max-width:min(440px,calc(100vw - 2 * var(--gut)));pointer-events:none;z-index:3}
-body.panel-closed #globe .g-epi{left:var(--gut)}
-#globe .g-epi span{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font:500 10.5px/1.2 var(--f-ui);color:var(--ink-2);white-space:nowrap}
-#globe .g-epi .epi{font-size:9px;padding:2px 5px}
-@media (max-width:760px){ #globe .g-epi{left:var(--gut)!important;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));gap:4px} #globe .g-epi span{font-size:9.5px;padding:2px 6px} }
 /* rangkaian aturan z-level label peta datar, diulang untuk globe (data-z dihitung dari jarak kamera) */
 #globe[data-z="0"] .lbl-region, #globe[data-z="1"] .lbl-region{display:none}
 #globe[data-z="0"] .lbl-arc{display:none}
@@ -403,7 +398,7 @@ body.in-disk #map .leaflet-map-pane{visibility:hidden}
 @media (max-width:760px){ #disk .d-note{top:auto!important;bottom:calc(124px + env(safe-area-inset-bottom,0px))!important} #disk .d-note span:nth-child(n+2){display:none} }
 
 /* ---------- kontras (WCAG AA) untuk UI baru di tema terang: --ink-3 ≈ 4,0 : 1 (teks tombol aktif memakai --on-sea, lihat .tbtn[aria-pressed]) ---------- */
-#sec-globe .gctl .note, #sec-globe .gctl .val, #sec-globe .grp h3, #compass .cp-l3, #compass .cp-key, #globe .g-epi span small, #disk .g-epi span small{color:var(--ink-2)}
+#sec-globe .gctl .note, #sec-globe .gctl .val, #sec-globe .grp h3, #compass .cp-l3, #compass .cp-key, #disk .g-epi span small{color:var(--ink-2)}
 
 /* ---------- ukur jarak di globe 3D dan peta kerja (v1.6.1) ---------- */
 #globe .g-mdot{width:14px;height:14px;box-sizing:border-box;border-radius:50%;background:#ff7a3d;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
@@ -414,6 +409,6 @@ body.in-disk #map .leaflet-map-pane{visibility:hidden}
 #globe.meas, #globe.meas.pick, #disk.meas, #disk.meas.pick{cursor:crosshair}
 #globe.meas.dragging, #disk.meas.dragging{cursor:grabbing}
 @media (max-width:760px){
-  body.has-mhint #globe .g-epi, body.has-mhint #disk .g-epi{top:calc(138px + var(--mhint-h,0px) + env(safe-area-inset-top,0px))}
+  body.has-mhint #disk .g-epi{top:calc(138px + var(--mhint-h,0px) + env(safe-area-inset-top,0px))}
   body.has-mhint #globe .g-mtip{display:none}
 }

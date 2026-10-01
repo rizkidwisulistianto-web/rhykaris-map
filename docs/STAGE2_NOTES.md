@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) and **v1.6.2** (contrast of pressed buttons, §12). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
+Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) and **v1.6.3** (moon names, chip strip removed from the globe, §13). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
@@ -44,14 +44,14 @@ All 25 layers of the v1.4 flat map have a globe adapter. Four layers exist only 
 - **Rotation.** Drag with inertia, wheel / pinch zoom, double-click to fly, keyboard. **Auto-rotation** turns the planet west → east (an illustrative direction: no canon fixes it), a full turn every 30–300 s (default 90 s), and **stops as soon as the globe is touched, clicked, dragged, or wheeled**; only the Putar button resumes it. With a *prefers-reduced-motion* system setting it is off and the button is disabled. A hidden tab stops rendering.
 - **Pointer routing.** DOM pins are `pointer-events: none`; the canvas hit-tests markers itself (`pinAt`), so a drag can start on top of a marker without being swallowed.
 - **Lighting.** Neutral and attached to the camera (`ambient .66 + diffuse .42`). Because **the axial tilt is unfixed (Terbuka #2)** the axis is drawn upright, the ecliptic parallel to the equator (both labelled *ilustratif*), and there is **no terminator, night side, or seasons**.
-- **Epistemic honesty in 3D.** Chips stay visible (a strip at the bottom of the globe; relief = *Turunan*, moons = *Inferensi AI*). Castra Birath is a fading ring zone — a true spherical circle of the data's `zone_r`, never a point. The ocean banks are drawn as spherical caps. Nothing on the globe predicts or schedules the Great Wave (Tension #6).
+- **Epistemic honesty in 3D.** Status stays on the objects themselves: each moon's label says *Inferensi AI · tidak berskala*, the orbit line says *jarak bulan tidak berskala*, and the Globe panel groups carry their chips (moons = *Inferensi AI*, axis = *Terbuka*, relief = *Turunan*). Until v1.6.3 a strip of chips under the readout repeated this on the globe; it was removed (§13). Castra Birath is a fading ring zone — a true spherical circle of the data's `zone_r`, never a point. The ocean banks are drawn as spherical caps. Nothing on the globe predicts or schedules the Great Wave (Tension #6).
 - **Markers, labels, cards.** The globe reuses the flat map's declutter (`C.declutterNames`) and the same card builders (faction, mandala, route, bank, place), shown in one shared card (`#g-card`). The live readout (coordinates, distance to The Scar, elevation, biome) is the same as in 2D, fed by the point under the cursor, or by the view centre on touch screens.
 
 ## 4. The moons — parameters and provenance
 
 All parameters are in `data/moons.json`, every value **Inferensi AI**, not canon, not in the Canon Index. They come from the owner's choice of reading *A* ("stable but wobbling") on 1 Oct 2026, from an N-body REBOUND run that survived ≥ 30,000 years.
 
-| | Bulan Besar | Bulan Kecil |
+| | Ferrea (*bulan besar*) | Errans (*bulan kecil*) |
 |---|---|---|
 | Origin | the Rhykar moon that survived intact; post-merger orbit | remnant of the Aëris moon; post-merger orbit, inside the big moon's |
 | Radius | 2,000 km (0.2415 planet radii) | 500 km (0.0604) |
@@ -70,6 +70,8 @@ All parameters are in `data/moons.json`, every value **Inferensi AI**, not canon
 **Drawn *not to scale*.** True relative radii, but distances are compressed by a monotone power law `s(a) = K·a^p` (`p = ln(3.4/2.2) / ln(34.4/15.1) ≈ 0.529`, fitted so the inner orbit sits at 2.2 and the outer at 3.4 planet radii; order and ratios of the real orbits are preserved). The panel and the orbit layer say *jarak tidak berskala*. Orbital periods keep their true ratio, so the pair drifts in and out of phase correctly; Kepler's equation is solved per frame.
 
 **Illustrative constants** (written in `moons.json` under `illustrative`, not simulation output, not canon): the orbital plane is drawn parallel to the equator (tilt is Terbuka), and ascending nodes (20°, 110°), arguments of periapsis (60°, 200°) and the initial mean anomalies (40°, 215°) are fixed, deterministic values chosen only so that the picture is reproducible and both orbits are readable. The origin text on each card is limited to the two sentences above.
+
+**Names (v1.6.3).** *Ferrea* and *Errans* are **working names**, the human exonyms, chosen by the owner on 1 Oct 2026 and recorded in `moons.json` under `naming`. Both come from what a person can see and say nothing about origin or tides: Ferrea "iron-bearing" (the dark iron-red grey), Errans "wandering" (the swaying orbit). Status **Inferensi AI**, not canon, not in the Canon Index; the names each race uses are still undecided. The ids `bulan_besar` / `bulan_kecil` are unchanged.
 
 ## 5. The compass
 
@@ -185,3 +187,13 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 **Evidence.** `tests/a11y.mjs` gained four checks (both themes, at rest and hovered); they fail on the old stylesheet (4.02 and 3.78) and pass now. `tests/regress2d.mjs` run in exact mode (`RH_THRESHOLD=0`) against the baseline captured on the pre-Stage-2 `main` is byte-identical in 15 of 16 scenes; the 16th (`d-light-measure`, which shows a pressed Ukur button) differs only inside the 50 × 12 px of the button's label — the intended change.
 
 **A note on "pixel-identical".** The 2D regression numbers quoted earlier (Stage 2 and v1.6.1) were taken with pixelmatch's default perceptual tolerance (`threshold 0.1`). The exact run above confirms those scenes are in fact byte-identical, so the claim stands; the exact mode is now one environment variable away.
+
+## 13. Follow-up v1.6.3 — moon names, and the chip strip leaves the globe
+
+**Names.** `moons.json` now carries `name` (*Ferrea*, *Errans*), `epithet` (*bulan besar*, *bulan kecil*) and a top-level `naming` block (status, date, rationale). The moon card shows the name, the epithet, a *nama kerja · eksonim manusia* tag and the naming note; the two Globe-panel buttons, the period-ratio row and the card cross-references use the same names, read from the data (nothing is hard-coded in the UI). Ids are unchanged, so tests, layers and saved state keep working.
+
+**Strip removed.** The row of chips at the bottom of the globe (*Peta fisik v4 · Relief · Dua bulan · Kemiringan sumbu*) sat directly under the coordinate readout on phones and was the main clutter. It is gone from the globe: `renderEpi` and its CSS were deleted. The status it carried is still on screen where it applies — moon labels (*Inferensi AI · tidak berskala*), the orbit note, the Globe-panel group chips and the relief status line. The dual-disk working map keeps its own two-chip note, unchanged.
+
+**Tests.** `feature3d.mjs` asserts the new names on both cards and the panel buttons, that no *Bulan Besar / Bulan Kecil* placeholder is left in the moon UI, that `#globe .g-epi` no longer exists, and that *tidak berskala* is stated by each moon label, the orbit note and the panel. The strip assertions in `relief.mjs`, `measure.mjs` and `a11y.mjs` were removed (measure.mjs is now 45 checks, was 46). In this headless SwiftShader sandbox two checks in `measure.mjs` (the start dot's canvas pixels, and *Selesai* clearing the drawing) fail identically on the unmodified v1.6.2 build, and the moon-clock rate check in `feature3d.mjs` is load-dependent (0.20–0.33 vs 0.5 expected, 0.30 on v1.6.2).
+
+**Not regenerated.** The documentation screenshots `docs/images/06-globe-3d.jpg`, `07-moons.jpg` and `10-mobile-globe.jpg` still show the old strip and names; `tests/docshots.mjs` rebuilds them.

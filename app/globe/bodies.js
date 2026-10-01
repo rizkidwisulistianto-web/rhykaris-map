@@ -127,7 +127,7 @@ G.createBodies = function (S, ctx, labelsEl) {
       row('Eksentrisitas', f(m.eccentricity, 2) + (sm ? ' <small>(berayun ' + f(sm[0], 2) + '–' + f(sm[1], 2) + '; tidak dianimasikan)</small>' : '')),
       row('Inklinasi', '≈ ' + f(m.inclination_deg, 0) + '°' + (m.inclination_range_deg ? ' <small>(berayun ' + m.inclination_range_deg[0] + '–' + m.inclination_range_deg[1] + '°; tidak dianimasikan)</small>' : '') + '<br><small>terhadap bidang orbit planet (digambar sejajar ekuator — ilustratif)</small>'),
       row('Periode', f(d.periodDaysR, 2) + ' hari-Rhykaris<br><small>= ' + f(d.periodDaysE, 1) + ' hari-Bumi (hari-R = ' + P.day_hours + ' jam)</small>'),
-      row('Rasio periode', f(M.periodRatio(), 2) + ' : 1 <small>(Bulan Besar : Bulan Kecil)</small>'),
+      row('Rasio periode', f(M.periodRatio(), 2) + ' : 1 <small>(' + C.esc(M.byId('bulan_besar').name) + ' : ' + C.esc(M.byId('bulan_kecil').name) + ')</small>'),
       row('Ukuran tampak', ang + '<br><small>dari planet, pusat ke pusat</small>'),
       row('Jarak periapsis · apoapsis', C.fint(d.periapsisKm) + ' · ' + C.fint(d.apoapsisKm) + ' km'),
       row('Albedo · warna', f(m.albedo, 2) + ' · ' + C.esc(m.color)),
@@ -135,10 +135,11 @@ G.createBodies = function (S, ctx, labelsEl) {
       row('Pasang ekuilibrium', '≈ ' + f(m.tide_equilibrium_m, m.tide_equilibrium_m < 1 ? 2 : 1) + ' m' + (m.tide_note ? ' <small>(' + C.esc(m.tide_note) + ')</small>' : ''))
     ].join('');
     var stab = m.id === 'bulan_kecil' ? '<p class="nt"><b>Batas stabilitas:</b> tebing ≈ ' + C.fint(M.data.stability.cliff_km) + ' km (jarak ≥ ' + C.fint(M.data.stability.lost_within_century_km) + ' km hilang dalam hitungan abad) — jarak rata-rata tidak digeser keluar dari ≤ ' + C.fint(M.data.stability.max_semi_major_axis_km) + ' km.</p>' : '';
-    return '<div class="pp"><h2>' + C.esc(m.name) + '</h2><p class="aka">' + C.esc(m.origin) + '</p>' +
-      '<div class="tags"><span class="tag bad">Inferensi AI — bukan kanon</span><span class="tag">tafsir A · stabil tapi bergoyang</span><span class="tag">jarak tidak berskala di globe</span></div>' +
+    return '<div class="pp"><h2>' + C.esc(m.name) + '</h2><p class="aka">' + C.esc(m.epithet) + ' · ' + C.esc(m.origin) + '</p>' +
+      '<div class="tags"><span class="tag bad">Inferensi AI — bukan kanon</span><span class="tag">nama kerja · eksonim manusia</span><span class="tag">tafsir A · stabil tapi bergoyang</span><span class="tag">jarak tidak berskala di globe</span></div>' +
       '<div class="pos"><div class="ph">Parameter ' + C.chip('inferensi') + '</div>' + C.esc(M.data.provenance) + '</div>' +
       '<table class="mt">' + rows + '</table>' + stab +
+      '<p class="nt">' + C.esc(M.data.naming.note) + '</p>' +
       '<p class="nt">Di globe: ukuran relatif ke planet <b>asli</b>; jarak dikompres dengan fungsi monoton (urutan orbit dan bentuk elips tetap terbaca). Simpul naik, argumen periapsis dan fase awal dipilih tetap hanya untuk ilustrasi.</p>' +
       '<div class="acts"><button type="button" class="act" data-g="sys">Lihat sistem bulan</button><button type="button" class="act" data-g="planet">Fokus planet</button></div></div>';
   }
