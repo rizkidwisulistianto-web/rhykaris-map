@@ -16,7 +16,6 @@ RH.globe = {
     var S = G.createScene(rootEl, ctx); G.S = S;
     var labelsEl = G.el('div', 'g-labels'); rootEl.appendChild(labelsEl); G.labelsEl = labelsEl;
     var tipEl = G.el('div', 'g-tip'); tipEl.hidden = true; rootEl.appendChild(tipEl);
-    var epiEl = G.el('div', 'g-epi'); rootEl.appendChild(epiEl);
     var cardEl = ctx.card.el;   // kartu info bersama (dibuat app.js; isi dari pembangun popup 2D)
     var dockEl = G.el('div', 'v2-chrome'); dockEl.id = 'g-dock'; dockEl.hidden = true; dockEl.setAttribute('role', 'group'); dockEl.setAttribute('aria-label', 'Kontrol globe');
     app.appendChild(dockEl);
@@ -25,14 +24,6 @@ RH.globe = {
     var layers = G.createLayers ? G.createLayers(S, ctx, labelsEl) : null; G.layers = layers;
     var bodies = G.createBodies ? G.createBodies(S, ctx, labelsEl) : null; G.bodies = bodies;
     if (G.createRelief) G.relief = G.createRelief(S, ctx);
-
-    // ------------------------------------------------------------ strip epistemik (selalu terlihat di 3D)
-    function renderEpi() {
-      var rel = G.relief && G.relief.isOn && G.relief.isOn(), interp = rel && G.relief.label && G.relief.label() !== 'Turunan';
-      epiEl.innerHTML = '<span>Peta fisik v4 ' + C.chip('kanon') + '</span>' + (rel ? '<span>Relief ' + C.chip('turunan') + (interp ? ' <small>(diinterpolasi)</small>' : '') + '</span>' : '') +
-        '<span>Dua bulan ' + C.chip('inferensi') + ' · jarak tidak berskala</span><span>Kemiringan sumbu ' + C.chip('terbuka') + '</span>';
-    }
-    G.renderEpi = renderEpi; renderEpi();
 
     // ------------------------------------------------------------ putar otomatis (≈ 90 dtk / putaran; berhenti saat disentuh)
     var btnSpin, btnFocus, btnSys;
@@ -133,6 +124,7 @@ RH.globe = {
     var sec = document.getElementById('sec-globe'); sec.innerHTML = '';
     var PERIODS = [30, 60, 90, 180, 300], MSPEEDS = [0, 0.25, 0.5, 1, 2, 4, 8];
     var mIdx = REDUCED ? 0 : LS.get('rh-g-moonspeed', 3); if (MSPEEDS[mIdx] == null) mIdx = 3;
+    function mname(id) { var m = bodies && bodies.byId(id); return m ? m.name : id; }   // nama kerja bulan dari data/moons.json
     function grp(title, inner) { var d = G.el('div', 'grp gctl', '<h3>' + title + '</h3>' + inner); sec.appendChild(d); return d; }
     var spinG = grp('Putaran planet',
       '<div class="btns"><button type="button" class="btn" id="g-spin" aria-pressed="false"></button></div>' +
@@ -141,10 +133,10 @@ RH.globe = {
       '<p class="note">' + (REDUCED ? '<b class="bad">Dinonaktifkan</b> oleh pengaturan <i>kurangi gerakan</i> perangkat. ' : '') + 'Berhenti saat globe disentuh, diklik, atau diseret; lanjutkan lewat tombol. Arah putaran (barat → timur) ilustratif.</p>');
     var moonG = grp('Dua bulan ' + C.chip('inferensi'),
       '<div class="btns"><button type="button" class="btn" id="g-focus">Fokus planet</button><button type="button" class="btn" id="g-sys">Lihat sistem bulan</button></div>' +
-      '<div class="btns"><button type="button" class="btn" id="g-m-besar">Bulan Besar</button><button type="button" class="btn" id="g-m-kecil">Bulan Kecil</button></div>' +
+      '<div class="btns"><button type="button" class="btn" id="g-m-besar" title="Buka kartu ' + esc(mname('bulan_besar')) + ' (bulan besar)">' + esc(mname('bulan_besar')) + '</button><button type="button" class="btn" id="g-m-kecil" title="Buka kartu ' + esc(mname('bulan_kecil')) + ' (bulan kecil)">' + esc(mname('bulan_kecil')) + '</button></div>' +
       '<label class="row" for="g-mspeed"><span>Kecepatan bulan</span><span class="val" id="g-mspeed-v"></span></label>' +
       '<input type="range" id="g-mspeed" min="0" max="' + (MSPEEDS.length - 1) + '" step="1" aria-label="Kecepatan bulan">' +
-      '<p class="note">Ukuran relatif ke planet <b>asli</b> (0,2415 dan 0,0604 jari-jari). <b>Jarak tidak berskala</b>: dikompres monoton agar urutan orbit dan bentuk elips (e, i) tetap terbaca. Rasio periode asli 3,41 : 1. Jam bulan terpisah dari putaran planet. Seluruh parameter = Inferensi AI, bukan kanon.</p>');
+      '<p class="note">Nama kerja (eksonim manusia, Inferensi AI): <b>' + esc(mname('bulan_besar')) + '</b> = bulan besar, <b>' + esc(mname('bulan_kecil')) + '</b> = bulan kecil. Ukuran relatif ke planet <b>asli</b> (0,2415 dan 0,0604 jari-jari). <b>Jarak tidak berskala</b>: dikompres monoton agar urutan orbit dan bentuk elips (e, i) tetap terbaca. Rasio periode asli 3,41 : 1. Jam bulan terpisah dari putaran planet. Seluruh parameter = Inferensi AI, bukan kanon.</p>');
     grp('Sumbu &amp; ekliptika ' + C.chip('terbuka'),
       '<p class="note">Sumbu rotasi digambar tegak dan bidang ekliptika sejajar ekuator — <b>ilustratif</b>. <b>Kemiringan sumbu belum ditetapkan</b> (Terbuka #2): tidak ada terminator, sisi malam, atau musim; pencahayaan netral menempel pada kamera. Bintang belum ditetapkan.</p>');
     if (G.relief) G.relief.buildPanel(sec, grp);

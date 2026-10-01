@@ -4,6 +4,11 @@
   "epi": "inferensi",
   "label": "Inferensi AI — bukan kanon",
   "status": "Parameter dua bulan Rhykaris. Seluruhnya Inferensi AI: tafsir A (\"stabil tapi bergoyang\") dipilih pemilik pada 1 Okt 2026; belum menjadi kanon dan tidak menyentuh Canon Index.",
+  "naming": {
+    "epi": "inferensi",
+    "decided": "2026-10-01",
+    "note": "Nama kerja, eksonim manusia (Latin), diambil dari pengamatan dan bukan dari asal-usul atau pasang: Ferrea \"yang berbesi\" (warna abu gelap merah-besi), Errans \"yang mengembara\" (orbit yang berayun dan tidak sejalan dengan tahun). Dipilih pemilik pada 1 Okt 2026. Inferensi AI, bukan kanon; nama tiap ras belum diputuskan."
+  },
   "provenance": "Hasil simulasi N-body REBOUND; konfigurasi bertahan ≥ 30.000 tahun. Tebing stabilitas bulan kecil ≈ 131.000 km (jarak ≥ 133.000 km hilang dalam hitungan abad) — jarak rata-rata bulan kecil tidak boleh digeser keluar dari ≤ 125.000 km. Periode ayunan e dan i tidak diukur, jadi keduanya hanya ditampilkan sebagai rentang dan tidak dianimasikan.",
   "planet": { "radius_km": 8282, "day_hours": 28, "year_days": 424, "gravity_g": 0.9 },
   "stability": { "cliff_km": 131000, "lost_within_century_km": 133000, "max_semi_major_axis_km": 125000 },
@@ -16,7 +21,8 @@
   "moons": [
     {
       "id": "bulan_besar",
-      "name": "Bulan Besar",
+      "name": "Ferrea",
+      "epithet": "bulan besar",
       "epi": "inferensi",
       "origin": "Bulan Rhykar yang selamat utuh; orbitnya pascamerger.",
       "radius_km": 2000, "radius_rel": 0.2415,
@@ -33,9 +39,10 @@
     },
     {
       "id": "bulan_kecil",
-      "name": "Bulan Kecil",
+      "name": "Errans",
+      "epithet": "bulan kecil",
       "epi": "inferensi",
-      "origin": "Sisa bulan Aëris; orbitnya pascamerger, di dalam orbit Bulan Besar.",
+      "origin": "Sisa bulan Aëris; orbitnya pascamerger, di dalam orbit Ferrea.",
       "radius_km": 500, "radius_rel": 0.0604,
       "density_gcm3": 2.2, "mass_kg": 1.15e21,
       "semi_major_axis_km": 125000, "semi_major_axis_rel": 15.1,
@@ -47,7 +54,7 @@
       "color": "krem sampai putih susu",
       "rotation": "tidak dianimasikan",
       "tide_equilibrium_m": 0.46,
-      "tide_note": "rata-rata, ≈ 10% pasang Bulan Besar"
+      "tide_note": "rata-rata, ≈ 10% pasang Ferrea"
     }
   ],
   "ratio_period": { "big_to_small": 3.41 }

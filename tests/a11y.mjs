@@ -32,7 +32,7 @@ for (const scheme of ['dark', 'light']) {
   t(`[${scheme}] toast is a polite live region, compass and canvas have roles/labels`, await page.evaluate(() => document.getElementById('v2-toast').getAttribute('role') === 'status' && document.getElementById('v2-toast').getAttribute('aria-live') === 'polite' && /Kompas/.test(document.getElementById('compass').getAttribute('aria-label')) && document.querySelector('canvas.g-canvas').getAttribute('role') === 'application'));
   t(`[${scheme}] sliders and the relief checkbox are labelled`, await page.evaluate(() => ['g-period', 'g-mspeed', 'g-exag'].every((id) => !!document.getElementById(id).getAttribute('aria-label')) && !!window.__ax.name(document.getElementById('g-relief'))));
   // b. contrast of panel text (map labels carry their own halo and are theme-independent, like the 2D labels)
-  const sels = ['#sec-globe .gctl .note', '#sec-globe label.row span', '#sec-globe .btn', '#globe .g-epi > span', '#compass .cp-l1', '#compass .cp-l2', '#compass .cp-l3', '#compass .cp-key', '#g-dock .tbtn', '#btn-view', '#sec-globe h3'];
+  const sels = ['#sec-globe .gctl .note', '#sec-globe label.row span', '#sec-globe .btn', '#compass .cp-l1', '#compass .cp-l2', '#compass .cp-l3', '#compass .cp-key', '#g-dock .tbtn', '#btn-view', '#sec-globe h3'];
   const bad = await page.evaluate((ss) => ss.flatMap((s) => Array.from(document.querySelectorAll(s)).filter((e) => !e.hidden && e.offsetParent !== null).slice(0, 3).map((e) => [s, +window.__ax.ratio(e).toFixed(2)])).filter((x) => x[1] < 4.5), sels);
   t(`[${scheme}] panel text contrast ≥ 4.5 : 1 (${bad.map((b) => b.join('=')).join(', ') || 'all pass'})`, bad.length === 0, JSON.stringify(bad));
   // c. keyboard: markers reachable and operable, focus ring visible on the dock

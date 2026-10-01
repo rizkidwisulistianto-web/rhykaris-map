@@ -65,7 +65,7 @@ G.createRelief = function (S, ctx) {
       U.uAlbedo.value = st.tex.albedo; U.uHeight.value = st.tex.height.tex; U.uHeightSize.value.set(st.tex.height.w, st.tex.height.h); U.uHMax.value = m.height.hmax_m;
       U.uSlope.value = st.tex.slope; U.uSlopeMax.value = m.slope.smax; U.uRelief.value = 1; U.uExag.value = st.exag; U.uDisp.value = st.exag / R_M;
     } else { U.uAlbedo.value = S.baseTex || U.uAlbedo.value; U.uRelief.value = 0; U.uExag.value = 0; U.uDisp.value = 0; }
-    S.dirty(); if (G.renderEpi) G.renderEpi();
+    S.dirty();
   }
   function setStatus(txt, bad) { if (!ui.st) return; ui.st.textContent = txt || ''; ui.st.classList.toggle('bad', !!bad); }
   function setOn(on) {

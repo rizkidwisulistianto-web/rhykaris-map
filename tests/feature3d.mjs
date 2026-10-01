@@ -236,8 +236,8 @@ await run('moons', async () => {
   const pos = (d) => page.evaluate((day) => { const b = window.__rhGlobe._bodies; b.setSimDays(day); return b.positions().map((p) => p.pos); }, d);
   const ang = (p) => Math.atan2(p[0], p[2]);
   const t0 = await pos(0), tB = await pos(12.1), tS = await pos(3.55), tHalf = await pos(6.05);
-  t('Bulan Besar returns after 12,1 hari-R', Math.hypot(...t0[0].map((v, i) => v - tB[0][i])) < 1e-6);
-  t('Bulan Kecil returns after 3,55 hari-R', Math.hypot(...t0[1].map((v, i) => v - tS[1][i])) < 1e-6);
+  t('Ferrea returns after 12,1 hari-R', Math.hypot(...t0[0].map((v, i) => v - tB[0][i])) < 1e-6);
+  t('Errans returns after 3,55 hari-R', Math.hypot(...t0[1].map((v, i) => v - tS[1][i])) < 1e-6);
   t('moons are not back at half a period', Math.hypot(...t0[0].map((v, i) => v - tHalf[0][i])) > 1);
   // moon clock is independent of the planet's rotation: speed slider changes simDays rate, spin does not
   await page.evaluate(() => window.__rhGlobe._bodies.setSimDays(0));
@@ -249,22 +249,25 @@ await run('moons', async () => {
   // cards
   const card = async (id) => page.evaluate((m) => { window.__rhGlobe.openMoon(m); return document.getElementById('g-card').innerText; }, id);
   const cb = await card('bulan_besar'), ck = await card('bulan_kecil');
-  for (const [nm, tx] of [['Bulan Besar', cb], ['Bulan Kecil', ck]]) {
+  for (const [nm, tx] of [['Ferrea', cb], ['Errans', ck]]) {
     t(`${nm} card: Inferensi AI chip, not canon`, /INFERENSI AI|Inferensi AI/.test(tx) && /bukan kanon/i.test(tx));
     t(`${nm} card: period ratio 3,41 : 1 and both period units`, /3,41/.test(tx) && /hari-Rhykaris/.test(tx) && /hari-Bumi/.test(tx));
     t(`${nm} card: albedo, tidal info and tides present`, /Albedo/.test(tx) && /Pasang ekuilibrium/.test(tx) && /Rotasi/.test(tx));
     t(`${nm} card: origin sentence`, /pascamerger/.test(tx));
+    t(`${nm} card: shows its working name, epithet and naming status (nama kerja, Inferensi AI)`, tx.includes(nm) && /bulan (besar|kecil)/i.test(tx) && /nama kerja/i.test(tx) && /eksonim manusia/i.test(tx));
   }
-  t('Bulan Besar card values (2.000 km, 285.000 km, 12,10 d-R, 14,1 d-B, 0,80°)', /2\.000 km/.test(cb) && /285\.000 km/.test(cb) && /12,10 hari-Rhykaris/.test(cb) && /14,1 hari-Bumi/.test(cb) && /0,80°/.test(cb) && /4,5 m/.test(cb), cb.slice(0, 600));
-  t('Bulan Kecil card values (500 km, 125.000 km, 3,55, 4,1, 0,41–0,52°, 0,46 m)', /500 km/.test(ck) && /125\.000 km/.test(ck) && /3,55 hari-Rhykaris/.test(ck) && /4,1 hari-Bumi/.test(ck) && /0,41–0,52°/.test(ck) && /0,46 m/.test(ck));
-  t('Bulan Kecil card: e and i shown as ranges (0,09–0,18 · 16–30°), not animated', /0,09–0,18/.test(ck) && /16–30°/.test(ck) && /tidak dianimasikan/.test(ck));
-  t('Bulan Kecil card: stability cliff 131.000 km, ≤ 125.000 km', /131\.000 km/.test(ck) && /125\.000 km/.test(ck));
-  t('UI states "jarak tidak berskala"', await page.evaluate(() => /jarak tidak berskala/i.test(document.getElementById('globe').innerText) && /jarak tidak berskala/i.test(document.getElementById('sec-globe').innerText)));
+  t('Ferrea card values (2.000 km, 285.000 km, 12,10 d-R, 14,1 d-B, 0,80°)', /2\.000 km/.test(cb) && /285\.000 km/.test(cb) && /12,10 hari-Rhykaris/.test(cb) && /14,1 hari-Bumi/.test(cb) && /0,80°/.test(cb) && /4,5 m/.test(cb), cb.slice(0, 600));
+  t('Errans card values (500 km, 125.000 km, 3,55, 4,1, 0,41–0,52°, 0,46 m)', /500 km/.test(ck) && /125\.000 km/.test(ck) && /3,55 hari-Rhykaris/.test(ck) && /4,1 hari-Bumi/.test(ck) && /0,41–0,52°/.test(ck) && /0,46 m/.test(ck));
+  t('Errans card: e and i shown as ranges (0,09–0,18 · 16–30°), not animated', /0,09–0,18/.test(ck) && /16–30°/.test(ck) && /tidak dianimasikan/.test(ck));
+  t('Errans card: stability cliff 131.000 km, ≤ 125.000 km', /131\.000 km/.test(ck) && /125\.000 km/.test(ck));
+  t('moon buttons in the Globe panel carry the working names', (await page.locator('#g-m-besar').innerText()) === 'Ferrea' && (await page.locator('#g-m-kecil').innerText()) === 'Errans');
+  t('no placeholder names left in the moon UI', !/Bulan (Besar|Kecil)/.test(cb + ck + await page.evaluate(() => document.getElementById('sec-globe').innerText + document.getElementById('globe').innerText)));
+  t('UI states "jarak tidak berskala" (each moon label, the orbit note and the Globe panel)', await page.evaluate(() => { const lbl = Array.from(document.querySelectorAll('#globe .g-moon-lbl')), notes = Array.from(document.querySelectorAll('#globe .g-note')); return lbl.length === 2 && lbl.every((e) => /tidak berskala/i.test(e.textContent)) && notes.some((e) => /jarak bulan tidak berskala/i.test(e.textContent)) && /jarak tidak berskala/i.test(document.getElementById('sec-globe').innerText); }));
   t('buttons Fokus planet / Lihat sistem bulan exist', (await page.locator('#g-dock-focus').count()) === 1 && (await page.locator('#g-dock-sys').count()) === 1);
   // click on a moon opens its card
   await page.evaluate(() => window.__rhGlobe.closeCard()); await page.evaluate(() => window.__rhGlobe.viewMoonSystem()); await page.waitForTimeout(1500);
   const mp = await page.evaluate(() => window.__rhGlobe._bodies.positions().find((p) => p.id === 'bulan_kecil'));
-  if (mp.vis) { await page.mouse.click(mp.sx, mp.sy); await page.waitForTimeout(200); t('clicking the small moon opens its card', /Bulan Kecil/.test(await page.evaluate(() => document.getElementById('g-card').innerText))); }
+  if (mp.vis) { await page.mouse.click(mp.sx, mp.sy); await page.waitForTimeout(200); t('clicking the small moon opens its card', /Errans/.test(await page.evaluate(() => document.getElementById('g-card').innerText))); }
   else t('small moon visible in the moon-system view (not occluded)', false);
   await ctx.close();
 });
@@ -353,9 +356,9 @@ await run('filters, search, epistemic labels, wording', async () => {
   t(`globe centred on Libbāl (Δlat ${Math.abs(f.lat - lb.lat).toFixed(1)}°)`, near(f.lat, lb.lat, 3) && near(C.lonN(f.lon - lb.lon), 0, 3));
   // Castra Birath: fading zone rings, never a precise dot — the zone layer exists and is painted
   t('Castra Birath zone layer is registered with a 3D adapter', (await page.evaluate(() => window.__rhGlobe.layerStatus().zone)).adapter3D === true);
-  // epistemic strip visible in 3D
-  const strip = await page.evaluate(() => document.querySelector('#globe .g-epi').innerText);
-  t('epistemic strip lists Kanon, Inferensi AI and Terbuka', /KANON|Kanon/i.test(strip) && /INFERENSI AI|Inferensi AI/i.test(strip) && /TERBUKA|Terbuka/i.test(strip), strip);
+  // v1.6.3: the chip strip under the coordinate readout was removed from the globe; status stays on the moon labels and in the panel
+  t('globe has no chip strip under the readout (removed in v1.6.3)', (await page.locator('#globe .g-epi').count()) === 0);
+  t('moon labels still say Inferensi AI', await page.evaluate(() => { const l = Array.from(document.querySelectorAll('#globe .g-moon-lbl')); return l.length === 2 && l.every((e) => /Inferensi AI/.test(e.textContent)); }));
   const sec = await page.evaluate(() => document.getElementById('sec-globe').innerText);
   t('axis note: "kemiringan sumbu belum ditetapkan", no terminator/season', /kemiringan sumbu belum ditetapkan/i.test(sec) && /tidak ada terminator/i.test(sec));
   // Tension #6: nothing predicts or schedules the Great Wave

@@ -93,14 +93,12 @@ const frame = (page, n = 3) => page.evaluate((k) => new Promise((res) => { let i
   await page.locator('#tab-globe').click();
   t('relief is off by default, slider disabled, exaggeration default 15×', !(await page.locator('#g-relief').isChecked()) && (await page.locator('#g-exag').isDisabled()) && (await page.locator('#g-exag').inputValue()) === '15' && /15×/.test(await page.locator('#g-exag-v').innerText()));
   t('before activation: baked-hillshade texture, no displacement', await (async () => { const u = await uni(page); return u.relief === 0 && u.disp === 0 && u.albedoIsBase; })());
-  const strip0 = await page.evaluate(() => document.querySelector('#globe .g-epi').innerText); t('epistemic strip has no Relief chip while off', !/Relief/.test(strip0));
   await page.locator('#g-relief').check();
   await page.waitForFunction(() => /^aktif/.test(document.getElementById('g-relief-st').textContent), null, { timeout: 90000 });
   const r = reqs(); t(`after activation exactly the four relief files are requested once (${r.join(', ')})`, r.length === 4 && ['relief.json', man.height.file, man.slope.file, man.albedo.file].every((f) => r.includes(f)));
   const u = await uni(page);
   t('shader uniforms: relief on, hmax and height texture size from the manifest', u.relief === 1 && u.hmax === man.height.hmax_m && u.hs[0] === 4096 && u.hs[1] === 2048 && near(u.smax, man.slope.smax, 1e-9), JSON.stringify(u));
   t('displacement = exaggeration / planet radius (15× / 8.282 km)', u.exag === 15 && near(u.disp, 15 / 8282000, 1e-12) && !u.albedoIsBase);
-  const strip1 = await page.evaluate(() => document.querySelector('#globe .g-epi').innerText); t('epistemic strip shows Relief · Turunan while on', /Relief/.test(strip1) && /TURUNAN|Turunan/.test(strip1));
   { const st = await page.locator('#g-relief-st').innerText(); t('status text names the epistemic label', /Turunan/.test(st), st); }
   const albedoLum = await page.evaluate(async () => { const g = window.__rhGlobe; function lum(img) { const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 256, 128); const d = x.getImageData(0, 0, 256, 128).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; return s / (d.length / 4); } const a = lum(g._S.mat.uniforms.uAlbedo.value.image), b = lum(g._S.baseTex.image); return { a, b }; });
   t(`albedo (no hillshade) has the same overall brightness as the canon map (${albedoLum.a.toFixed(1)} vs ${albedoLum.b.toFixed(1)})`, Math.abs(albedoLum.a / albedoLum.b - 1) < 0.1, JSON.stringify(albedoLum));
