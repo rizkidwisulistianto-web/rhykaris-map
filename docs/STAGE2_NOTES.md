@@ -159,7 +159,7 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 - ~~The pre-existing 2D pressed-button style has 4.01:1 contrast in the light theme.~~ Fixed in v1.6.2 (§12).
 - Tested under SwiftShader (software GL), not on a physical GPU or phone; frame rate on real devices is unmeasured. Two moons plus a 4096 × 2048 height texture and slope map are modest, but a low-end phone may prefer relief off.
 
-**Out of scope here (by the brief):** layer presets, hotspots, habitats, cover, the day/night terminator and tides → Stage 3; regional detail, rivers and trees → Stage 4.
+**Out of scope here (by the brief):** layer presets, hotspots, habitats, cover, the day/night terminator and tides → Stage 3; regional detail, rivers and trees → Stage 4. *(Update, 2 Oct 2026: Stage 4 has since moved to v3, where it becomes Stage 2; see the README roadmap.)*
 
 ## 11. Follow-up v1.6.1 — the measure tool in every view
 

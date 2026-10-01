@@ -298,7 +298,7 @@ The Python pipeline in [`src/`](src/) needs Python 3.11 with `numpy`, `scipy`, `
 
 ## Worldbuilding Progress / Roadmap
 
-Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **29 Sep 2026**, mirrored from the world's own development backlog.
+Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **29 Sep 2026**, mirrored from the world's own development backlog; the interactive-map roadmap below was refreshed on **2 Oct 2026**.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -346,20 +346,30 @@ In the author's order. 🔒 marks a gate: other work waits on it.
 
 **Later — Interactive Map v2** *(parked wishlist — no commitment yet)*
 
-The flat viewer stays the baseline; stages are numbered as in the author's backlog.
+The flat viewer stays the baseline; stages are numbered as in the author's backlog. v2 stays on the current stack (three.js r160 and Leaflet) and is for exploring features and writing lore in bulk; shader and tile work that a renderer rewrite would throw away is deliberately left to v3.
 
 - [x] **Stage 2 — 3D globe:** 2D/3D toggle, rotation, two moons, compass, and the existing v1.4 layer toggles (2a); relief from a regenerated 16-bit heightmap (2b); an optional dual-disk Lambert working map. Built on `feat/stage-2-globe` and merged to `main` in pull request #1 (1 Oct 2026). Moon parameters stay *AI-inferred* until ratified. Layer presets moved to Stage 3.
-- [ ] **Stage 3 — layer presets and new layers:** presets (Physical, Biomes, Ecology & Zones, Scar Proximity, Politics, Culture, Audit), hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2 and an open consistency question about monster habitats.
-- [ ] **Stage 4 — fine detail** for chosen regions (rivers, trees, smooth coastlines). Proposed first regions: Sinus Adventus, Hesperia, Ellumāt. Comes last, and fine detail does not become canon unless the author ratifies it.
+- [ ] **Stage 3 — layer presets and new layers:** presets (Physical, Biomes, Ecology & Zones, Scar Proximity, Politics, Culture, Audit), hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2, an open consistency question about monster habitats and, for the terminator, night side and seasons, the astronomy decision below.
+- [ ] 🔒 **Canon prerequisite — the astronomy decision.** Axial tilt (already open, *Terbuka*), star type and orbital eccentricity are not set; canon fixes only a 424-day year with four axial seasons. Before the star is locked, also check that both moons stay comfortably inside the planet's Hill sphere — it is not yet known whether the moon-stability simulation included a star. This gates the terminator, night side, seasons and city lights, in Stage 3 now and in v3 later.
+- ↪ **Stage 4 — fine detail** moved to v3 on 2 Oct 2026 (it becomes v3 Stage 2): it is tied to the renderer and the tile format, so building it twice would be waste.
 
-Every new parameter — moons, axial tilt, tides, fine detail — stays *AI-inferred* until ratified. Not in Stage 2 on purpose: layer presets, hotspots, habitats, cover, the day/night terminator and tides (Stage 3), and regional detail, rivers and trees (Stage 4).
+**Later still — Interactive Map v3** *(long-term direction — not a commitment)*
+
+A possible rewrite on a WebGPU renderer with tiled map data, so that zoom detail is no longer limited to one HTML file.
+
+- [ ] **Stage 1 — foundation:** a renderer-neutral tile format; a check of three.js's WebGL2 fallback and of GitHub Pages size and bandwidth limits (neither verified yet); then a WebGPU renderer that reads the tiles. Starting v3 does not wait for the astronomy decision.
+- [ ] **Stage 2 — fine detail** for chosen regions (formerly v2 Stage 4): rivers, trees, smooth coastlines and an optional realism shader (atmosphere glow, sea glint, procedural clouds — illustrative, *AI-inferred*, switchable). Proposed first regions: Sinus Adventus, Hesperia, Ellumāt. Comes last, and fine detail does not become canon unless the author ratifies it. Anything that depends on the star and the axis (terminator, night side, seasons, city lights, moon phases, eclipses, sky colour) waits on the astronomy decision; effects lit by a camera-attached light do not.
+
+Detail would keep coming from the deterministic seed-1647 generator, re-evaluated per region. The whole planet at 100 m per pixel would be roughly 135 gigapixels (a rough AI estimate), so close detail stays regional.
+
+Every new parameter — moons, axial tilt, tides, fine detail — stays *AI-inferred* until ratified. Not in Stage 2 on purpose: layer presets, hotspots, habitats, cover, the day/night terminator and tides (Stage 3), and regional detail, rivers and trees (v3 Stage 2).
 
 **Known limitations**
 
 - The viewer needs an internet connection (Leaflet and fonts come from CDNs; 3D also needs three.js, with a vendored fallback).
 - The 3D views need WebGL and a web origin (`http(s)://`, i.e. GitHub Pages or a local server) — not `file://`. The first entry into 3D downloads ≈ 9 MB of relief textures plus three.js (≈ 0.67 MB); the flat map never does.
 - Moon parameters are **AI-inferred** (not canon); the moons are drawn *not to scale*. Moon phases, orbit orientation and the spin direction of the planet are illustrative.
-- The axial tilt is unfixed (*Terbuka*), so the 3D view has no terminator, seasons or night side.
+- The axial tilt is unfixed (*Terbuka*) and no star type is set, so the 3D view has no terminator, seasons or night side.
 - The dual-disk view supports a subset of layers (graticule, meridians, band, curve, arcs, markers, anomalies, the Castra zone); the others are listed as unavailable there.
 - Interface and lore text are in Bahasa Indonesia; there is no English interface yet.
 - Pipeline scripts other than `terrain.py`, `render.py` and `make_relief.py` still use absolute paths (see above).
