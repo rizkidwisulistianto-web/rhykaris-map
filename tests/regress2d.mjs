@@ -15,7 +15,7 @@ if (!['capture', 'compare'].includes(mode) || !dirArg) { console.error('usage: r
 const DIR = path.resolve(dirArg);
 fs.mkdirSync(DIR, { recursive: true });
 
-const HIDE_V2 = '.v2-chrome{visibility:hidden !important}';
+const HIDE_V2 = '.v2-chrome{display:none !important}';
 const PRESETS = { cland: true, csea: true, banks: true };
 const view = (la, lo, z) => (p) => p.evaluate(([a, b, c]) => { window.__rhMap.setView([a, b], c, { animate: false }); }, [la, lo, z]);
 const wait = (ms) => (p) => p.waitForTimeout(ms);
@@ -101,7 +101,12 @@ await browser.close(); await srv.close();
 if (mode === 'capture') { fs.writeFileSync(path.join(DIR, 'facts.json'), JSON.stringify(facts, null, 1)); console.log('baseline captured →', DIR, JSON.stringify({ data: facts.data, load: facts.load })); }
 else {
   const base = JSON.parse(fs.readFileSync(path.join(DIR, 'facts.json'), 'utf8'));
-  const sameHash = JSON.stringify(base.hashes) === JSON.stringify(facts.hashes);
+  // canon files must be byte-identical; NEW files (data/moons.json, assets/3d/*) are additions, not changes
+  const changed = Object.keys(base.hashes).filter((f) => facts.hashes[f] !== base.hashes[f]);
+  const added = Object.keys(facts.hashes).filter((f) => !(f in base.hashes));
+  const sameHash = changed.length === 0;
+  if (changed.length) console.log('CANON FILES CHANGED:', changed);
+  if (added.length) console.log('new files (additions):', added.join(', '));
   const sameData = JSON.stringify({ ...base.data, layerInputs: 0, markers: 0 }) === JSON.stringify({ ...facts.data, layerInputs: 0, markers: 0 });
   console.log(`canon hashes identical: ${sameHash}`); console.log(`data counts identical: ${sameData}`, JSON.stringify(facts.data));
   console.log(`2D loads three.js: ${facts.threeRequested}`); console.log(`load ms baseline ${base.load.mean} → now ${facts.load.mean}`);
