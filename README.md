@@ -289,8 +289,8 @@ In the author's order. 🔒 marks a gate: other work waits on it.
 
 The flat v1.4 viewer stays the baseline; stages are numbered as in the author's backlog.
 
-- [ ] **Stage 2 — 3D globe:** relief, rotation, moons, compass, presets. Waits on the moon parameters.
-- [ ] **Stage 3 — new layers:** hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2 and an open consistency question about monster habitats.
+- [ ] **Stage 2 — 3D globe:** 2D/3D toggle, rotation, two moons, compass, and the existing v1.4 layer toggles (2a); relief from a regenerated 16-bit heightmap comes last (2b). Moon parameters are proposed and stay *AI-inferred* until ratified. Layer presets moved to Stage 3.
+- [ ] **Stage 3 — layer presets and new layers:** presets (Physical, Biomes, Ecology & Zones, Scar Proximity, Politics, Culture, Audit), hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2 and an open consistency question about monster habitats.
 - [ ] **Stage 4 — fine detail** for chosen regions (rivers, trees, smooth coastlines). Proposed first regions: Sinus Adventus, Hesperia, Ellumāt. Comes last, and fine detail does not become canon unless the author ratifies it.
 
 Every new parameter — moons, axial tilt, tides, fine detail — stays *AI-inferred* until ratified.
