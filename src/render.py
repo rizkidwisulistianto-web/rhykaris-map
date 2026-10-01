@@ -2,7 +2,9 @@
 import numpy as np, sys, time
 from PIL import Image, ImageDraw, ImageFilter
 from scipy import ndimage as ndi
-sys.path.insert(0, '/home/claude/rhykaris_map')
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import work
 from geo import *
 from noise import make_perm, fbm
 
@@ -34,7 +36,9 @@ def hillshade(elev, LAT, W, H, az=315.0, alt=42.0, zf=1.0):
     sh = np.sin(altr) * np.cos(slope) + np.cos(altr) * np.sin(slope) * np.cos(azr - aspect)
     return np.clip(sh, 0, 1)
 
-def render(T, W, H, out_path, rivers=True, verbose=True):
+def render(T, W, H, out_path, rivers=True, verbose=True, shade=True):
+    """shade=False -> albedo for the 3D globe (Stage 2b): same palette, no baked hillshade (lighting is dynamic there).
+    Land/sea are multiplied by the *flat-surface* shade so the mean brightness matches the canon map. Default output is unchanged."""
     t0 = time.time()
     LAT, LON = grid(W, H)
     elev = T['elev']; land = T['land'].astype(bool); pr = T['pr']; temp = T['temp']; d = T['d']
@@ -104,8 +108,11 @@ def render(T, W, H, out_path, rivers=True, verbose=True):
     col = mix(col, mix(hexc('#c9b99c'), hexc('#ddd2bc'), np.clip(0.5 + tex, 0, 1)), 0.78 * np.clip(pl_soft * 1.4, 0, 1))
 
     # hillshade (darat tajam, laut sangat halus)
-    hs = hillshade(elev * land, LAT, W, H, zf=1.0)
-    hs_s = hillshade(np.where(land, 0, elev), LAT, W, H, zf=0.05)
+    if shade:
+        hs = hillshade(elev * land, LAT, W, H, zf=1.0)
+        hs_s = hillshade(np.where(land, 0, elev), LAT, W, H, zf=0.05)
+    else:
+        hs = hs_s = np.full((H, W), np.sin(np.radians(42.0)), np.float32)   # hillshade() default alt = 42 deg, flat ground
     col *= (0.38 + 0.82 * hs)[..., None]
     ocean *= (0.90 + 0.16 * hs_s)[..., None]
     img = np.where(land[..., None], col, ocean)
@@ -161,7 +168,7 @@ def render(T, W, H, out_path, rivers=True, verbose=True):
 
 if __name__ == '__main__':
     W, H = int(sys.argv[1]), int(sys.argv[2])
-    Z = dict(np.load(f'/home/claude/rhykaris_map/terrain_{W}.npz'))
+    Z = dict(np.load(work(f'terrain_{W}.npz')))
     LAT, LON = grid(W, H)
     Z['F_ellhi'] = np.exp(-(gc_dist_deg(LAT, LON, 55.5, 180.0) / 10.0) ** 2).astype(np.float32)
-    render(Z, W, H, sys.argv[3])
+    render(Z, W, H, sys.argv[3], shade='--albedo' not in sys.argv[4:])

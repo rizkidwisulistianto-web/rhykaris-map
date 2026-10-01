@@ -3,7 +3,9 @@ import numpy as np, sys, time, heapq
 from numba import njit
 from scipy import ndimage as ndi
 from scipy.spatial import cKDTree
-sys.path.insert(0, '/home/claude/rhykaris_map')
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import work
 from geo import *
 from noise import make_perm, fbm, ridged
 from masks import build, landmask, SEED
@@ -272,7 +274,7 @@ if __name__ == '__main__':
     e = T['elev']; land = T['land']
     print('elev land pct 50/90/99/max', np.percentile(e[land], [50, 90, 99]).round(0), e[land].max().round(0))
     print('elev sea pct 1/50/99', np.percentile(e[~land], [1, 50, 99]).round(0))
-    np.savez_compressed(f'/home/claude/rhykaris_map/terrain_{W}.npz', elev=e, land=land, pr=T['pr'], temp=T['temp'],
+    np.savez_compressed(work(f'terrain_{W}.npz'), elev=e, land=land, pr=T['pr'], temp=T['temp'],
                         acc=T['acc'], rec=T['rec'], depr=T['depr'], cd=T['cd'], bank=T['bank'], trench=T['trench'],
                         pol=T['pol'], sut=T['sut'], alt=T['alt'], mas=T['mas'], culm=T['culm'],
                         **{'comp_' + k: v for k, v in T['comp'].items()},

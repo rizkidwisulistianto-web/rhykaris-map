@@ -1,0 +1,54 @@
+{
+  "id": "rhykaris-moons",
+  "version": 1,
+  "epi": "inferensi",
+  "label": "Inferensi AI — bukan kanon",
+  "status": "Parameter dua bulan Rhykaris. Seluruhnya Inferensi AI: tafsir A (\"stabil tapi bergoyang\") dipilih pemilik pada 1 Okt 2026; belum menjadi kanon dan tidak menyentuh Canon Index.",
+  "provenance": "Hasil simulasi N-body REBOUND; konfigurasi bertahan ≥ 30.000 tahun. Tebing stabilitas bulan kecil ≈ 131.000 km (jarak ≥ 133.000 km hilang dalam hitungan abad) — jarak rata-rata bulan kecil tidak boleh digeser keluar dari ≤ 125.000 km. Periode ayunan e dan i tidak diukur, jadi keduanya hanya ditampilkan sebagai rentang dan tidak dianimasikan.",
+  "planet": { "radius_km": 8282, "day_hours": 28, "year_days": 424, "gravity_g": 0.9 },
+  "stability": { "cliff_km": 131000, "lost_within_century_km": 133000, "max_semi_major_axis_km": 125000 },
+  "illustrative": {
+    "note": "Bukan parameter kanon dan bukan hasil simulasi: bidang orbit planet digambar sejajar ekuator (kemiringan sumbu belum ditetapkan — Terbuka #2); simpul naik, argumen periapsis, dan fase awal dipilih tetap (deterministik) hanya supaya gambar konsisten dan kedua orbit terbaca.",
+    "ascending_node_deg": { "bulan_besar": 20, "bulan_kecil": 110 },
+    "arg_periapsis_deg": { "bulan_besar": 60, "bulan_kecil": 200 },
+    "mean_anomaly_deg_t0": { "bulan_besar": 40, "bulan_kecil": 215 }
+  },
+  "moons": [
+    {
+      "id": "bulan_besar",
+      "name": "Bulan Besar",
+      "epi": "inferensi",
+      "origin": "Bulan Rhykar yang selamat utuh; orbitnya pascamerger.",
+      "radius_km": 2000, "radius_rel": 0.2415,
+      "density_gcm3": 4.0, "mass_kg": 1.34e23,
+      "semi_major_axis_km": 285000, "semi_major_axis_rel": 34.4,
+      "eccentricity": 0.04,
+      "inclination_deg": 4,
+      "period_days_rhykaris": 12.1, "period_days_earth": 14.1,
+      "angular_size_deg": [0.80, 0.80],
+      "albedo": 0.12,
+      "color": "abu gelap, merah-besi",
+      "rotation": "terkunci pasang-surut (sisi yang sama selalu menghadap planet)",
+      "tide_equilibrium_m": 4.5
+    },
+    {
+      "id": "bulan_kecil",
+      "name": "Bulan Kecil",
+      "epi": "inferensi",
+      "origin": "Sisa bulan Aëris; orbitnya pascamerger, di dalam orbit Bulan Besar.",
+      "radius_km": 500, "radius_rel": 0.0604,
+      "density_gcm3": 2.2, "mass_kg": 1.15e21,
+      "semi_major_axis_km": 125000, "semi_major_axis_rel": 15.1,
+      "eccentricity": 0.12, "eccentricity_range": [0.09, 0.18],
+      "inclination_deg": 20, "inclination_range_deg": [16, 30],
+      "period_days_rhykaris": 3.55, "period_days_earth": 4.14,
+      "angular_size_deg": [0.41, 0.52],
+      "albedo": 0.5,
+      "color": "krem sampai putih susu",
+      "rotation": "tidak dianimasikan",
+      "tide_equilibrium_m": 0.46,
+      "tide_note": "rata-rata, ≈ 10% pasang Bulan Besar"
+    }
+  ],
+  "ratio_period": { "big_to_small": 3.41 }
+}

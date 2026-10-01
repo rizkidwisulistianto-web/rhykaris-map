@@ -3,12 +3,18 @@
 """Bundle the Master Map viewer into ONE self-contained ``index.html``.
 
 Inputs (all inside this repository):
-    app/body.html, app/app.js, app/style.css   viewer markup, logic and styles
+    app/body.html, app/style.css               viewer markup and styles
+    app/core.js, moons.js, compass.js, app.js  viewer logic, concatenated in this order into one classic script
+    app/globe/*.js                             3D globe (Stage 2); inlined but inert until the user enters 3D
+    app/disk.js                                dual-disk Lambert working map (Stage 2, optional); inert until opened, no three.js needed
+                                               (the relief assets in assets/3d/ are NOT inlined: fetched only when relief is switched on)
     data/data.json                             places, factions, territories, routes, audit, ...
+    data/moons.json                            the two moons (AI inference, not canon) — single source of moon parameters
     assets/base_q84.webp                       global physical layer (4096 x 2048, equirectangular)
     assets/inset_40_q84.webp                   Sinus Adventus inset (40 px/deg)
     assets/datagrid.png                        R = elevation code, G = biome class (terrain readout)
     vendor/leaflet/leaflet.css                 Leaflet 1.9.4 stylesheet (BSD-2-Clause), inlined + minified
+    vendor/three/three.module.min.js           three.js r160 (MIT): NOT inlined; only its SRI hash is computed here
 
 Output:
     index.html                                 open by double-click, or serve the folder (GitHub Pages ready)
@@ -23,6 +29,7 @@ Usage:
 """
 import argparse
 import base64
+import hashlib
 import json
 import re
 import urllib.parse
@@ -45,6 +52,15 @@ var s=document.createElement('script');s.src=srcs[i++];s.onload=function(){if(wi
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" onerror="__rhFallback()"></script>"""
 
+# Viewer version shown in the UI (Metode tab) and exposed as window.RH.version.
+VIEWER_VERSION = "1.6"
+
+# Order matters: each file extends the shared window.RH namespace created by the previous ones.
+APP_JS = ["app/core.js", "app/moons.js", "app/compass.js", "app/app.js"]
+# Inlined as inert text and only evaluated when the user first enters 3D (so the flat map never pays for it).
+LAZY_JS = [("rh-disk", ["app/disk.js"]), ("rh-globe", ["app/globe/kit.js", "app/globe/scene.js", "app/globe/layers.js", "app/globe/bodies.js", "app/globe/relief.js", "app/globe/ui.js"])]
+THREE_VENDOR = "vendor/three/three.module.min.js"
+
 DESCRIPTION = ("Peta induk interaktif dunia Rhykaris — proyeksi equirectangular, The Scar, "
                "wilayah kuasa AS 1647, dan status epistemik tiap koordinat.")
 
@@ -65,6 +81,27 @@ def read_text(rel):
 
 def data_uri(rel, mime):
     return f"data:{mime};base64," + base64.b64encode((ROOT / rel).read_bytes()).decode()
+
+
+def sri384(rel):
+    return "sha384-" + base64.b64encode(hashlib.sha384((ROOT / rel).read_bytes()).digest()).decode()
+
+
+def app_js():
+    """core.js ... app.js as one script, with the SRI of the pinned three.js build substituted in."""
+    js = "\n".join(read_text(f) for f in APP_JS)
+    assert "sha384-__THREE_SRI__" in js, "core.js lost its THREE_SRI placeholder"
+    return js.replace("sha384-__THREE_SRI__", sri384(THREE_VENDOR))
+
+
+def lazy_blocks():
+    out = []
+    for sid, files in LAZY_JS:
+        src = "\n".join(read_text(rel) for rel in files)
+        # the source sits in <script type="text/plain">: it must not be able to close the element or open an HTML comment
+        assert "</script" not in src.lower() and "<!--" not in src, f"{sid} contains a sequence that would break inline embedding"
+        out.append(f'<script id="{sid}-src" type="text/plain">{src}</script>')
+    return "\n".join(out)
 
 
 def leaflet_css():
@@ -95,11 +132,12 @@ def build(with_meta=True):
     css_leaf = leaflet_css()
     css_app = read_text("app/style.css")
     body = read_text("app/body.html")
-    js = read_text("app/app.js")
+    js = app_js()
 
     dj = json.loads(read_text("data/data.json"))
     dj["inset"] = {"b": [[-32.0, -40.0], [23.0, 46.0]], "ppd": 40}
     data = json.dumps(dj, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    moons = json.dumps(json.loads(read_text("data/moons.json")), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
     inset = data_uri("assets/inset_40_q84.webp", "image/webp")
     base = data_uri("assets/base_q84.webp", "image/webp")
@@ -119,11 +157,14 @@ def build(with_meta=True):
 
     payload = f"""{body}
 <script id="rh-data" type="application/json">{data}</script>
+<script id="rh-moons" type="application/json">{moons}</script>
 <script id="rh-base" type="text/plain">{base}</script>
 <script id="rh-grid" type="text/plain">{grid}</script>
 <script id="rh-inset" type="text/plain">{inset}</script>
 {LOADER}
+{lazy_blocks()}
 <script>
+window.RH = {{ version: "{VIEWER_VERSION}" }};
 {js}
 </script>"""
 
