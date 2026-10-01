@@ -78,5 +78,21 @@ for (const scheme of ['dark', 'light']) {
     await r.ctx.close();
   }
 }
+// ---- flat map (v1.6.2): the pressed state of the toolbar buttons — Ukur, Legenda — keeps >= 4.5 : 1 in both themes, resting and hovered
+for (const scheme of ['dark', 'light']) {
+  const { ctx, page } = await newPage(browser, { colorScheme: scheme });
+  await page.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+  await page.addInitScript(HELPERS);
+  await page.goto(srv.url, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__rhMap && document.querySelectorAll('.leaflet-image-layer').length > 0, null, { timeout: 60000 });
+  await page.waitForTimeout(400);
+  await page.locator('#btn-measure').click(); await page.locator('#btn-legend').click(); await page.mouse.move(700, 450); await page.waitForTimeout(350);
+  const rest = await page.evaluate(() => ['btn-measure', 'btn-legend'].map((id) => [id, document.getElementById(id).getAttribute('aria-pressed'), +window.__ax.ratio(document.getElementById(id)).toFixed(2)]));
+  t(`[${scheme}] flat map: pressed toolbar buttons are >= 4.5 : 1 at rest (${rest.map((r) => r.join('=')).join(', ')})`, rest.every((r) => r[1] === 'true' && r[2] >= 4.5), JSON.stringify(rest));
+  const hov = [];
+  for (const id of ['btn-measure', 'btn-legend']) { await page.hover('#' + id); await page.waitForTimeout(350); hov.push([id, await page.evaluate((i) => +window.__ax.ratio(document.getElementById(i)).toFixed(2), id)]); }
+  t(`[${scheme}] flat map: … and while hovered (${hov.map((r) => r.join('=')).join(', ')})`, hov.every((r) => r[1] >= 4.5), JSON.stringify(hov));
+  await ctx.close();
+}
 await browser.close(); await srv.close();
 console.log(`\na11y: ${pass} passed, ${fail} failed${fail ? '\nFAILED: ' + failures.join(' | ') : ''}`); process.exit(fail ? 1 : 0);

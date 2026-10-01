@@ -1,6 +1,7 @@
 // 2D regression guard.
 //   node regress2d.mjs capture <dir>   → write baseline PNGs + facts.json into <dir>
 //   node regress2d.mjs compare <dir>   → re-shoot, diff against <dir> (new v2 chrome is hidden with .v2-chrome), write diffs
+// RH_THRESHOLD=0 makes the comparison exact (default 0.1: pixelmatch's perceptual tolerance, which ignores anti-aliasing noise and tiny colour shifts).
 // RH_ROOT=<folder> points the tests at another checkout of the site (e.g. an old main) instead of this repository.
 // Run "capture" on a clean checkout of main, "compare" on the feature branch.
 import fs from 'node:fs';
@@ -79,7 +80,7 @@ for (const s of SCENES) {
     if (a.width !== b.width || a.height !== b.height) { console.log(`FAIL ${s.n}: size ${a.width}x${a.height} vs ${b.width}x${b.height}`); failures++; }
     else {
       const out = new PNG({ width: a.width, height: a.height });
-      const n = pixelmatch(a.data, b.data, out.data, a.width, a.height, { threshold: 0.1 });
+      const n = pixelmatch(a.data, b.data, out.data, a.width, a.height, { threshold: Number(process.env.RH_THRESHOLD ?? 0.1) });
       totalDiff += n; facts.scenes[s.n] = { diff: n };
       if (n > 0) { fs.writeFileSync(path.join(DIR, s.n + '.diff.png'), PNG.sync.write(out)); fs.writeFileSync(path.join(DIR, s.n + '.new.png'), png); }
       console.log(`${n === 0 ? 'ok  ' : 'DIFF'} ${s.n}: ${n} px`); if (n > 0) failures++;

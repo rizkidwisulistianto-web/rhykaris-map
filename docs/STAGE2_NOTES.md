@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view) and **v1.6.1** (measure tool in every view, §11). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
+Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) and **v1.6.2** (contrast of pressed buttons, §12). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
@@ -128,7 +128,7 @@ Taken without asking, in the order the brief ranks priorities (1 no canon change
 6. **View memory.** The last view is remembered (`rh-view`), with `?view=` overriding it. New visitors always get the flat map.
 7. **cdnjs second in the loader chain.** See §3.
 8. **Mobile.** On phones the 3D and disk toggles live in the panel header (the top bar has no room next to the brand); the epistemic strip moves to the top, under the header; the card and the panel share the bottom sheet.
-9. **Light-theme contrast.** Notes and pressed state of the *new* buttons got ink-2 / `--sea-2` overrides so they pass 4.5:1; the pre-existing 2D styles were not touched (a pre-existing 4.0:1 pressed state in the flat theme is out of scope — see §10).
+9. **Light-theme contrast.** Notes of the *new* panels got an ink-2 override so they pass 4.5:1. The pressed state of the toolbar buttons was a pre-existing 2D defect (4.02:1 in the light theme) that the Stage 2 brief did not allow touching; it is fixed in v1.6.2 (§12).
 10. **Hidden tabs** do not render (`document.hidden` guard); reduced motion renders on demand.
 11. **Banks as spherical caps; Castra zone as a true circle.** The globe draws what the data says (centre + radius) on the sphere, not a projected flat shape.
 12. **Relief as a mode, not a replacement.** With relief off the globe shows the unmodified canon raster (`base_q84.webp`); with relief on it swaps to the unlit albedo and lights it dynamically — otherwise hillshade would be applied twice.
@@ -154,7 +154,7 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 - The globe has no terminator, seasons or night side (axial tilt, Terbuka #2); the Great Wave is never predicted or scheduled (Tension #6).
 - Dual-disk supports a subset of layers by design; richer disk layers are a possible follow-up, not a debt of this stage.
 - The cdnjs path/hash of three.js could not be verified from the build sandbox; the SRI check makes a wrong guess harmless.
-- The pre-existing 2D pressed-button style has 4.01:1 contrast in the light theme. It was left alone on purpose (the brief forbids changing 2D); noted for the author.
+- ~~The pre-existing 2D pressed-button style has 4.01:1 contrast in the light theme.~~ Fixed in v1.6.2 (§12).
 - Tested under SwiftShader (software GL), not on a physical GPU or phone; frame rate on real devices is unmeasured. Two moons plus a 4096 × 2048 height texture and slope map are modest, but a low-end phone may prefer relief off.
 
 **Out of scope here (by the brief):** layer presets, hotspots, habitats, cover, the day/night terminator and tides → Stage 3; regional detail, rivers and trees → Stage 4.
@@ -175,3 +175,13 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 **Tests.** `tests/measure.mjs` (46 checks) plus the two measure scenes in `tests/regress2d.mjs`. `RH_ROOT=<folder>` lets `regress2d.mjs` capture a baseline from any other checkout.
 
 **Known limits.** Travel times are the flat map's rough estimates (25 / 50 / 130 km per day). The measure line is not clipped to land or sea. A measurement started in one view is redrawn in the other views only after the switch completes (the working map rebuilds its texture first).
+
+## 12. Follow-up v1.6.2 — contrast of the pressed toolbar buttons (WCAG AA)
+
+**Finding (from the Stage 2 accessibility checks, logged in the backlog).** On the flat map, the pressed state of a toolbar button (Ukur, Legenda, …) used the page background colour as its text colour: **4.02 : 1** in the light theme (`#e9efee` on `#1d7f90`). While checking the fix, the same rule family showed a second defect: in the **dark** theme the *hover* of a pressed button used white on `--sea-2` (`#2f8fa0`) = **3.78 : 1**. Both are below the 4.5 : 1 that WCAG AA asks for normal-size text.
+
+**Fix.** Two theme variables, `--on-sea` (text on `--sea`) and `--on-sea-2` (text on `--sea-2`), set in the four theme blocks: light `#fff` / `#fff` (4.68 / 7.18 : 1), dark `#0f1317` / `#0f1317` (8.50 / 4.94 : 1). `.tbtn[aria-pressed="true"]` and its hover use them. Backgrounds and borders are unchanged; only the text colour moved. The Stage 2 per-widget override for the new buttons became redundant and was removed (same result, one mechanism).
+
+**Evidence.** `tests/a11y.mjs` gained four checks (both themes, at rest and hovered); they fail on the old stylesheet (4.02 and 3.78) and pass now. `tests/regress2d.mjs` run in exact mode (`RH_THRESHOLD=0`) against the baseline captured on the pre-Stage-2 `main` is byte-identical in 15 of 16 scenes; the 16th (`d-light-measure`, which shows a pressed Ukur button) differs only inside the 50 × 12 px of the button's label — the intended change.
+
+**A note on "pixel-identical".** The 2D regression numbers quoted earlier (Stage 2 and v1.6.1) were taken with pixelmatch's default perceptual tolerance (`threshold 0.1`). The exact run above confirms those scenes are in fact byte-identical, so the claim stands; the exact mode is now one environment variable away.
