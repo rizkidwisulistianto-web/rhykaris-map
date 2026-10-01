@@ -58,7 +58,7 @@ The map is **derived, not drawn.** The locked canon constraints — land/water p
 | **Planet** | radius 8,282 km (≈ 1.3 × Earth) · circumference 52,039 km |
 | **Land / water** | 38 % land (Rhykar 23.0 % + Aëris 15.0 %) · 62 % water |
 | **Seed** | `1647` — same seed and constraints, same planet |
-| **Content** | 43 map entries · 3 anomaly pockets · 24 territories · 13 physical regions · 4 routes · 3 fronts |
+| **Content** | 44 map entries · 3 anomaly pockets · 25 territories · 13 physical regions · 4 routes · 3 fronts |
 | **Viewer** | Leaflet 1.9.4 · vanilla JavaScript · one self-contained 1.7 MB HTML file |
 
 Because the planet is a sphere, the map **wraps seamlessly** across the antimeridian, and every distance is a **great-circle distance on the sphere** — never flat pixels.
@@ -82,7 +82,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 
 ### Dynamic Markers & Popup Lore
 
-- **43 entries** — **21 point markers** (capitals, cities, ports, a market city-state, fortresses, kingdoms, a tribe, a mine, a ruin, an oasis, a gate, a landmark, hidden sites) and **22 engraved labels** (continents, seas, regions, forests, a mountain range, an island group, an ice cap, a blank spot, The Scar and its four arcs) — plus **three mass-anomaly pockets**.
+- **44 entries** — **22 point markers** (capitals, cities, ports, a market city-state, fortresses, kingdoms, a tribe, a mine, a ruin, an oasis, two gates, a landmark, hidden sites) and **22 engraved labels** (continents, seas, regions, forests, a mountain range, an island group, an ice cap, a blank spot, The Scar and its four arcs) — plus **three mass-anomaly pockets**.
 - **A glyph per place type**, a status ring per coordinate, an amber badge on *proposals* (places on the map that have no atlas entry yet), and a **collision-aware label placer** (capitals outrank cities, canon outranks inference) so the map stays legible at every zoom.
 - **Honest uncertainty:** where a position is genuinely unknown (Castra Birath), the map draws a fading zone of concentric rings instead of a falsely precise dot.
 - **Popups carry the lore:** aliases, type, canon and in-world status, the *reasoning* behind the coordinate, region and parent, hemisphere, strategic value and notes — plus, where the lore defines them, climate, population, hazards and controlling power. Each popup can copy its coordinates or start a measurement from that place.
@@ -91,7 +91,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 
 ### Faction Boundary / Territorial Layers
 
-- **24 territories for AS 1647** — fourteen named powers (Hesperia, Foedera, Provincia Cassivallae, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below) plus three unnamed vassal commonwealths and seven illustrative Interregna kingdoms — toggled in groups from the **Layer** tab.
+- **25 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Provincia Cassivallae, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below) plus three unnamed vassal commonwealths and seven illustrative Interregna kingdoms — toggled in groups from the **Layer** tab.
 - **Terrain-aware borders:** frontiers are computed by a Dijkstra partition whose movement cost rises in mountains and along great rivers, grown from canon anchors — not hand-drawn polygons.
 - **Hatching** marks contested, annexed and vassal land; **fronts** and expansion arrows show campaigns in motion.
 - **The Mandala of Purity** (the Elvari empire, Anušarri) is drawn as a four-ring gradient with no border at all — power that radiates from its centre and thins out.
@@ -208,10 +208,10 @@ rhykaris-map/
 
 | Key | Contents |
 |---|---|
-| `places` | 43 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
+| `places` | 44 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
 | `anomalies` | 3 mass-anomaly pockets |
-| `factions` | 25 powers: name, kind, colour, epistemic status, blurb |
-| `territories` · `mandala` | Polygon rings for the 24 territories and the four Mandala rings |
+| `factions` | 26 powers: name, kind, colour, epistemic status, blurb |
+| `territories` · `mandala` | Polygon rings for the 25 territories and the four Mandala rings |
 | `regions` · `contours` · `banks` | Physical region outlines · 198 contour lines · six ocean banks |
 | `routes` · `fronts` | 4 routes (historic, land, story, sea) · 3 fronts |
 | `audit` · `ledger` · `unmapped` | 11 audit cards · 14 open location-debt slots · 11 entries deliberately left off the map |
@@ -252,8 +252,8 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 | Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
 | Interactive viewer | ✅ **v1.4** · flat map | Search, filters, layers, measure tool, audit tab, mobile layout. A 3D globe is a parked wish — see *Later* below |
 | Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer; individual Interregna kingdoms are added when the story needs them |
-| Coordinates | 🟡 8 canon · 11 derived · 23 AI-inferred · 1 open *(of 43)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
-| Proposals | 🟡 10 of 43 entries | On the map, but without an atlas entry yet — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
+| Coordinates | 🟡 8 canon · 11 derived · 24 AI-inferred · 1 open *(of 44)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
+| Proposals | 🟡 11 of 44 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
 | Atlas ↔ map v4 reconciliation | 🟠 In progress | Scar rings and the Zona Ambang Ellumāt settled on 29 Sep 2026; coordinates and the sea corridor are the next gates |
 | Location-debt ledger | 🟠 14 open of 22 slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
 | Audit findings | 🟠 8 awaiting a decision · 3 closed | 2 frictions · 3 blank spots · 3 patterns — see the Audit tab |
@@ -262,7 +262,7 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 
 - [x] Physical layer v4 ratified as canon (29 Sep 2026)
 - [x] Viewer v1.4 — search · filters · layers · measure · audit · dark/light
-- [x] 43 map entries · 24 territories · 4 routes · 3 fronts · 3 anomaly pockets
+- [x] 44 map entries · 25 territories · 4 routes · 3 fronts · 3 anomaly pockets
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
 - [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
 - [x] Public edition on GitHub, ready for GitHub Pages

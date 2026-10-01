@@ -25,7 +25,7 @@ for a in ANOMALIES:
     a['d'] = round(float(scar_signed(a['lat'], a['lon'])), 2)
 
 C = dict(  # warna faksi (terbaca di atas terrain)
-    hesperia='#c0394b', cw='#e08a96', kloaka='#8a8a8a', foedera='#2aa38a', cassivalla='#7fd1bd', liminara='#9b6fd6', ktonia='#9fb6c6',
+    hesperia='#c0394b', cw='#e08a96', kloaka='#8a8a8a', foedera='#2aa38a', cassivalla='#7fd1bd', liminara='#9b6fd6', ktonia='#9fb6c6', pylora='#d4a76a',
     anabasim='#ff6a2b', emporys='#f5c542', perates='#4f86e8', anusarri='#e6d47a', andura='#4cc3a8', vasundha='#b58a52', nundina='#ffd970',
     tarvenna='#e0a33a', aventalia='#86a8e6', ir='#b99ad6')
 IR_COLS = ['#c9a86a', '#a58fd0', '#d88b6b', '#8fb07a', '#c98fb2', '#7fa4c9', '#b8a27d']
@@ -46,6 +46,8 @@ FACTIONS = {
      blurb='Koalisi militer lintas ras + Ordo Foederis (akses Sistem II-B via Pharmakeia). Legitimasi: perjanjian (foedus), bukan warisan.'),
  'liminara': dict(name='Liminara', kind='Kingdom · Regional — posisi usulan', color=C['liminara'], epi='inferensi', url=None, blurb='Benteng medan; manufaktur senjata dari besi Ktonia; flora gunung.'),
  'ktonia': dict(name='Ktonia', kind='Kingdom · Regional — posisi usulan', color=C['ktonia'], epi='inferensi', url=None, blurb='Satu-satunya deposit iridescent — material yang memutus proyeksi Sistem II-B.'),
+ 'pylora': dict(name='Pylora', kind='Kingdom · Local — usulan (Draft)', color=C['pylora'], epi='inferensi', url=None,
+     blurb='Penjaga satu-satunya celah tebing pesisir timur; gerbang dua arah (nilai-padat keluar, komoditas Hesperia masuk); klien Peratēs.'),
  'anabasim': dict(name='Anabasim', kind='Tribe (konfederasi Birath–Satvan) · Rising · Regional', color=C['anabasim'], epi='turunan', hatch=True, url=None,
      blurb='Zona konsolidasi di daratan pita Lereng Timur + pijakan zona penyangga Fase 1. Umur teraih Birath ~40–55 tahun di Scar: wilayah = tahun yang dikembalikan.'),
  'emporys': dict(name='Emporys', kind='City-state · Regional — posisi usulan', color=C['emporys'], epi='turunan', url=None, blurb='Simpul pasar netral; netralitas sebagai properti geografis (tanah pita tak bisa diklaim).'),

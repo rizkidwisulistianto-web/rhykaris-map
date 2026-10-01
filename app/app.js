@@ -304,7 +304,7 @@ function main() {
   reg('regions', gRegions, true);
 
   var FAC = DATA.factions;
-  var TGROUP = { hesperia: 'hes', cw_a: 'hes', cw_b: 'hes', cw_c: 'hes', kloaka: 'lain', foedera: 'foe', cassivalla: 'foe', liminara: 'lain', ktonia: 'lain', anabasim: 'ana',
+  var TGROUP = { hesperia: 'hes', cw_a: 'hes', cw_b: 'hes', cw_c: 'hes', kloaka: 'lain', foedera: 'foe', cassivalla: 'foe', liminara: 'lain', ktonia: 'lain', pylora: 'lain', anabasim: 'ana',
                  emporys: 'lain', perates: 'lain', andura: 'elv', anusarri: 'elv', vasundha: 'lain', nundina: 'int', aventalia: 'int', tarvenna: 'int' };
   var TG = { hes: L.layerGroup(), foe: L.layerGroup(), int: L.layerGroup(), ana: L.layerGroup(), elv: L.layerGroup(), lain: L.layerGroup() };
   var gTerrAll = L.layerGroup();

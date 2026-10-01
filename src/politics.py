@@ -103,6 +103,11 @@ POL = [
  # >= 150 km dari laut, CNT == 0, bebas dari wilayah lain) -- pipeline Dijkstra ini belum dijalankan ulang untuk Ktonia,
  # dan dengan bias Liminara 300 km ia mungkin tidak mereproduksi ring itu. Cek dulu sebelum rebuild penuh.
  ('ktonia', 'Ktonia', [(-4.39, 39.90)], 0, 350, ((-4.39, 39.90), 3.0), notband),
+ # Pylora (kerajaan gerbang sungai timur; ketok Opsi A, 01 Okt 2026): titik kursi (-4.31, 44.69), d = -10,11 deg (Adjacent).
+ # CATATAN: ring final di data/politics.json digambar manual dari raster tanah bebas (CNT == 0, d <= -7, <= 150 km dari
+ # alur sungai timur, dikurangi poligon Ktonia + celah 0,14 deg, disederhanakan ke 16 simpul) -- pipeline Dijkstra ini
+ # belum dijalankan ulang untuk Pylora, dan mungkin tidak mereproduksi ring itu. Cek dulu sebelum rebuild penuh.
+ ('pylora', 'Pylora', [(-4.31, 44.69)], 0, 300, ((-4.31, 44.69), 2.5), notband),
 ]
 
 t0 = time.time()
