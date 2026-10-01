@@ -29,6 +29,7 @@ function main() {
   var OFFS = [-360, 0, 360];
   var AUR = DATA.stats.aurelia_lon;
   var measuring = false, mA = null;
+  var viewMode = '2d', compass = null, hoverOn = false;   // v1.5: tampilan aktif, kompas, apakah kursor di atas peta
   var placeById = {}; DATA.places.forEach(function (p) { placeById[p.id] = p; });
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var LS = C.LS;
@@ -48,7 +49,7 @@ function main() {
   // ================================================================ panel samping (diatur sebelum peta agar padding awal tepat)
   var body = document.body;
   var panelOpen = LS.get('rh-panel', window.innerWidth > 760);
-  function setPanel(o) { panelOpen = o; body.classList.toggle('panel-closed', !o); document.getElementById('btn-panel').setAttribute('aria-expanded', String(o)); LS.set('rh-panel', o); setTimeout(function () { map.invalidateSize(); }, 50); }
+  function setPanel(o) { panelOpen = o; body.classList.toggle('panel-closed', !o); document.getElementById('btn-panel').setAttribute('aria-expanded', String(o)); LS.set('rh-panel', o); setTimeout(function () { map.invalidateSize(); if (layerSubs) emitLayer('layout'); }, 50); }
   document.getElementById('btn-panel').addEventListener('click', function () { setPanel(!panelOpen); });
   setPanel(panelOpen);
   function insets() {  // ruang peta yang tertutup panel: {l, b}
@@ -213,15 +214,17 @@ function main() {
     if (c === 'blank') return 'lbl-blank';
     return 'lbl-region';
   }
+  function labelHTML(p) {
+    var sub = (p.cat === 'continent' || p.cat === 'blank' || p.id === 'mare_internum') && p.aka ? '<small>' + esc(p.aka) + '</small>' : '';
+    var nm = LBL_BREAK[p.id] ? breakName(esc(p.name), LBL_BREAK[p.id]) : esc(p.name);
+    return '<div class="mlbl ' + lblClass(p) + (p.proposal ? ' lbl-proposal' : '') + (LBL_MINOR[p.id] ? ' minor' : '') + '" title="' + esc(p.name) + '">' + nm + sub + '</div>';
+  }
   DATA.places.forEach(function (p) {
     var e = { p: p, layers: [] }; entries[p.id] = e;
     OFFS.forEach(function (dx) {
       var m;
       if (p.label_only) {
-        var sub = (p.cat === 'continent' || p.cat === 'blank' || p.id === 'mare_internum') && p.aka ? '<small>' + esc(p.aka) + '</small>' : '';
-        var nm = LBL_BREAK[p.id] ? breakName(esc(p.name), LBL_BREAK[p.id]) : esc(p.name);
-        m = L.marker([p.lat, p.lon + dx], { pane: 'lbl', keyboard: false, icon: L.divIcon({ className: '', iconSize: null,
-          html: '<div class="mlbl ' + lblClass(p) + (p.proposal ? ' lbl-proposal' : '') + (LBL_MINOR[p.id] ? ' minor' : '') + '" title="' + esc(p.name) + '">' + nm + sub + '</div>' }) });
+        m = L.marker([p.lat, p.lon + dx], { pane: 'lbl', keyboard: false, icon: L.divIcon({ className: '', iconSize: null, html: labelHTML(p) }) });
         gLabels.addLayer(m);
       } else {
         var sz = p.cat === 'capital' ? 26 : (p.cat === 'town' ? 20 : 23);
@@ -448,14 +451,15 @@ function main() {
   }
   function gcDeg(a, b) { return C.angDist(a[0], a[1], b[0], b[1]); }
   function pathKm(pts) { var s = 0; for (var i = 1; i < pts.length; i++) s += gcDeg(pts[i - 1], pts[i]); return s * KM_DEG; }
-  map.getContainer().addEventListener('click', function (ev) {
+  function cardAction(ev) {
     var t = ev.target.closest ? ev.target.closest('[data-copy],[data-measure],[data-fac]') : null; if (!t) return;
     if (t.hasAttribute('data-copy')) { ev.preventDefault(); var txt = t.getAttribute('data-copy');
       var done = function () { t.textContent = 'Tersalin ✓'; setTimeout(function () { t.textContent = 'Salin koordinat'; }, 1400); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, function () { t.textContent = txt; }); else t.textContent = txt; }
-    if (t.hasAttribute('data-measure')) { ev.preventDefault(); var p = placeById[t.getAttribute('data-measure')]; startMeasure([p.lat, nearestX(p.lon)]); }
-    if (t.hasAttribute('data-fac')) { ev.preventDefault(); openFaction(t.getAttribute('data-fac'), popup.getLatLng()); }
-  });
+    if (t.hasAttribute('data-measure')) { ev.preventDefault(); var p = placeById[t.getAttribute('data-measure')]; if (viewMode === '3d') leave3D(); startMeasure([p.lat, nearestX(p.lon)]); }
+    if (t.hasAttribute('data-fac')) { ev.preventDefault(); if (viewMode === '3d' && globe) globe.openFaction(t.getAttribute('data-fac')); else openFaction(t.getAttribute('data-fac'), popup.getLatLng()); }
+  }
+  map.getContainer().addEventListener('click', cardAction);
 
   // ================================================================ panel: tabs, pencarian, filter
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tb) { tb.addEventListener('click', function () {
@@ -489,12 +493,16 @@ function main() {
     document.getElementById('n-res').textContent = list.length + ' entri';
   }
   function zoomFor(p) { return p.cat === 'continent' ? 2.4 : (p.label_only ? 3.4 : 4.6); }
-  function goPlace(id) { var p = placeById[id]; if (!p) return; var x = nearestX(p.lon), z = Math.max(map.getZoom(), zoomFor(p));
+  function goPlace(id) { var p = placeById[id]; if (!p) return;
+    if (viewMode === '3d' && globe) { globe.goPlace(p); if (window.innerWidth <= 760) setPanel(false); return; }
+    var x = nearestX(p.lon), z = Math.max(map.getZoom(), zoomFor(p));
     if (REDUCED) map.setView([p.lat, x], z, { animate: false }); else map.flyTo([p.lat, x], z, { duration: 0.9 });
     map.once('moveend', function () { openPlace(id); }); if (window.innerWidth <= 760) setPanel(false); }
   function goFaction(id) { var t = DATA.territories.filter(function (x) { return x.id === id; })[0]; var pts = [];
     if (id === 'anusarri') { DATA.mandala.forEach(function (m) { m.rings.forEach(function (r) { pts = pts.concat(r); }); }); } else if (t) t.rings.forEach(function (r) { pts = pts.concat(r); });
-    if (!pts.length) return; var b = L.latLngBounds(pts); var c = b.getCenter(), dx = nearestX(c.lng) - c.lng; b = L.latLngBounds(shift(pts, dx));
+    if (!pts.length) return;
+    if (viewMode === '3d' && globe) { globe.goFaction(id, pts); if (window.innerWidth <= 760) setPanel(false); return; }
+    var b = L.latLngBounds(pts); var c = b.getCenter(), dx = nearestX(c.lng) - c.lng; b = L.latLngBounds(shift(pts, dx));
     map.flyToBounds(b, { padding: [60, 60], maxZoom: 5, duration: REDUCED ? 0 : 0.9 }); map.once('moveend', function () { openFaction(id, L.latLng(b.getCenter())); }); if (window.innerWidth <= 760) setPanel(false); }
   resEl.addEventListener('click', function (e) { var li = e.target.closest('.res'); if (!li) return; if (li.dataset.fac) goFaction(li.dataset.fac); else goPlace(li.dataset.id); });
   resEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { var li = e.target.closest('.res'); if (li) li.click(); } });
@@ -502,11 +510,13 @@ function main() {
   qEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { var li = resEl.querySelector('.res'); if (li) li.click(); } });
   document.addEventListener('keydown', function (e) {
     if (e.key === '/' && document.activeElement !== qEl) { e.preventDefault(); if (!panelOpen) setPanel(true); document.getElementById('tab-cari').click(); qEl.focus(); }
-    if (e.key === 'Escape') { map.closePopup(); stopMeasure(); }
+    if (e.key === 'Escape') { map.closePopup(); stopMeasure(); if (viewMode === '3d' && globe) globe.closeCard(); }
   });
 
   // ================================================================ tab Layer
+  reg3D('g_moons', true); reg3D('g_orbits', true); reg3D('g_axis', true); reg3D('g_ecl', true);
   var LAYER_UI = [
+    ['Globe 3D', [['g_moons', 'Dua bulan (Inferensi AI)'], ['g_orbits', 'Garis orbit bulan · jarak tidak berskala'], ['g_axis', 'Sumbu rotasi (tegak · kemiringan belum ditetapkan)'], ['g_ecl', 'Bidang ekliptika (ilustratif · sejajar ekuator)']], true],
     ['Dasar & kartografi', [['grat', 'Graticule 15°'], ['mer', 'Tiga meridian'], ['cland', 'Kontur elevasi (1.000/2.500/4.500 m)'], ['csea', 'Kontur batimetri (−200/−3.000/−6.000 m)'], ['labels', 'Label wilayah & perairan'], ['regions', 'Garis region fisik']]],
     ['The Scar', [['band', 'Pita 13,0°'], ['curve', 'Kurva small circle'], ['arcs', 'Empat busur (batas usulan)'], ['anom', 'Kantong anomali massa'], ['zone', 'Zona Castra Birath (tak dikunci)']]],
     ['Wilayah kuasa AS 1647', [['t_hes', 'Hesperia & vasal Commonwealth', '#c0394b'], ['t_foe', 'Foedera & Provincia Cassivallae', '#2aa38a'], ['t_int', 'Kerajaan Interregna & Nundina', '#e0a33a'], ['t_ana', 'Anabasim (konsolidasi Birath–Satvan)', '#ff6a2b'], ['t_elv', 'Andurā (Zona Ambang)', '#4cc3a8'], ['mandala', 'Mandala Kemurnian (Anušarri)', '#e6d47a'], ['t_lain', 'Lainnya: Liminara, Ktonia, Kloaka, Emporys, Peratēs, Vasundha', '#9b6fd6'], ['fronts', 'Front Florian & arah ekspansi Anabasim']]],
@@ -516,7 +526,7 @@ function main() {
   ];
   var secL = document.getElementById('sec-layer');
   LAYER_UI.forEach(function (g) {
-    var d = document.createElement('div'); d.className = 'grp'; d.innerHTML = '<h3>' + esc(g[0]) + '</h3>';
+    var d = document.createElement('div'); d.className = 'grp'; d.innerHTML = '<h3>' + esc(g[0]) + '</h3>'; if (g[2]) { d.hidden = true; d.setAttribute('data-only3d', '1'); }
     g[1].forEach(function (it) { var k = it[0]; if (!LAYERS[k]) return; var id = 'ly-' + k;
       var lab = document.createElement('label'); lab.className = 'layer'; lab.setAttribute('for', id);
       lab.innerHTML = '<input type="checkbox" id="' + id + '"' + (LAYERS[k].on ? ' checked' : '') + '><span>' + (it[2] ? '<span class="sw" style="background:' + it[2] + '"></span>' : '') + esc(it[1]) + '</span><span class="meta"></span>';
@@ -545,7 +555,7 @@ function main() {
     '<dt>Hemisfer Rhykar / Aëris</dt><dd>' + fmt(S.hemR, 2) + ' / ' + fmt(S.hemA, 2) + '</dd><dt>Overlay Scar pada pita 13,0°</dt><dd>' + fmt(S.overlay, 2) + '%</dd>' +
     '<dt>Lebar turunan utk 4,000%</dt><dd>' + fmt(S.width_derived, 2) + '°</dd><dt>Koridor lintas-sutura</dt><dd>1 · ' + esc(S.corridor.split(' (')[0]) + '</dd>' +
     '<dt>Radius planet · keliling</dt><dd>' + fint(S.radius_km) + ' km · ' + fint(S.circ_km) + ' km</dd><dt>Grid raster global</dt><dd>' + esc(S.grid.split(' (')[0]) + ' · 12,7 km/px</dd>' +
-    (DATA.inset ? '<dt>Inset detail wilayah inti</dt><dd>' + DATA.inset.ppd + ' px/° · ' + fmt(KM_DEG / DATA.inset.ppd, 1) + ' km/px</dd>' : '') + '</dl></div>' +
+    (DATA.inset ? '<dt>Inset detail wilayah inti</dt><dd>' + DATA.inset.ppd + ' px/° · ' + fmt(KM_DEG / DATA.inset.ppd, 1) + ' km/px</dd>' : '') + '<dt>Versi viewer</dt><dd>v' + esc(RH.version || '') + ' · peta datar + globe 3D</dd></dl></div>' +
     '<div class="card"><h4>Master Map v4 = peta kanon (29 Sep 2026, Canon Index #208)</h4><p>v4 dibangun ulang dari constraint Master Map v3-D (11 Jul 2026), yang gambar dan script-nya tidak pernah masuk vault. Pipeline baru (seed 1647) memakai semua constraint terkunci sebagai <b>input</b> generator — proporsi, koridor tunggal, teluk, antipode — lalu lapisan fisiknya (garis pantai, relief, sungai, bioma, batimetri) diketok sebagai kanon. Lapisan politik tetap snapshot AS 1647 yang boleh bergeser tanpa versi fisik baru.</p></div>' +
     '<div class="prose"><p><b>Status koordinat.</b> Relasi sebuah lokasi bisa kanon sementara koordinatnya inferensi. Chip di setiap popup menandai status <i>koordinat</i>: ' + chip('kanon') + ' dikunci kanon (bujur 0° teluk, kutub, geometri Scar) · ' + chip('turunan') + ' diturunkan deterministik dari kanon + garis pantai · ' + chip('inferensi') + ' penempatan AI yang patuh relasi kanon · ' + chip('terbuka') + ' sengaja tidak dikunci.</p>' +
     '<p><b>Ambang Scar Proximity (kanon — Canon Index #209, 29 Sep 2026).</b> Pita ±' + fmt(TH.within, 1) + '° = Within · ≤' + fmt(TH.adjacent, 1) + '° (tiga setengah-lebar pita) = Adjacent · ≤' + fmt(TH.peripheral, 1) + '° = Peripheral · selebihnya Unaffected. Polity diukur dari ibukota, wilayah fisik dari sentroid; benua & samudra lintas-cincin tanpa nilai tunggal. Sabuk Transisi Sutura = Adjacent + Peripheral. Semua field kanon cocok setelah Zona Ambang dikoreksi ke Unaffected (#210).</p>' +
@@ -589,9 +599,18 @@ function main() {
     roLL.textContent = fLat(lat) + ' · ' + fLon(lonF);
     var d = scarD(lat, lon); roS.textContent = fmt(Math.abs(d), 1) + '° · ' + fint(Math.abs(d) * KM_DEG) + ' km · ' + PROX_ID[prox(d)] + ' · sisi ' + (d < 0 ? 'Rhykar' : 'Aëris');
     var t = terrainAt(lat, lon); roT.textContent = t ? ((t.el >= 0 ? '+' : '−') + fint(Math.abs(t.el)) + ' m · ' + t.b) : '—';
+    if (compass && viewMode === '2d') updCompass2D(lat, lon, hoverOn ? 'kursor' : 'pusat');
   }
-  map.on('mousemove', function (e) { lastLL = e.latlng; if (rafPend) return; rafPend = true; requestAnimationFrame(function () { rafPend = false; updRO(lastLL); }); });
+  function updCompass2D(lat, lon, src) {
+    var r = C.scarCompass(lat, lon);
+    compass.update({ lat: lat, lon: lon, source: src, northDeg: 0, scarDeg: r.singular ? 0 : C.screenDir2D(lat, r.bearing) });
+  }
+  map.on('mousemove', function (e) { hoverOn = true; lastLL = e.latlng; if (rafPend) return; rafPend = true; requestAnimationFrame(function () { rafPend = false; updRO(lastLL); }); });
   map.on('click', function (e) { lastLL = e.latlng; updRO(e.latlng); });
+  function compassToCenter() { if (compass && viewMode === '2d') { var c = map.getCenter(); updCompass2D(c.lat, lonN(c.lng), 'pusat'); } }
+  map.on('mouseout', function () { hoverOn = false; compassToCenter(); });
+  map.on('move', function () { if (!hoverOn) compassToCenter(); });
+  map.getContainer().addEventListener('touchstart', function () { hoverOn = false; }, { passive: true });
   document.getElementById('readout').addEventListener('click', function (e) { if (e.target.tagName !== 'SELECT') this.classList.toggle('open'); });
   updRO(map.getCenter());
 
@@ -713,11 +732,100 @@ function main() {
   function closeStaleTips() { map.eachLayer(function (l) { var t = l.getTooltip && l.getTooltip(); if (t && !t.options.permanent && l.isTooltipOpen()) l.closeTooltip(); }); }
   map.on('dragstart dragend zoomstart', closeStaleTips);
 
+  // ================================================================ tampilan 2D <-> 3D (v1.5)
+  // Peta datar tetap menjadi tampilan utama. Globe 3D (three.js + modul app/globe/*) dimuat MALAS saat tombol "Globe 3D" ditekan
+  // (atau saat pilihan terakhir pengguna adalah 3D); peta datar tidak mengunduh three.js. Bila three.js gagal dimuat atau WebGL tidak ada,
+  // pengguna mendapat pesan ramah dan tetap di 2D.
+  var MOONS = JSON.parse(document.getElementById('rh-moons').textContent); RH.moons.configure(MOONS);
+  compass = RH.compass.create(document.getElementById('app'));
+  var switching = false, globe = null, globeP = null;
+  var vtBtns = Array.prototype.slice.call(document.querySelectorAll('[data-vt]')), tabGlobe = document.getElementById('tab-globe'), toastEl = document.getElementById('v2-toast'), toastT = null;
+  function toast(html, ms) {
+    toastEl.innerHTML = html; toastEl.hidden = false; clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.hidden = true; }, ms || 9000);
+  }
+  function setViewButton() {
+    var is3 = viewMode === '3d';
+    vtBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(is3)); b.title = is3 ? 'Kembali ke peta datar 2D' : 'Tampilkan globe 3D (peta datar 2D tetap menjadi tampilan utama)'; });
+  }
+  function syncLayerUI() {
+    var is3 = viewMode === '3d';
+    Array.prototype.forEach.call(secL.querySelectorAll('[data-only3d]'), function (g) { g.hidden = !is3; });
+    Object.keys(LAYERS).forEach(function (k) {
+      var L0 = LAYERS[k], inp = document.getElementById('ly-' + k); if (!inp) return;
+      var lab = inp.parentNode, meta = lab.querySelector('.meta'), un = is3 && !L0.adapter3D;
+      inp.disabled = un; lab.classList.toggle('na', un);
+      if (un) lab.setAttribute('title', L0.reason3D || 'Belum tersedia di tampilan 3D'); else lab.removeAttribute('title');
+      if (meta) meta.textContent = un ? 'tak ada di 3D' : '';
+    });
+  }
+  function tgroupOf(t) { return TGROUP[t.id] || (t.id.indexOf('ir_') === 0 ? 'int' : 'lain'); }
+  function globeCtx() {
+    return {
+      DATA: DATA, MOONS: MOONS, C: C, LAYERS: LAYERS, placeById: placeById, FAC: FAC, BASE: BASE, TERR: TERR, REDUCED: REDUCED, LS: LS, version: RH.version,
+      styles: { REG_STYLE: REG_STYLE, TGROUP: TGROUP, MOP: MOP, RST: RST, CST: CST, MER: MER, ARCS: ARCS, SC: SC, tgroupOf: tgroupOf },
+      scar: { outer: outer, inner: inner, curve: curve },
+      visible: visible, groupOf: groupOf, markerHTML: markerHTML, lblClass: lblClass, breakName: breakName, LBL_BREAK: LBL_BREAK, LBL_MINOR: LBL_MINOR,
+      labelHTML: labelHTML, DECL: { LBL_SIDE: LBL_SIDE, PRI: PRI, EPR: EPR }, cardAction: cardAction, closePanel: function () { setPanel(false); },
+      cards: { place: placeHTML, faction: factionHTML, mandala: mandalaHTML, route: routeHTML, bank: BANK_HTML },
+      readout: function (ll) { lastLL = ll; updRO(ll); }, compass: compass, insets: insets, panelOpen: function () { return panelOpen; },
+      onEvent: onLayerEvent, setLayer: setLayer, syncLayerUI: syncLayerUI, toast: toast, esc: esc,
+      setHash: function (id) { try { if (id) history.replaceState(null, '', '#' + id); else history.replaceState(null, '', location.pathname + location.search); } catch (e) {} },
+      to2D: function () { return leave3D(); },
+    };
+  }
+  function loadGlobe() {
+    if (globeP) return globeP;
+    globeP = C.loadThree().then(function (THREE) {
+      if (!RH.globe) { var sc = document.createElement('script'); sc.textContent = document.getElementById('rh-globe-src').textContent; document.head.appendChild(sc); }
+      if (!RH.globe || !RH.globe.init) throw new Error('modul globe tidak terpasang');
+      return RH.globe.init(THREE, globeCtx());
+    }).catch(function (e) { globeP = null; throw e; });
+    return globeP;
+  }
+  function enter3D(opts) {
+    opts = opts || {};
+    if (viewMode === '3d' || switching) return Promise.resolve(viewMode === '3d');
+    if (!C.hasWebGL()) { toast('<b>Globe 3D tidak bisa dibuka:</b> peramban ini tidak mendukung WebGL (atau WebGL dimatikan). Peta datar 2D tetap berfungsi penuh.'); return Promise.resolve(false); }
+    switching = true; vtBtns.forEach(function (b) { b.setAttribute('aria-busy', 'true'); b.disabled = true; });
+    var ins = insets(), sz = map.getSize(), c = map.containerPointToLatLng([ins.l + (sz.x - ins.l) / 2, (sz.y - ins.b) / 2]);   // pusat area yang tidak tertutup panel
+    var focus = { lat: Math.max(-85, Math.min(85, c.lat)), lon: lonN(c.lng), zoom: map.getZoom() };
+    return loadGlobe().then(function (g) {
+      globe = g; viewMode = '3d';
+      document.body.classList.add('in-3d'); tabGlobe.hidden = false;
+      map.closePopup(); stopMeasure(); btnMeas.disabled = true; btnMeas.title = 'Ukur jarak tersedia di tampilan 2D';
+      LS.set('rh-view', '3d'); setViewButton(); syncLayerUI();
+      g.show(focus, { instant: REDUCED || !!opts.instant });
+      return true;
+    }).catch(function (e) {
+      console.error(e);
+      toast('<b>Globe 3D tidak bisa dimuat.</b> Pustaka three.js gagal diunduh (periksa koneksi internet; sumber CDN dan salinan lokal sudah dicoba). Peta datar 2D tetap berfungsi penuh.');
+      return false;
+    }).then(function (ok) { switching = false; vtBtns.forEach(function (b) { b.removeAttribute('aria-busy'); b.disabled = false; }); return ok; });
+  }
+  function leave3D() {
+    if (viewMode !== '3d' || !globe) return;
+    var f = globe.getFocus();
+    globe.hide();
+    viewMode = '2d'; document.body.classList.remove('in-3d'); tabGlobe.hidden = true;
+    if (document.getElementById('tab-globe').getAttribute('aria-selected') === 'true') document.getElementById('tab-layer').click();
+    btnMeas.disabled = false; btnMeas.title = 'Ukur jarak: ketuk dua titik di peta';
+    LS.set('rh-view', '2d'); setViewButton(); syncLayerUI();
+    map.invalidateSize(); map.setView([f.lat, nearestX(f.lon)], Math.max(map.getMinZoom(), Math.min(6, f.zoom)), { animate: false });
+    var ins = insets(); map.panBy([-ins.l / 2, ins.b / 2], { animate: false });   // fokus globe → pusat area bebas peta datar
+    hoverOn = false; updRO(map.getCenter()); drawGratLabels(); queueDeclutter();
+  }
+  vtBtns.forEach(function (b) { b.addEventListener('click', function () { if (viewMode === '3d') leave3D(); else enter3D(); }); });
+  setViewButton();
+
   // ================================================================ render awal & tautan dalam
   applyFilters(); drawGratLabels(); queueDeclutter();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(queueDeclutter);
   var h0 = (location.hash || '').replace('#', '');
-  if (h0 && placeById[h0]) setTimeout(function () { goPlace(h0); }, 300);
+  var qv = (location.search.match(/[?&]view=(2d|3d)\b/) || [])[1];
+  var bootView = qv || LS.get('rh-view', '2d');
+  if (bootView === '3d') enter3D({ instant: true }).then(function (ok) { if (ok && h0 && placeById[h0]) setTimeout(function () { goPlace(h0); }, 200); else if (!ok && h0 && placeById[h0]) goPlace(h0); });
+  else if (h0 && placeById[h0]) setTimeout(function () { goPlace(h0); }, 300);
   map.on('popupclose', function () { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} });
 }
 
