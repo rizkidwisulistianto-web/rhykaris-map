@@ -401,3 +401,10 @@ body.in-disk #map .leaflet-map-pane{visibility:hidden}
 @media (min-width:761px) and (max-width:1100px){ #btn-disk .lbl{display:none} }
 @media (max-width:760px){ #disk .g-epi{left:var(--gut)!important;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));gap:4px} #disk .g-epi span{font-size:9.5px;padding:2px 6px} }
 @media (max-width:760px){ #disk .d-note{top:auto!important;bottom:calc(124px + env(safe-area-inset-bottom,0px))!important} #disk .d-note span:nth-child(n+2){display:none} }
+
+/* ---------- kontras (WCAG AA) untuk UI baru di tema terang: --ink-3 ≈ 4,0 : 1 dan teks putih di atas --sea ≈ 4,0 : 1 ---------- */
+#sec-globe .gctl .note, #sec-globe .gctl .val, #sec-globe .grp h3, #compass .cp-l3, #compass .cp-key, #globe .g-epi span small, #disk .g-epi span small{color:var(--ink-2)}
+:root[data-theme="light"] .tbtn.v2-chrome[aria-pressed="true"], :root[data-theme="light"] #g-dock .tbtn[aria-pressed="true"]{background:var(--sea-2);border-color:var(--sea-2);color:#fff}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]) .tbtn.v2-chrome[aria-pressed="true"], :root:not([data-theme="dark"]) #g-dock .tbtn[aria-pressed="true"]{background:var(--sea-2);border-color:var(--sea-2);color:#fff}
+}

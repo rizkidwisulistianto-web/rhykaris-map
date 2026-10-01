@@ -459,6 +459,22 @@ await run('console clean, render pauses when hidden', async () => {
   await page.locator('#btn-legend').click(); await page.locator('#btn-theme').click();
   t('no console errors/warnings and no page errors during a normal 3D session', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
   const dpr = await page.evaluate(() => window.__rhGlobe.info().dpr); t('pixel ratio capped at 2', dpr <= 2);
+  // hidden tab: no frames, no simulation; resumes without a time jump when visible again
+  await page.evaluate(() => { window.__rhGlobe._state.spin = true; window.__rhGlobe._S.dirty(); }); await page.waitForTimeout(400);
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
+  const h0 = await page.evaluate(() => ({ f: window.__rhGlobe.info().frames, lon: window.__rhGlobe._S.view.lon })); await page.waitForTimeout(900);
+  const h1 = await page.evaluate(() => ({ f: window.__rhGlobe.info().frames, lon: window.__rhGlobe._S.view.lon }));
+  t(`hidden tab: rendering and rotation stop (frames ${h0.f}→${h1.f}, lon ${h0.lon.toFixed(2)}→${h1.lon.toFixed(2)})`, h1.f === h0.f && near(h1.lon, h0.lon, 1e-9));
+  await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); }); await page.waitForTimeout(900);
+  const h2 = await page.evaluate(() => ({ f: window.__rhGlobe.info().frames, lon: window.__rhGlobe._S.view.lon }));
+  t('visible again: rendering resumes and the rotation did not jump', h2.f > h1.f && Math.abs(((h2.lon - h1.lon + 540) % 360) - 180) < 12, JSON.stringify([h1, h2]));
+  // WebGL context loss: friendly toast, no crash, recovers
+  await page.evaluate(() => { window.__rhGlobe._state.spin = false; });
+  await page.evaluate(() => { const gl = window.__rhGlobe._S.renderer.getContext(); window.__lose = gl.getExtension('WEBGL_lose_context'); window.__lose.loseContext(); }); await page.waitForTimeout(500);
+  t('context loss: friendly toast and the page keeps working', await page.evaluate(() => /Konteks grafis globe hilang/.test(document.getElementById('v2-toast').innerText)) && ev.errors.length === 0);
+  await page.evaluate(() => window.__lose.restoreContext()); await page.waitForTimeout(800);
+  const f0 = await page.evaluate(() => window.__rhGlobe.info().frames); await page.evaluate(() => window.__rhGlobe._S.dirty()); await page.waitForTimeout(1500);
+  t('after the context is restored the globe renders again', (await page.evaluate(() => window.__rhGlobe.info().frames)) > f0 && ev.errors.length === 0, JSON.stringify(ev.errors));
   await ctx.close();
 });
 

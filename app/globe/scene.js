@@ -294,6 +294,7 @@ G.createScene = function (rootEl, ctx) {
   function loop(t) {
     if (!S.running) return;
     S.raf = requestAnimationFrame(loop);
+    if (document.hidden) return;   // tab tersembunyi: tidak ada simulasi dan tidak ada render (rAF peramban juga dihentikan)
     var now = t / 1000, dt = Math.min(0.5, Math.max(0, now - S.last)); S.last = now;   // jam simulasi mengikuti waktu nyata (batas 0,5 dtk menahan lompatan setelah tab disembunyikan)
     for (var i = 0; i < S.hooks.length; i++) S.hooks[i](dt);
     if (S.isDirty) { S.isDirty = false; S.render(); S.frames = (S.frames || 0) + 1; }
