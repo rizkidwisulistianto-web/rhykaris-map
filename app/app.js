@@ -325,7 +325,7 @@ function main() {
   });
   // mandala Elvari: gradasi tanpa tepi
   var gMand = L.layerGroup(); var MOP = [0.46, 0.32, 0.18, 0.07];
-  var RINGTXT = ['Ring 0 — Libbāl: kursi Sarum, kuil Lex Aēlis, arsip standar, jangkar meridian Elvari.', 'Ring 1 — dataran inti: kota-kota Sarum/Marum, kanon budaya penuh, produksi Iridescent (entri menyusul).',
+  var RINGTXT = ['Ring 0 — Libbāl: kursi Sarum, kuil Lex Aēlis, arsip standar, jangkar meridian Elvari.', 'Ring 1 — dataran inti: kota-kota Sarum/Marum, kanon budaya penuh (entri menyusul).',
                  'Ring 2 — lingkar dagang & pesisir: pelabuhan Marum, gerbang diplomatik manusia; standar melonggar (entri menyusul).', 'Ring 3 — pinggiran; di barat-daya menjadi Zona Ambang (Napûm Berteritori, Andurā), di atas kantong anomali massa #3.'];
   DATA.mandala.forEach(function (m) { m.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
     var pl = L.polygon(shift(ring, dx), { renderer: svgMand, stroke: false, fillColor: FAC.anusarri.color, fillOpacity: MOP[m.ring], smoothFactor: 1.5 });
