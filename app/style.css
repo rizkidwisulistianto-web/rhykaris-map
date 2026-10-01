@@ -408,3 +408,16 @@ body.in-disk #map .leaflet-map-pane{visibility:hidden}
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]) .tbtn.v2-chrome[aria-pressed="true"], :root:not([data-theme="dark"]) #g-dock .tbtn[aria-pressed="true"]{background:var(--sea-2);border-color:var(--sea-2);color:#fff}
 }
+
+/* ---------- ukur jarak di globe 3D dan peta kerja (v1.6.1) ---------- */
+#globe .g-mdot{width:14px;height:14px;box-sizing:border-box;border-radius:50%;background:#ff7a3d;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
+#globe .g-mtip{padding:6px 9px;border-radius:8px;background:var(--panel);color:var(--ink);border:1px solid var(--line-2);box-shadow:var(--shadow);font:500 11.5px/1.45 var(--f-ui);white-space:nowrap;pointer-events:none}
+#globe .g-mtip{transform:translateY(-100%)}   /* di atas-kanan titik tujuan: tooltip hover (di bawah-kanan kursor) tidak menimpanya */
+#globe .g-mtip b{font-weight:600}
+#globe .g-pin.g-mpin{z-index:4}
+#globe.meas, #globe.meas.pick, #disk.meas, #disk.meas.pick{cursor:crosshair}
+#globe.meas.dragging, #disk.meas.dragging{cursor:grabbing}
+@media (max-width:760px){
+  body.has-mhint #globe .g-epi, body.has-mhint #disk .g-epi{top:calc(138px + var(--mhint-h,0px) + env(safe-area-inset-top,0px))}
+  body.has-mhint #globe .g-mtip{display:none}
+}

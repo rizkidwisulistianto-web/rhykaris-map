@@ -60,7 +60,7 @@ await run('toggle & lazy loading', async () => {
   t('three.js requested after entering 3D (exactly one source used)', ev.requests.filter((u) => /three/i.test(u)).length === 1, ev.requests.filter((u) => /three/i.test(u)).join());
   t('aria-pressed is true in 3D', (await btn.getAttribute('aria-pressed')) === 'true');
   t('choice is remembered', (await page.evaluate(() => localStorage.getItem('rh-view'))) === '"3d"');
-  t('Globe tab appears, Ukur is disabled in 3D', !(await page.locator('#tab-globe').isHidden()) && (await page.locator('#btn-measure').isDisabled()));
+  t('Globe tab appears, Ukur stays enabled in 3D (v1.6.1: the measure tool works on the globe)', !(await page.locator('#tab-globe').isHidden()) && !(await page.locator('#btn-measure').isDisabled()));
   await btn.click(); await page.waitForTimeout(300);
   t('back to 2D: body class removed, map pane visible again, remembered 2d', await page.evaluate(() => !document.body.classList.contains('in-3d') && getComputedStyle(document.querySelector('.leaflet-map-pane')).visibility !== 'hidden' && localStorage.getItem('rh-view') === '"2d"'));
   t('back to 2D: Ukur enabled, Globe tab hidden', !(await page.locator('#btn-measure').isDisabled()) && (await page.locator('#tab-globe').isHidden()));

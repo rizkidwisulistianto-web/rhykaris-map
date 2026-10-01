@@ -160,7 +160,7 @@ DK.init = function (ctx) {
     '<span>Rim cakram Aëris: skala radial ' + C.fmt(M.radialScale(M.RIM_A), 2) + ' (107,5°)</span><span>Cincin dari kurva Scar: Within ≤ 6,5° · Adjacent ≤ 19,5° · Peripheral ≤ 32,5°</span>';
 
   var DPR = 1, W = 1, H = 1, orient = 'h', orientPref = LS.get('rh-d-orient', 'auto'), L = M.layout('h');
-  var st = { shown: false, cx: 0, cy: 0, scale: 100, hover: null, hoverPx: null };   // (cx, cy): titik lembar (Rs) di pusat area bebas; scale: px per Rs
+  var st = { shown: false, cx: 0, cy: 0, scale: 100, hover: null, hoverPx: null, meas: false }, meas = null;   // meas (state): mode ukur aktif; meas (var): hasil ukur yang digambar   // (cx, cy): titik lembar (Rs) di pusat area bebas; scale: px per Rs
   var sheets = {}, texData = null, texW = 0, texH = 0, sheetBuilding = null, RS_PX = 500;
   var tipTxt = '';
 
@@ -221,7 +221,7 @@ DK.init = function (ctx) {
     var sz = p.cat === 'capital' ? 26 : (p.cat === 'town' ? 20 : 23), w = document.createElement('div'); w.className = 'g-pin'; w.style.display = 'none';
     var el = document.createElement('div'); el.innerHTML = ctx.markerHTML(p, sz); var mk = el.firstChild;
     mk.setAttribute('role', 'button'); mk.tabIndex = 0; mk.setAttribute('aria-label', p.name + (p.proposal ? ' (usulan)' : '') + ', status koordinat ' + C.EPI[p.epi]); mk.title = p.name;
-    mk.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(p.id); } });
+    mk.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (st.meas) ctx.measureAt(p.lat, p.lon); else openPlace(p.id); } });
     w.appendChild(el); pinsEl.appendChild(w); pins.push({ p: p, wrap: w, nm: mk.querySelector('.mk-name'), size: sz, shown: false, sx: 0, sy: 0, copies: [] });
   });
   var anoms = ctx.DATA.anomalies.map(function (a) { var w = document.createElement('div'); w.className = 'g-anom'; w.style.display = 'none'; w.innerHTML = '<b></b><i></i>'; pinsEl.appendChild(w); return { a: a, wrap: w, shown: false, sx: 0, sy: 0 }; });
@@ -285,6 +285,7 @@ DK.init = function (ctx) {
     }
     // graticule 15° dan tiga meridian (garis lengkung pada proyeksi)
     if (on('grat') || on('mer')) { drawGrat(); }
+    if (meas) drawMeas();
     placePins();
     root.setAttribute('data-z', String(clamp(Math.floor(2 + 2.2 * Math.log(st.scale / fitScale()) / Math.LN2), 0, 7)));
     updateCompass();
@@ -299,6 +300,20 @@ DK.init = function (ctx) {
         if (open) g.lineTo(s.x, s.y); else { g.moveTo(s.x, s.y); open = true; }
       });
       g.stroke();
+    });
+  }
+  // hasil ukur: busur besar (putus di luar cakram), titik awal dan tujuan di setiap cakram yang memuatnya, serta jarak di titik tujuan
+  function drawMeas() {
+    if (meas.pts) {
+      g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.setLineDash([]); g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 5; polyline(meas.pts);
+      g.setLineDash([6, 5]); g.strokeStyle = '#fff3d6'; g.lineWidth = 2.2; polyline(meas.pts); g.restore();
+    }
+    [meas.a, meas.b].forEach(function (q, i) {
+      if (!q) return;
+      M.project(q[0], q[1], L).forEach(function (pr) {
+        var s = toScreen(pr.x, pr.y); g.beginPath(); g.arc(s.x, s.y, 5.5, 0, Math.PI * 2); g.fillStyle = '#ff7a3d'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#fff'; g.stroke();
+        if (i === 1 && meas.label) text(meas.label, s.x + 12, s.y - 12, { align: 'left', font: '600 12px "IBM Plex Sans", system-ui, sans-serif', color: '#fff3d6' });
+      });
     });
   }
   function dense(a, b, step) { var n = Math.max(2, Math.ceil(Math.abs(b[0] - a[0] || b[1] - a[1]) / step)), out = []; for (var i = 0; i <= n; i++) out.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); return out; }
@@ -403,6 +418,7 @@ DK.init = function (ctx) {
   });
   function click(e) {
     var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, h = pinAt(px, py, e.pointerType === 'touch' ? 1.9 : 1);
+    if (st.meas) { var mpl = h && ctx.placeById[h.id], mu = pointToLatLon(px, py); if (mpl && !mpl.label_only) ctx.measureAt(mpl.lat, mpl.lon); else if (mu) ctx.measureAt(mu.lat, mu.lon); return; }   // mode ukur: marker = titik tepat, selain itu titik di cakram
     if (h) { openPlace(h.id); return; }
     var u = pointToLatLon(px, py); if (u) { ctx.readout({ lat: u.lat, lng: u.lon }); st.hover = { lat: u.lat, lon: u.lon }; }
     closeCard();
@@ -424,11 +440,15 @@ DK.init = function (ctx) {
       if (focus0 && z >= 3) { var pr = M.project(focus0.lat, focus0.lon, L)[0]; if (pr) { st.cx = pr.x; st.cy = pr.y; st.scale = fitScale() * Math.min(5, Math.pow(2, (z - 2) / 1.6)); limitView(); } }
       return buildSheet(orient).then(function () { draw(); ctx.syncLayerUI(); });
     },
-    hide: function () { st.shown = false; root.hidden = true; dockEl.hidden = true; closeCard(); busyEl.hidden = true; tipEl.hidden = true; },
+    hide: function () { st.shown = false; st.meas = false; root.classList.remove('meas'); root.hidden = true; dockEl.hidden = true; closeCard(); busyEl.hidden = true; tipEl.hidden = true; },
     getFocus: function () { var f = focus(), z = clamp(2 + 1.6 * Math.log(st.scale / fitScale()) / Math.LN2, 0.5, 6); return { lat: clamp(f.lat, -85, 85), lon: C.lonN(f.lon), zoom: z }; },
-    goPlace: function (p) { var pr = M.project(p.lat, p.lon, L); if (!pr.length) return; var b = pr[0].theta <= M.RIM_R || pr.length === 1 ? pr[0] : pr[1]; st.cx = b.x; st.cy = b.y; st.scale = Math.max(st.scale, fitScale() * (p.label_only ? 1.6 : 2.6)); limitView(); draw(); setTimeout(function () { openPlace(p.id); }, REDUCED ? 0 : 80); },
+    goPlace: function (p) { var pr = M.project(p.lat, p.lon, L); if (!pr.length) return; var b = pr[0].theta <= M.RIM_R || pr.length === 1 ? pr[0] : pr[1]; st.cx = b.x; st.cy = b.y; st.scale = Math.max(st.scale, fitScale() * (p.label_only ? 1.6 : 2.6)); limitView(); draw(); setTimeout(function () { if (!st.meas) openPlace(p.id); }, REDUCED ? 0 : 80); },
     goFaction: function (id, pts) { var la = 0, lo = [0, 0]; pts.forEach(function (q) { la += q[0]; var a = q[1] * D2R; lo[0] += Math.cos(a); lo[1] += Math.sin(a); }); var cLat = la / pts.length, cLon = Math.atan2(lo[1], lo[0]) * R2D, pr = M.project(cLat, cLon, L); if (!pr.length) return; st.cx = pr[0].x; st.cy = pr[0].y; st.scale = Math.max(st.scale, fitScale() * 2); limitView(); draw(); ctl.openFaction(id); },
     openFaction: function (id) { ctx.card.open(id === 'anusarri' ? ctx.cards.mandala(0) : ctx.cards.faction(id), 'fac:' + id); },
+    /** Ukur jarak: app.js memegang keadaan; modul ini menangkap ketukan dan menggambar garis, titik, dan jarak. */
+    setMeasure: function (m) { meas = m && m.a ? m : null; draw(); },
+    _measure: function () { return meas; },
+    setMeasureMode: function (on) { st.meas = !!on; root.classList.toggle('meas', st.meas); if (st.meas) { tipEl.hidden = true; root.classList.remove('pick'); } },
     closeCard: closeCard, relayout: function () { if (st.shown) resize(); },
     layerStatus: function () { var o = {}; Object.keys(LAY).forEach(function (k) { o[k] = { on: LAY[k].on, adapterDisk: !!LAY[k].adapterDisk, reason: LAY[k].reasonDisk || null }; }); return o; },
     info: function () { var s = sheets[orient]; return { orient: orient, scale: st.scale, fit: fitScale(), cx: st.cx, cy: st.cy, sheet: s ? { w: s.w, h: s.h, RsPx: s.RsPx, counts: s.counts, ms: s.ms } : null, layout: L, W: W, H: H, hover: st.hover, pins: pins.filter(function (n) { return n.shown; }).length }; },
