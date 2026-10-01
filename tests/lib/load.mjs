@@ -4,7 +4,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { ROOT } from './server.mjs';
 
-export function loadRH(files = ['app/core.js', 'app/moons.js', 'app/compass.js']) {
+export function loadRH(files = ['app/core.js', 'app/moons.js', 'app/compass.js', 'app/disk.js']) {
   const ctx = vm.createContext({ console, URL, Math, Date, JSON, Promise });
   ctx.window = ctx; ctx.globalThis = ctx;
   for (const f of files) {

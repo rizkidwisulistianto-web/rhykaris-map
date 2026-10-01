@@ -93,10 +93,9 @@ G.createLayers = function (S, ctx, labelsEl) {
   }
   var lastDecl = 0, declT = 0;
   var DEC = ctx.DECL;
-  function overlap(a, b) { return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; }
-  function declutter() {   // sama dengan peta datar: ikon selalu tampil; nama marker kanan/kiri menurut prioritas, disembunyikan bila bentrok
+  function declutter() {   // sama dengan peta datar (C.declutterNames): ikon selalu tampil; nama marker kanan/kiri menurut prioritas, disembunyikan bila bentrok
     declT = 0; lastDecl = performance.now();
-    var cr = labelsEl.getBoundingClientRect(), obst = [], items = [], W = S.W, H = S.H;
+    var cr = labelsEl.getBoundingClientRect(), obst = [], items = [];
     pins.forEach(function (n) {
       if (!n.shown) return;
       if (n.kind === 'marker') {
@@ -107,21 +106,7 @@ G.createLayers = function (S, ctx, labelsEl) {
         obst.push([r.left - cr.left, r.top - cr.top, r.right - cr.left, r.bottom - cr.top, null]);
       }
     });
-    items.sort(function (a, b) { var pa = DEC.PRI[a.p.cat] != null ? DEC.PRI[a.p.cat] : 4, pb = DEC.PRI[b.p.cat] != null ? DEC.PRI[b.p.cat] : 4; return (pa - pb) || ((DEC.EPR[a.p.epi] || 0) - (DEC.EPR[b.p.epi] || 0)); });
-    var placed = [];
-    items.forEach(function (it) {
-      var w = it.nm.offsetWidth, h = it.nm.offsetHeight; if (!w) return;
-      var x = it.sx, y = it.sy, s2 = it.size / 2;
-      var R = [x + s2 + 1, y - h / 2 + 1, x + s2 + 3 + w, y + h / 2 - 1], Lf = [x - s2 - 3 - w, y - h / 2 + 1, x - s2 - 1, y + h / 2 - 1];
-      var cand = DEC.LBL_SIDE[it.p.id] === 'l' ? [['l', Lf], ['r', R]] : [['r', R], ['l', Lf]], ok = null;
-      for (var i = 0; i < cand.length && !ok; i++) {
-        var rc = cand[i][1], hit = false;
-        for (var j = 0; j < obst.length && !hit; j++) if (obst[j][4] !== it && overlap(rc, obst[j])) hit = true;
-        for (var k = 0; k < placed.length && !hit; k++) if (overlap(rc, placed[k])) hit = true;
-        if (!hit) ok = cand[i];
-      }
-      if (ok) { placed.push(ok[1]); it.nm.classList.toggle('l', ok[0] === 'l'); } else it.nm.classList.add('hide');
-    });
+    C.declutterNames(items, obst, DEC);
   }
   function queueDeclutter() { if (declT) return; var wait = Math.max(0, 140 - (performance.now() - lastDecl)); declT = setTimeout(declutter, wait); }
   S.afterRender(function () { placePins(); queueDeclutter(); });

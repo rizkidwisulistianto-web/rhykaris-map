@@ -351,3 +351,53 @@ body.panel-closed #globe .g-epi{left:var(--gut)}
 .gctl .note{font-size:11.8px;color:var(--ink-3);margin:0}
 .gctl .note b{color:var(--ink-2);font-weight:600}
 .gctl .bad{color:var(--bad)}
+
+/* ---------- peta kerja dual-disk (Canvas 2D; memakai ulang gaya pin/tooltip/strip globe) ---------- */
+#disk{position:absolute;inset:0;z-index:500;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--void) 82%,#2a3a48) 0%,var(--void) 68%)}
+#disk.dragging{cursor:grabbing}
+#disk.pick{cursor:pointer}
+#disk.fade{opacity:0;transition:opacity .28s ease}
+#disk.fade.in{opacity:1}
+#disk canvas.d-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
+#disk canvas.d-canvas:focus-visible{outline:2px solid var(--sea);outline-offset:-3px}
+#disk .g-labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#disk .g-pin{position:absolute;left:0;top:0;will-change:transform;pointer-events:none}
+#disk .g-pin .mlbl{transform:translate(-50%,-50%);pointer-events:none}
+#disk .g-pin.hide{display:none}
+#disk .g-pin .mk{pointer-events:none}
+#disk .g-pin .mk:focus-visible svg{filter:drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px var(--brass))}
+#disk .g-anom{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;will-change:transform}
+#disk .g-anom i{position:absolute;border:1.5px dashed #ffb07a;border-radius:50%;left:-17px;top:-17px;width:34px;height:34px;box-sizing:border-box;background:rgba(255,122,61,.06);pointer-events:none}
+#disk .g-anom b{position:absolute;border:1px dotted rgba(255,176,122,.5);border-radius:50%;left:-24px;top:-24px;width:48px;height:48px;box-sizing:border-box;pointer-events:none}
+#disk .g-moon-lbl{position:absolute;left:0;top:0;white-space:nowrap;font:600 11px/1 var(--f-ui);letter-spacing:.04em;color:var(--lbl-ink);pointer-events:none;will-change:transform;
+  text-shadow:0 0 2px var(--lbl-halo),0 0 5px var(--lbl-halo),0 0 8px var(--lbl-halo)}
+#disk .g-moon-lbl small{display:block;font:500 9.5px/1.2 var(--f-mono);opacity:.85;margin-top:2px}
+#disk .g-note{position:absolute;left:0;top:0;white-space:nowrap;font:italic 500 11px/1.2 var(--f-water);color:#cfe3ea;opacity:.9;pointer-events:none;will-change:transform;
+  text-shadow:0 0 3px var(--lbl-halo),0 0 6px var(--lbl-halo)}
+#disk .g-tip{position:absolute;left:0;top:0;z-index:5;pointer-events:none;padding:5px 8px;border-radius:7px;background:var(--panel);color:var(--ink);border:1px solid var(--line-2);box-shadow:var(--shadow);font:500 12px var(--f-ui);white-space:nowrap}
+#disk .g-epi{position:absolute;left:calc(var(--gut) + 348px + 12px);bottom:calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;max-width:min(440px,calc(100vw - 2 * var(--gut)));pointer-events:none;z-index:3}
+body.panel-closed #disk .g-epi{left:var(--gut)}
+#disk .g-epi span{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font:500 10.5px/1.2 var(--f-ui);color:var(--ink-2);white-space:nowrap}
+#disk .g-epi .epi{font-size:9px;padding:2px 5px}
+#disk[data-z="0"] .lbl-region, #disk[data-z="1"] .lbl-region{display:none}
+#disk[data-z="0"] .lbl-arc{display:none}
+#disk[data-z="0"] .lbl-water:not(.big){display:none}
+#disk[data-z="0"] .mk .mk-name, #disk[data-z="1"] .mk .mk-name, #disk[data-z="2"] .mk:not(.cap) .mk-name{display:none}
+#disk[data-z="0"] .mk:not(.cap){opacity:0;pointer-events:none}
+#disk[data-z="0"] .mlbl.minor, #disk[data-z="1"] .mlbl.minor, #disk[data-z="2"] .mlbl.minor, #disk[data-z="3"] .mlbl.minor{display:none}
+#disk .mk .mk-name{pointer-events:none}
+#disk .d-busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--sea);box-shadow:var(--shadow);font:500 12.5px var(--f-mono);color:var(--ink);z-index:6}
+#disk .d-note{max-width:min(520px,calc(100vw - 2 * var(--gut)))}
+#d-dock{position:absolute;z-index:999;right:calc(var(--gut) + 176px);bottom:calc(56px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:min(420px,calc(100vw - 2 * var(--gut) - 176px))}
+#d-dock .tbtn{height:34px}
+body.in-disk .scale{display:none}
+body.in-disk #map .leaflet-map-pane{visibility:hidden}
+#btn-disk-m{display:none}
+@media (max-width:760px){
+  .tools #btn-disk{display:none} #btn-disk-m{display:inline-flex;height:30px;min-width:30px;padding:0 8px;font-size:12px;box-shadow:none} #btn-disk-m .lbl{display:none}
+  #d-dock{right:calc(var(--gut) + 140px);bottom:calc(64px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 2 * var(--gut) - 140px)} #d-dock .tbtn .lbl{display:none}
+}
+@media (min-width:761px) and (max-width:1100px){ #btn-disk .lbl{display:none} }
+@media (max-width:760px){ #disk .g-epi{left:var(--gut)!important;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));gap:4px} #disk .g-epi span{font-size:9.5px;padding:2px 6px} }
+@media (max-width:760px){ #disk .d-note{top:auto!important;bottom:calc(124px + env(safe-area-inset-bottom,0px))!important} #disk .d-note span:nth-child(n+2){display:none} }

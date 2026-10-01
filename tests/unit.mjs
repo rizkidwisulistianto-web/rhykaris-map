@@ -151,5 +151,95 @@ for (const m of [big, small]) {   // compressed orbit keeps e exactly
 nearName('moons.json provenance: all moons Inferensi AI', MOONS.moons.filter((m) => m.epi === 'inferensi').length, 2, 0);
 t('moons.json top-level epi is inferensi', MOONS.epi === 'inferensi');
 
+
+// ---------------------------------------------------------------- dual-disk Lambert azimuthal equal-area (RH.disk.math)
+{
+  const K = RH.disk.math, D2R = Math.PI / 180;
+  const dotv = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  t('frame: a, u0, u90 are orthonormal', near(dotv(K.a, K.a), 1, 1e-12) && near(dotv(K.u0, K.u0), 1, 1e-12) && near(dotv(K.u90, K.u90), 1, 1e-12) && near(dotv(K.a, K.u0), 0, 1e-12) && near(dotv(K.a, K.u90), 0, 1e-12) && near(dotv(K.u0, K.u90), 0, 1e-12));
+  nearName('u90 is local east at the Scar centre (+y, lon 90°)', K.u90[1], 1, 1e-12);
+  // the disk azimuth is the SAME parametrisation as the Scar curve used by the 2D/3D viewers (RH.core.circlePt)
+  let dev = 0; for (let al = -180; al < 180; al += 7.3) { const p = K.fromPolar(72.5, al), q = C.circlePt(al, 72.5); dev = Math.max(dev, Math.abs(p[0] - q[0]), Math.abs(C.lonN(p[1] - q[1]))); }
+  t(`fromPolar(72,5°, α) = RH.core.circlePt(α, 72,5) for all azimuths (max Δ ${dev.toExponential(1)}°)`, dev < 1e-9);
+  nearName('azimuth 0 at θ = 72,5° is the Scar peak (+17,0° lat, lon 0°)', K.fromPolar(72.5, 0)[0], 17.0, 1e-9); nearName('peak longitude', K.fromPolar(72.5, 0)[1], 0, 1e-9);
+  // polar round trip
+  let rt = 0; for (let i = 0; i < 3000; i++) { const th = rnd() * 178 + 1, al = (rnd() - 0.5) * 359, ll = K.fromPolar(th, al), pp = K.polar(ll[0], ll[1]); rt = Math.max(rt, Math.abs(pp.theta - th), Math.abs(((pp.alpha - al + 540) % 360) - 180)); }
+  t(`polar ↔ geographic round trip (3000 points, max Δ ${rt.toExponential(1)}°)`, rt < 1e-8);
+  // Lambert forward/inverse round trip in both layouts and both disks
+  for (const orient of ['h', 'v']) {
+    const L = K.layout(orient); let worst = 0, n = 0, bothDisks = 0;
+    for (let i = 0; i < 4000; i++) {
+      const la = (rnd() - 0.5) * 178, lo = (rnd() - 0.5) * 359.9, prs = K.project(la, lo, L);
+      for (const pr of prs) { const back = K.unproject(pr.x, pr.y, L); n++; if (!back) { worst = 9; continue; } worst = Math.max(worst, Math.abs(back.lat - la), Math.abs(C.lonN(back.lon - lo)) * Math.cos(la * D2R)); }
+      if (prs.length === 2) bothDisks++;
+    }
+    t(`Lambert round trip, layout ${orient}: ${n} projected points, max Δ ${worst.toExponential(1)}° (${bothDisks} in the margin overlap)`, worst < 1e-7);
+  }
+  // every point is on at least one disk
+  { let miss = 0; const L = K.layout('h'); for (let i = 0; i < 4000; i++) if (!K.project((rnd() - 0.5) * 178, (rnd() - 0.5) * 359.9, L).length) miss++; t('every point of the sphere lands on a disk', miss === 0); }
+  // test places land on the right disk
+  { const L = K.layout('h'), place = (id) => P[id]; const pr = (id) => K.project(place(id).lat, place(id).lon, L);
+    t('Sinus Adventus head / Litus Primum lands on the Rhykar disk only', pr('litus_primum').length === 1 && pr('litus_primum')[0].disk === 'R');
+    t('Dies Ignis lands on the Rhykar disk only', pr('dies_ignis').length === 1 && pr('dies_ignis')[0].disk === 'R');
+    const lb = pr('libbal'); t('Libbāl lands on the Aëris disk only', lb.length === 1 && lb[0].disk === 'A');
+    t('Libbāl is at the exact centre of the Aëris disk (it is the antipode of the Scar centre)', near(lb[0].x, L.A.cx, 1e-6) && near(lb[0].y, L.A.cy, 1e-6), JSON.stringify(lb[0]));
+    const c0 = K.project(-55.5, 0, L)[0]; t('Scar centre is the exact centre of the Rhykar disk', near(c0.x, L.R.cx, 1e-9) && near(c0.y, L.R.cy, 1e-9));
+    t('Ellumāt (55,5°, 180°) is on the Aëris disk, Vastitas pole (−90°) on the Rhykar disk', K.project(55.5, 180, L)[0].disk === 'A' && K.project(-90, 0, L)[0].disk === 'R');
+    const m = K.project(...K.fromPolar(74.5, 30), L); t('a point 2° beyond the Scar rim shows on BOTH disks (faded context margin)', m.length === 2 && m[0].disk === 'R' && m[1].disk === 'A');
+  }
+  // the Scar is a perfect circle in both disks
+  for (const orient of ['h', 'v']) {
+    const L = K.layout(orient); let dR = 0, dA = 0;
+    for (let al = -180; al < 180; al += 1) {
+      const ll = K.fromPolar(72.5, al), pr = K.project(ll[0], ll[1], L);
+      const r = pr.find((q) => q.disk === 'R'), a = pr.find((q) => q.disk === 'A');
+      dR = Math.max(dR, Math.abs(Math.hypot(r.x - L.R.cx, r.y - L.R.cy) - K.rho(72.5))); dA = Math.max(dA, Math.abs(Math.hypot(a.x - L.A.cx, a.y - L.A.cy) - K.rho(107.5)));
+    }
+    t(`Scar = perfect circle on the Rhykar disk (radius ${K.rho(72.5).toFixed(4)} Rs) and the Aëris disk (${K.rho(107.5).toFixed(4)} Rs), layout ${orient}: deviation ${Math.max(dR, dA).toExponential(1)} Rs`, dR < 1e-12 && dA < 1e-12);
+  }
+  nearName('rim radius Rhykar ≈ 1,1826 Rs', K.rho(72.5), 1.1826, 1e-4); nearName('rim radius Aëris ≈ 1,6128 Rs', K.rho(107.5), 1.6128, 1e-4);
+  // areas: one common Rs → pi*rho^2 ratio = 34,964 : 65,036 and the two add up to the whole sphere (4 Rs^2)
+  const aR = K.rho(72.5) ** 2, aA = K.rho(107.5) ** 2;
+  nearName('rho² sum = 4·Rs² (area of the sphere)', aR + aA, 4, 1e-12);
+  nearName(`Rhykar share = ${(aR / 4 * 100).toFixed(3)} % (canon cap: ${DATA.stats.hemR} %)`, aR / 4 * 100, DATA.stats.hemR, 0.001); nearName('Aëris share = 65,036 %', aA / 4 * 100, DATA.stats.hemA, 0.001);
+  // equal-area: |det J| of (θ, α) → plane equals the sphere's area element sinθ — numerically, at random points on both disks
+  let ea = 0; for (let i = 0; i < 600; i++) {
+    const which = rnd() < 0.5 ? 'R' : 'A', th = which === 'R' ? 3 + rnd() * 69 : 75 + rnd() * 100, al = (rnd() - 0.5) * 340, h = 1e-5;
+    const f = (t2, a2) => { const q = K.diskXY(which, t2, a2, 'h'); return [q.x, q.y]; };
+    const fa = f(th + h, al), fb = f(th - h, al), fc = f(th, al + h), fd = f(th, al - h);
+    const J = [[(fa[0] - fb[0]) / (2 * h * D2R), (fc[0] - fd[0]) / (2 * h * D2R)], [(fa[1] - fb[1]) / (2 * h * D2R), (fc[1] - fd[1]) / (2 * h * D2R)]];
+    ea = Math.max(ea, Math.abs(Math.abs(J[0][0] * J[1][1] - J[0][1] * J[1][0]) / Math.sin(th * D2R) - 1));
+  }
+  t(`equal-area: |det J| = sin θ at 600 random points on both disks (max rel. error ${ea.toExponential(1)})`, ea < 1e-5);
+  nearName('radial scale at the Aëris rim (θ′ = 107,5°) ≈ 0,59', K.radialScale(107.5), 0.5906, 1e-3); nearName('radial × tangential scale = 1 (equal area)', K.radialScale(107.5) * K.tangentialScale(107.5), 1, 1e-12);
+  // orientation and the "facing" convention
+  { const L = K.layout('h'), pk = K.diskXY('R', 72.5, 0, 'h'), e1 = K.diskXY('R', 72.5, 90, 'h'), ea1 = K.diskXY('A', 72.5, 90, 'h'), pa = K.diskXY('A', 72.5, 0, 'h'), tr = K.diskXY('R', 72.5, 180, 'h');
+    t('landscape: the peak (α = 0) is at the TOP of both disks and the trough (±180) at the bottom', pk.y < 0 && near(pk.x, 0, 1e-12) && pa.y < 0 && near(pa.x, 0, 1e-12) && tr.y > 0);
+    t('landscape: α = +90 is the RIGHT rim of Rhykar and the LEFT rim of Aëris → the two east-slope points face each other across the gap', e1.x > 0 && ea1.x < 0 && near(e1.y, ea1.y, 1e-12) && (L.A.cx + ea1.x) > (L.R.cx + e1.x));
+    const Lv = K.layout('v'), ev = K.diskXY('R', 72.5, 90, 'v'), av = K.diskXY('A', 72.5, 90, 'v');
+    t('portrait: Rhykar on top, Aëris below; the east-slope points face each other vertically', Lv.R.cy < Lv.A.cy && ev.y > 0 && av.y < 0 && near(ev.x, av.x, 1e-12));
+    t('portrait: the peak (α = 0) is at the right of both disks', K.diskXY('R', 72.5, 0, 'v').x > 0 && K.diskXY('A', 72.5, 0, 'v').x > 0);
+  }
+  // reprojection of the real canon texture
+  { const png = PNG.sync.read(fs.readFileSync(path.join(ROOT, 'assets/base_4096.png'))), L = K.layout('h'), Rs = 110, sw = Math.ceil(L.W * Rs), sh = Math.ceil(L.H * Rs), out = new Uint8ClampedArray(sw * sh * 4);
+    const rgba = new Uint8Array(png.width * png.height * 4); rgba.set(png.data);
+    const cnt = K.reproject(rgba, png.width, png.height, L, Rs, out, sw, sh, 0, sh);
+    const share = cnt.R / (cnt.R + cnt.A) * 100;
+    t(`reprojected pixel areas: Rhykar ${share.toFixed(3)} % : Aëris ${(100 - share).toFixed(3)} % (canon 34,964 : 65,036; Rs = ${Rs} px)`, near(share, 34.964, 0.15), `${share}`);
+    let nan = 0; for (let i = 0; i < out.length; i += 997) if (Number.isNaN(out[i])) nan++; t('no NaN pixels (poles prefiltered)', nan === 0);
+    const a = [], b = [], cShift = []; let nSamp = 0;
+    for (let k = 0; k < 6000 && nSamp < 1200; k++) { const px = Math.floor(rnd() * sw), py = Math.floor(rnd() * sh), o = (py * sw + px) * 4; if (out[o + 3] < 255) continue;
+      const un = K.unproject(-L.W / 2 + (px + 0.5) / Rs, -L.H / 2 + (py + 0.5) / Rs, L); if (!un) continue; if (Math.abs(un.lat) > 75) continue;
+      const tx = Math.floor((C.lonN(un.lon) + 180) / 360 * png.width), ty = Math.floor((90 - un.lat) / 180 * png.height), i = (ty * png.width + tx) * 4;
+      const j = (ty * png.width + ((tx + 1024) % png.width)) * 4;   // negative control: same row, 90° further east
+      a.push(0.2126 * out[o] + 0.7152 * out[o + 1] + 0.0722 * out[o + 2]); b.push(0.2126 * png.data[i] + 0.7152 * png.data[i + 1] + 0.0722 * png.data[i + 2]); cShift.push(0.2126 * png.data[j] + 0.7152 * png.data[j + 1] + 0.0722 * png.data[j + 2]); nSamp++; }
+    const mean = (x) => x.reduce((s, v) => s + v, 0) / x.length, ma = mean(a), mb = mean(b); let sab = 0, saa = 0, sbb = 0; for (let i = 0; i < a.length; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; }
+    const rr = sab / Math.sqrt(saa * sbb), mc = mean(cShift); let sac = 0, scc = 0; for (let i = 0; i < a.length; i++) { sac += (a[i] - ma) * (cShift[i] - mc); scc += (cShift[i] - mc) ** 2; }
+    const rc = sac / Math.sqrt(saa * scc);
+    t(`reprojected luminance matches the canon texture at the inverse-projected position (r = ${rr.toFixed(4)}, n = ${a.length}; shifted control r = ${rc.toFixed(3)})`, rr > 0.95 && rc < rr - 0.25);
+  }
+  t('layout sizes: landscape 2·ρmaxR + gap + 2·ρmaxA by 2·ρmaxA', (() => { const L = K.layout('h'); return near(L.W, 2 * L.rhoMaxR + L.gap + 2 * L.rhoMaxA, 1e-12) && near(L.H, 2 * L.rhoMaxA, 1e-12); })());
+}
+
 console.log(`unit: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

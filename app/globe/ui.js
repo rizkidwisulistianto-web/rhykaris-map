@@ -17,8 +17,7 @@ RH.globe = {
     var labelsEl = G.el('div', 'g-labels'); rootEl.appendChild(labelsEl); G.labelsEl = labelsEl;
     var tipEl = G.el('div', 'g-tip'); tipEl.hidden = true; rootEl.appendChild(tipEl);
     var epiEl = G.el('div', 'g-epi'); rootEl.appendChild(epiEl);
-    var cardEl = G.el('div', 'v2-chrome'); cardEl.id = 'g-card'; cardEl.hidden = true; cardEl.setAttribute('role', 'dialog'); cardEl.setAttribute('aria-label', 'Kartu info');
-    app.appendChild(cardEl);
+    var cardEl = ctx.card.el;   // kartu info bersama (dibuat app.js; isi dari pembangun popup 2D)
     var dockEl = G.el('div', 'v2-chrome'); dockEl.id = 'g-dock'; dockEl.hidden = true; dockEl.setAttribute('role', 'group'); dockEl.setAttribute('aria-label', 'Kontrol globe');
     app.appendChild(dockEl);
 
@@ -59,17 +58,11 @@ RH.globe = {
     btnSys = dockBtn('g-dock-sys', ICON_MOON, 'Sistem bulan', 'Lihat sistem bulan: mundurkan kamera agar kedua orbit terlihat', function () { ctl.viewMoonSystem(); });
 
     // ------------------------------------------------------------ kartu info
-    function closeCard() { if (cardEl.hidden) return; cardEl.hidden = true; cardEl.innerHTML = ''; st.cardKey = null; ctx.setHash(null); }
-    function openCard(html, key, hash) {
-      cardEl.innerHTML = '<button type="button" class="g-x" aria-label="Tutup kartu">×</button>' + html;
-      cardEl.hidden = false; cardEl.scrollTop = 0; st.cardKey = key || null; if (hash !== undefined) ctx.setHash(hash);
-      cardEl.querySelector('.g-x').addEventListener('click', closeCard);
-      if (window.innerWidth <= 760) ctx.closePanel && ctx.closePanel();
-    }
-    cardEl.addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-g]');
-      if (b) { var a = b.getAttribute('data-g'); if (a === 'sys') ctl.viewMoonSystem(); else if (a === 'planet') ctl.focusPlanet(); return; }
-      ctx.cardAction(ev);
+    function closeCard() { ctx.card.close(); }
+    function openCard(html, key, hash) { ctx.card.open(html, key, hash); }
+    cardEl.addEventListener('click', function (ev) {   // tombol khusus kartu bulan (aksi umum — salin koordinat, ukur, kuasa — ditangani app.js)
+      var b = ev.target.closest && ev.target.closest('[data-g]'); if (!b) return;
+      var a = b.getAttribute('data-g'); if (a === 'sys') ctl.viewMoonSystem(); else if (a === 'planet') ctl.focusPlanet();
     });
     G.openCard = openCard; G.closeCard = closeCard;
     function openHit(h) {
@@ -203,7 +196,7 @@ RH.globe = {
       openFaction: function (id) { openCard(ctx.cards.faction(id), 'fac:' + id); },
       relayout: function () { if (st.shown) S.resize(); },
       /** Status adapter3D per layer (paritas 2D/3D): {key: {on, adapter3D, reason}}. */
-      layerStatus: function () { var o = {}; Object.keys(ctx.LAYERS).forEach(function (k) { var L0 = ctx.LAYERS[k]; o[k] = { on: L0.on, only3D: !!L0.only3D, adapter2D: !!L0.adapter2D, adapter3D: !!L0.adapter3D, reason: L0.reason3D || null }; }); return o; },
+      layerStatus: function () { var o = {}; Object.keys(ctx.LAYERS).forEach(function (k) { var L0 = ctx.LAYERS[k]; o[k] = { on: L0.on, only3D: !!L0.only3D, onlyDisk: !!L0.onlyDisk, adapter2D: !!L0.adapter2D, adapter3D: !!L0.adapter3D, reason: L0.reason3D || null }; }); return o; },
       /** Ringkasan teknis untuk uji: ukuran tekstur, memori GPU, pin DOM, bulan. */
       info: function () { var r = S.renderer.info; return { baseSize: S.baseSize, overlay: layers && layers.overlaySize, maxTex: S.maxTex, geometries: r.memory.geometries, textures: r.memory.textures, frames: S.frames || 0,
         pins: layers ? layers.pins.length : 0, view: { lat: S.view.lat, lon: S.view.lon, dist: S.view.dist }, moons: bodies ? bodies.info() : null, spin: st.spin, dpr: S.dpr, W: S.W, H: S.H }; },

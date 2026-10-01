@@ -124,6 +124,31 @@ C.createTerrain = function (src) {
   return t;
 };
 
+// ------------------------------------------------------------------ anti-tabrakan nama marker (dipakai globe 3D dan peta kerja)
+/**
+ * Ikon marker selalu tampil; nama marker ditempatkan kanan/kiri menurut prioritas (ibukota > kota > pelabuhan > lainnya, lalu kanon > turunan > inferensi)
+ * dan disembunyikan bila kedua sisi bertabrakan. items: [{sx, sy, size, nm (elemen nama), p (place), ref?}], obst: [[x0, y0, x1, y1, pemilik]].
+ * DEC = {PRI, EPR, LBL_SIDE} dari app.js. Sama dengan algoritma declutter peta datar.
+ */
+C.declutterNames = function (items, obst, DEC) {
+  function overlap(a, b) { return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; }
+  items.sort(function (a, b) { var pa = DEC.PRI[a.p.cat] != null ? DEC.PRI[a.p.cat] : 4, pb = DEC.PRI[b.p.cat] != null ? DEC.PRI[b.p.cat] : 4; return (pa - pb) || ((DEC.EPR[a.p.epi] || 0) - (DEC.EPR[b.p.epi] || 0)); });
+  var placed = [];
+  items.forEach(function (it) {
+    var w = it.nm.offsetWidth, h = it.nm.offsetHeight; if (!w) return;
+    var x = it.sx, y = it.sy, s2 = it.size / 2, self = it.ref || it;
+    var R = [x + s2 + 1, y - h / 2 + 1, x + s2 + 3 + w, y + h / 2 - 1], Lf = [x - s2 - 3 - w, y - h / 2 + 1, x - s2 - 1, y + h / 2 - 1];
+    var cand = DEC.LBL_SIDE[it.p.id] === 'l' ? [['l', Lf], ['r', R]] : [['r', R], ['l', Lf]], ok = null;
+    for (var i = 0; i < cand.length && !ok; i++) {
+      var rc = cand[i][1], hit = false;
+      for (var j = 0; j < obst.length && !hit; j++) if (obst[j][4] !== self && overlap(rc, obst[j])) hit = true;
+      for (var k = 0; k < placed.length && !hit; k++) if (overlap(rc, placed[k])) hit = true;
+      if (!hit) ok = cand[i];
+    }
+    if (ok) { placed.push(ok[1]); it.nm.classList.toggle('l', ok[0] === 'l'); } else it.nm.classList.add('hide');
+  });
+};
+
 // ------------------------------------------------------------------ three.js (dimuat malas, hanya saat pengguna masuk 3D)
 // Versi di-pin ke r160 (build ES module satu berkas, self-contained). Urutan: CDN berantai lalu salinan lokal (vendor/three).
 // Setiap sumber diverifikasi dengan SRI (fetch + integrity → blob → import()); sumber yang gagal/mismatch dilewati.

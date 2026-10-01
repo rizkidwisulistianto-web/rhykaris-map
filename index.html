@@ -375,6 +375,56 @@ body.panel-closed #globe .g-epi{left:var(--gut)}
 .gctl .note b{color:var(--ink-2);font-weight:600}
 .gctl .bad{color:var(--bad)}
 
+/* ---------- peta kerja dual-disk (Canvas 2D; memakai ulang gaya pin/tooltip/strip globe) ---------- */
+#disk{position:absolute;inset:0;z-index:500;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--void) 82%,#2a3a48) 0%,var(--void) 68%)}
+#disk.dragging{cursor:grabbing}
+#disk.pick{cursor:pointer}
+#disk.fade{opacity:0;transition:opacity .28s ease}
+#disk.fade.in{opacity:1}
+#disk canvas.d-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
+#disk canvas.d-canvas:focus-visible{outline:2px solid var(--sea);outline-offset:-3px}
+#disk .g-labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#disk .g-pin{position:absolute;left:0;top:0;will-change:transform;pointer-events:none}
+#disk .g-pin .mlbl{transform:translate(-50%,-50%);pointer-events:none}
+#disk .g-pin.hide{display:none}
+#disk .g-pin .mk{pointer-events:none}
+#disk .g-pin .mk:focus-visible svg{filter:drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px var(--brass))}
+#disk .g-anom{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;will-change:transform}
+#disk .g-anom i{position:absolute;border:1.5px dashed #ffb07a;border-radius:50%;left:-17px;top:-17px;width:34px;height:34px;box-sizing:border-box;background:rgba(255,122,61,.06);pointer-events:none}
+#disk .g-anom b{position:absolute;border:1px dotted rgba(255,176,122,.5);border-radius:50%;left:-24px;top:-24px;width:48px;height:48px;box-sizing:border-box;pointer-events:none}
+#disk .g-moon-lbl{position:absolute;left:0;top:0;white-space:nowrap;font:600 11px/1 var(--f-ui);letter-spacing:.04em;color:var(--lbl-ink);pointer-events:none;will-change:transform;
+  text-shadow:0 0 2px var(--lbl-halo),0 0 5px var(--lbl-halo),0 0 8px var(--lbl-halo)}
+#disk .g-moon-lbl small{display:block;font:500 9.5px/1.2 var(--f-mono);opacity:.85;margin-top:2px}
+#disk .g-note{position:absolute;left:0;top:0;white-space:nowrap;font:italic 500 11px/1.2 var(--f-water);color:#cfe3ea;opacity:.9;pointer-events:none;will-change:transform;
+  text-shadow:0 0 3px var(--lbl-halo),0 0 6px var(--lbl-halo)}
+#disk .g-tip{position:absolute;left:0;top:0;z-index:5;pointer-events:none;padding:5px 8px;border-radius:7px;background:var(--panel);color:var(--ink);border:1px solid var(--line-2);box-shadow:var(--shadow);font:500 12px var(--f-ui);white-space:nowrap}
+#disk .g-epi{position:absolute;left:calc(var(--gut) + 348px + 12px);bottom:calc(104px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;max-width:min(440px,calc(100vw - 2 * var(--gut)));pointer-events:none;z-index:3}
+body.panel-closed #disk .g-epi{left:var(--gut)}
+#disk .g-epi span{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font:500 10.5px/1.2 var(--f-ui);color:var(--ink-2);white-space:nowrap}
+#disk .g-epi .epi{font-size:9px;padding:2px 5px}
+#disk[data-z="0"] .lbl-region, #disk[data-z="1"] .lbl-region{display:none}
+#disk[data-z="0"] .lbl-arc{display:none}
+#disk[data-z="0"] .lbl-water:not(.big){display:none}
+#disk[data-z="0"] .mk .mk-name, #disk[data-z="1"] .mk .mk-name, #disk[data-z="2"] .mk:not(.cap) .mk-name{display:none}
+#disk[data-z="0"] .mk:not(.cap){opacity:0;pointer-events:none}
+#disk[data-z="0"] .mlbl.minor, #disk[data-z="1"] .mlbl.minor, #disk[data-z="2"] .mlbl.minor, #disk[data-z="3"] .mlbl.minor{display:none}
+#disk .mk .mk-name{pointer-events:none}
+#disk .d-busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--sea);box-shadow:var(--shadow);font:500 12.5px var(--f-mono);color:var(--ink);z-index:6}
+#disk .d-note{max-width:min(520px,calc(100vw - 2 * var(--gut)))}
+#d-dock{position:absolute;z-index:999;right:calc(var(--gut) + 176px);bottom:calc(56px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:min(420px,calc(100vw - 2 * var(--gut) - 176px))}
+#d-dock .tbtn{height:34px}
+body.in-disk .scale{display:none}
+body.in-disk #map .leaflet-map-pane{visibility:hidden}
+#btn-disk-m{display:none}
+@media (max-width:760px){
+  .tools #btn-disk{display:none} #btn-disk-m{display:inline-flex;height:30px;min-width:30px;padding:0 8px;font-size:12px;box-shadow:none} #btn-disk-m .lbl{display:none}
+  #d-dock{right:calc(var(--gut) + 140px);bottom:calc(64px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 2 * var(--gut) - 140px)} #d-dock .tbtn .lbl{display:none}
+}
+@media (min-width:761px) and (max-width:1100px){ #btn-disk .lbl{display:none} }
+@media (max-width:760px){ #disk .g-epi{left:var(--gut)!important;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));gap:4px} #disk .g-epi span{font-size:9.5px;padding:2px 6px} }
+@media (max-width:760px){ #disk .d-note{top:auto!important;bottom:calc(124px + env(safe-area-inset-bottom,0px))!important} #disk .d-note span:nth-child(n+2){display:none} }
+
 </style>
 </head>
 <body>
@@ -397,6 +447,8 @@ body.panel-closed #globe .g-epi{left:var(--gut)}
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h12M2 8h12M2 12.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
       <span class="ptitle">Instrumen kartografer</span>
+      <button class="tbtn v2-chrome" id="btn-disk-m" type="button" data-dk="1" aria-pressed="false" aria-label="Peta kerja dual-disk" title="Tampilkan peta kerja dual-disk">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="11.6" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="lbl">Peta kerja</span></button>
       <button class="tbtn v2-chrome" id="btn-view-m" type="button" data-vt="1" aria-pressed="false" aria-label="Globe 3D" title="Tampilkan globe 3D">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.4"/><ellipse cx="8" cy="8" rx="2.6" ry="6.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2 8h12" stroke="currentColor" stroke-width="1.2"/></svg><span class="lbl">Globe 3D</span></button>
     </div>
@@ -429,6 +481,8 @@ body.panel-closed #globe .g-epi{left:var(--gut)}
   <div class="tools">
     <button class="tbtn v2-chrome" id="btn-view" type="button" data-vt="1" aria-pressed="false" aria-label="Globe 3D" title="Tampilkan globe 3D (Peta datar 2D tetap menjadi tampilan utama)">
       <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.4"/><ellipse cx="8" cy="8" rx="2.6" ry="6.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2 8h12" stroke="currentColor" stroke-width="1.2"/></svg><span class="lbl">Globe 3D</span></button>
+    <button class="tbtn v2-chrome" id="btn-disk" type="button" data-dk="1" aria-pressed="false" aria-label="Peta kerja dual-disk" title="Tampilkan peta kerja dual-disk (Lambert equal-area, luas benar)">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="11.6" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="lbl">Peta kerja</span></button>
     <button class="tbtn" id="btn-measure" aria-pressed="false" aria-label="Ukur jarak" title="Ukur jarak: ketuk dua titik di peta">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13L13 2M4.5 10.5l1.4 1.4M7 8l1.4 1.4M9.5 5.5l1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="lbl">Ukur</span></button>
     <button class="tbtn" id="btn-legend" aria-pressed="false" title="Legenda">
@@ -465,6 +519,453 @@ window.__rhFallback=function(){if(window.L)return;if(i>=srcs.length){if(window._
 var s=document.createElement('script');s.src=srcs[i++];s.onload=function(){if(window.__rhBoot)window.__rhBoot();};s.onerror=window.__rhFallback;document.head.appendChild(s);};})();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" onerror="__rhFallback()"></script>
+<script id="rh-disk-src" type="text/plain">/* Master Map Rhykaris — tampilan "Peta kerja" dual-disk Lambert azimuthal equal-area (Stage 2, fase 3). Status epistemik proyeksi: TURUNAN.
+   Tanpa three.js dan tanpa WebGL: murni Canvas 2D, dimuat malas saat dibuka.
+
+   Dua cakram yang saling melengkapi dengan THE SCAR sebagai batas bersama, SATU skala Rs (luas sebanding):
+     • Cakram Rhykar : pusat C  = (−55,5°, 0°)   — jarak sudut θ  = 0 … 72,5°    ρ = 2·Rs·sin(θ/2),  rim (Scar) ρ ≈ 1,1826·Rs
+     • Cakram Aëris  : pusat C′ = (+55,5°, 180°) — jarak sudut θ′ = 0 … 107,5°   ρ = 2·Rs·sin(θ′/2), rim (Scar) ρ ≈ 1,6128·Rs
+   Luas: π·ρ² → 34,964 % : 65,036 % dan jumlah ρ² = 4·Rs² (luas bola). Skala radial = cos(θ/2): ≈ 0,59 di rim Aëris (107,5°) — bentuk
+   terdistorsi di dekat rim, luas tetap benar.
+
+   Orientasi: sudut polar = azimut α di sekeliling sumbu C–C′, diukur dari pusat Rhykar (α = 0 → puncak Scar +17° di bujur 0°,
+   +90 → lereng timur, ±180 → palung; sama dengan konstanta SC / circlePt di app.js):
+        P(θ, α) = cosθ·a + sinθ·(cosα·u0 + sinα·u90),   a = vektor C, u0 = utara lokal di C, u90 = u0 × a (timur lokal di C).
+   Cakram Aëris dilihat dari SISI SEBERANG (seperti sisi belakang globe): untuk α yang sama, arahnya CERMIN terhadap cakram Rhykar.
+   Konvensi yang dipilih (dan didokumentasikan di docs/STAGE2_NOTES.md): kedua cakram menaruh puncak (α = 0) di atas; Rhykar di kiri,
+   Aëris di kanan — maka titik Scar ber-azimut sama (mis. lereng timur α = +90: di tepi kanan Rhykar dan tepi kiri Aëris) tampak
+   BERHADAPAN di celah antar-cakram, seperti globe yang dibuka pada engsel vertikal. Di layar tegak (ponsel) keduanya diputar 90° dan
+   ditumpuk: Rhykar di atas, Aëris di bawah, lereng timur saling berhadapan. */
+(function (root) {
+'use strict';
+var RH = root.RH = root.RH || {};
+var D2R = Math.PI / 180, R2D = 180 / Math.PI;
+var DK = RH.disk = {};
+var M = DK.math = {};
+
+// ------------------------------------------------------------------ matematika murni (satuan Rs = 1, bola satuan; diuji di Node)
+M.CENTER = { lat: -55.5, lon: 0 };            // C — pusat cakram Rhykar (= konstanta SC)
+M.ANTIPODE = { lat: 55.5, lon: 180 };         // C′ — pusat cakram Aëris
+M.RIM_R = 72.5;                               // rim cakram Rhykar (jarak sudut dari C)
+M.RIM_A = 180 - 72.5;                         // rim cakram Aëris (jarak sudut dari C′) = 107,5°
+M.MARGIN = 4;                                 // derajat melewati rim yang digambar memudar (konteks)
+M.GAP = 0.14;                                 // celah antar-cakram (Rs)
+(function () {
+  var la = M.CENTER.lat * D2R, lo = M.CENTER.lon * D2R;
+  var a = [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)];
+  var u0 = [-Math.sin(la) * Math.cos(lo), -Math.sin(la) * Math.sin(lo), Math.cos(la)];
+  var u90 = [u0[1] * a[2] - u0[2] * a[1], u0[2] * a[0] - u0[0] * a[2], u0[0] * a[1] - u0[1] * a[0]];   // u0 × a
+  M.a = a; M.u0 = u0; M.u90 = u90;
+})();
+M.rho = function (thetaDeg) { return 2 * Math.sin(thetaDeg * D2R / 2); };
+M.theta = function (rho) { return 2 * Math.asin(Math.min(1, rho / 2)) * R2D; };
+M.radialScale = function (thetaDeg) { return Math.cos(thetaDeg * D2R / 2); };       // skala sepanjang radius
+M.tangentialScale = function (thetaDeg) { return 1 / Math.cos(thetaDeg * D2R / 2); }; // skala sepanjang keliling (hasil kali = 1: luas benar)
+function vec(lat, lon) { var la = lat * D2R, lo = lon * D2R; return [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)]; }
+function dot(p, q) { return p[0] * q[0] + p[1] * q[1] + p[2] * q[2]; }
+/** (lat, lon) → {theta, alpha}: jarak sudut dari C dan azimut di sekeliling sumbu C–C′ (derajat; alpha dalam −180…180). */
+M.polar = function (lat, lon) {
+  var p = vec(lat, lon), c = dot(p, M.a), q = [p[0] - c * M.a[0], p[1] - c * M.a[1], p[2] - c * M.a[2]];
+  return { theta: Math.atan2(Math.sqrt(dot(q, q)), c) * R2D, alpha: Math.atan2(dot(p, M.u90), dot(p, M.u0)) * R2D };
+};
+/** {theta, alpha} → [lat, lon]. */
+M.fromPolar = function (thetaDeg, alphaDeg) {
+  var t = thetaDeg * D2R, al = alphaDeg * D2R, ct = Math.cos(t), st = Math.sin(t), ca = Math.cos(al), sa = Math.sin(al);
+  var p = [ct * M.a[0] + st * (ca * M.u0[0] + sa * M.u90[0]), ct * M.a[1] + st * (ca * M.u0[1] + sa * M.u90[1]), ct * M.a[2] + st * (ca * M.u0[2] + sa * M.u90[2])];
+  return [Math.asin(Math.max(-1, Math.min(1, p[2]))) * R2D, Math.atan2(p[1], p[0]) * R2D];
+};
+/** Rotasi layar (derajat searah jarum jam) untuk orientasi: 'h' (lanskap) = 0, 'v' (potret) = 90. */
+M.rotOf = function (orient) { return orient === 'v' ? 90 : 0; };
+/** Koordinat bidang lokal pusat cakram (x ke kanan, y ke bawah, satuan Rs) untuk titik (theta, alpha) di cakram `which` ('R' | 'A'). */
+M.diskXY = function (which, thetaDeg, alphaDeg, orient) {
+  var rot = M.rotOf(orient), r, ang;
+  if (which === 'R') { r = M.rho(thetaDeg); ang = alphaDeg + rot; }
+  else { r = M.rho(180 - thetaDeg); ang = -alphaDeg + rot; }            // sisi seberang: cermin
+  return { x: r * Math.sin(ang * D2R), y: -r * Math.cos(ang * D2R), r: r };
+};
+/** Kebalikan dari diskXY: (x, y) lokal → {lat, lon, theta, alpha, rho} atau null bila di luar radius rhoMax. */
+M.diskInverse = function (which, x, y, orient, rhoMax) {
+  var r = Math.sqrt(x * x + y * y); if (rhoMax != null && r > rhoMax) return null; if (r > 2) return null;
+  var rot = M.rotOf(orient), ang = Math.atan2(x, -y) * R2D, thD = M.theta(r), theta, alpha;
+  if (which === 'R') { theta = thD; alpha = ang - rot; } else { theta = 180 - thD; alpha = rot - ang; }
+  alpha = ((alpha + 540) % 360) - 180; var ll = M.fromPolar(theta, alpha);
+  return { lat: ll[0], lon: ll[1], theta: theta, alpha: alpha, rho: r };
+};
+/** Tata letak lembar: pusat kedua cakram dalam satuan Rs, dengan (0,0) di tengah lembar. */
+M.layout = function (orient) {
+  var rR = M.rho(M.RIM_R + M.MARGIN), rA = M.rho(M.RIM_A + M.MARGIN), g = M.GAP, L = { orient: orient, rhoMaxR: rR, rhoMaxA: rA, gap: g };
+  if (orient === 'v') { var H = 2 * rR + g + 2 * rA, W = 2 * rA; L.W = W; L.H = H; L.R = { cx: 0, cy: -H / 2 + rR }; L.A = { cx: 0, cy: -H / 2 + 2 * rR + g + rA }; }
+  else { var W2 = 2 * rR + g + 2 * rA, H2 = 2 * rA; L.W = W2; L.H = H2; L.R = { cx: -W2 / 2 + rR, cy: 0 }; L.A = { cx: -W2 / 2 + 2 * rR + g + rA, cy: 0 }; }
+  return L;
+};
+/** Titik (lat, lon) pada lembar: daftar {disk, x, y} (x, y dalam satuan Rs relatif ke pusat lembar). Titik di strip margin tampil di kedua cakram. */
+M.project = function (lat, lon, L) {
+  var pp = M.polar(lat, lon), out = [];
+  if (pp.theta <= M.RIM_R + M.MARGIN) { var r = M.diskXY('R', pp.theta, pp.alpha, L.orient); out.push({ disk: 'R', x: L.R.cx + r.x, y: L.R.cy + r.y, theta: pp.theta, alpha: pp.alpha }); }
+  if (180 - pp.theta <= M.RIM_A + M.MARGIN) { var q = M.diskXY('A', pp.theta, pp.alpha, L.orient); out.push({ disk: 'A', x: L.A.cx + q.x, y: L.A.cy + q.y, theta: pp.theta, alpha: pp.alpha }); }
+  return out;
+};
+/** Titik lembar (x, y) → {disk, lat, lon, ...} atau null (di celah / di luar cakram). */
+M.unproject = function (x, y, L) {
+  var r = M.diskInverse('R', x - L.R.cx, y - L.R.cy, L.orient, L.rhoMaxR); if (r) { r.disk = 'R'; return r; }
+  r = M.diskInverse('A', x - L.A.cx, y - L.A.cy, L.orient, L.rhoMaxA); if (r) { r.disk = 'A'; return r; }
+  return null;
+};
+/**
+ * Reproyeksi tekstur ekuirektangular (RGBA, tw × th) ke lembar dual-disk. Menulis ke `out` (Uint8ClampedArray, sw × sh × 4) dan memanggil
+ * onRow(y) tiap baris. Invers Lambert → (lat, lon) → sampling bilinear (bujur membungkus). Alfa 255 sampai rim, memudar linear melewati rim
+ * sejauh M.MARGIN. Mengembalikan jumlah piksel penuh (alfa 255) per cakram {R, A} — untuk uji rasio luas.
+ */
+M.reproject = function (tex, tw, th, L, RsPx, out, sw, sh, rowFrom, rowTo, counts) {
+  var a = M.a, u0 = M.u0, u90 = M.u90, rot = M.rotOf(L.orient) * D2R, x0 = -L.W / 2, y0 = -L.H / 2, rimR = M.RIM_R, rimA = M.RIM_A, mg = M.MARGIN;
+  counts = counts || { R: 0, A: 0 };
+  var pre = tex._rhPre || (tex._rhPre = { rows: {} }), texelDeg = 360 / tw, pxDeg = R2D / RsPx * 1.5;   // pxDeg: arco per piksel keluaran (konservatif)
+  // Dekat kutub, satu piksel keluaran menutup ratusan teksel bujur → tanpa pra-penyaringan hasilnya derau (aliasing). Baris lintang dirata-rata
+  // 2^k teksel secara horizontal (k dipilih dari cos(lintang)) sebelum disampel; baris dibuat sekali dan disimpan.
+  function preRow(k, y) {
+    var key = k * 100000 + y, r = pre.rows[key]; if (r) return r;
+    var n = 1 << k, w = tw >> k; r = new Float32Array(w * 3); var base = y * tw * 4;
+    for (var i = 0; i < w; i++) { var sr = 0, sg = 0, sb = 0; for (var j = 0; j < n; j++) { var o = base + (i * n + j) * 4; sr += tex[o]; sg += tex[o + 1]; sb += tex[o + 2]; } r[i * 3] = sr / n; r[i * 3 + 1] = sg / n; r[i * 3 + 2] = sb / n; }
+    return (pre.rows[key] = r);
+  }
+  for (var py = rowFrom; py < rowTo; py++) {
+    var uy = y0 + (py + 0.5) / RsPx;
+    for (var px = 0; px < sw; px++) {
+      var ux = x0 + (px + 0.5) / RsPx, which, dx, dy, thD, rimD;
+      dx = ux - L.R.cx; dy = uy - L.R.cy; var rr = Math.sqrt(dx * dx + dy * dy);
+      if (rr <= L.rhoMaxR) { which = 0; }
+      else { dx = ux - L.A.cx; dy = uy - L.A.cy; rr = Math.sqrt(dx * dx + dy * dy); if (rr <= L.rhoMaxA) which = 1; else continue; }
+      thD = 2 * Math.asin(Math.min(1, rr / 2)) * R2D;                      // θ (Rhykar) atau θ′ (Aëris), derajat
+      rimD = which === 0 ? rimR : rimA;
+      var ang = Math.atan2(dx, -dy), alpha, theta;
+      if (which === 0) { alpha = ang - rot; theta = thD * D2R; } else { alpha = rot - ang; theta = Math.PI - thD * D2R; }
+      var ct = Math.cos(theta), st = Math.sin(theta), ca = Math.cos(alpha), sa = Math.sin(alpha);
+      var vx = ct * a[0] + st * ca * u0[0], vy = st * sa, vz = ct * a[2] + st * ca * u0[2];      // a[1] = u0[1] = 0 (C di bujur 0°)
+      var lat = Math.asin(vz > 1 ? 1 : vz < -1 ? -1 : vz), lon = Math.atan2(vy, vx);
+      var fy = (90 - lat * R2D) / 180 * th - 0.5, iy = Math.floor(fy), ty = fy - iy, o = (py * sw + px) * 4;
+      var y1 = iy < 0 ? 0 : (iy >= th ? th - 1 : iy), y2 = iy + 1 >= th ? th - 1 : (iy + 1 < 0 ? 0 : iy + 1);
+      var foot = pxDeg / (Math.max(Math.cos(lat), 0.01) * texelDeg), kk = foot < 2 ? 0 : Math.min(7, Math.floor(Math.log(foot) / Math.LN2));
+      if (kk === 0) {
+        var fx = (lon * R2D + 180) / 360 * tw - 0.5, ix = Math.floor(fx), tx = fx - ix, x1 = ((ix % tw) + tw) % tw, x2 = (x1 + 1) % tw;
+        var i11 = (y1 * tw + x1) * 4, i21 = (y1 * tw + x2) * 4, i12 = (y2 * tw + x1) * 4, i22 = (y2 * tw + x2) * 4;
+        var w11 = (1 - tx) * (1 - ty), w21 = tx * (1 - ty), w12 = (1 - tx) * ty, w22 = tx * ty;
+        out[o] = tex[i11] * w11 + tex[i21] * w21 + tex[i12] * w12 + tex[i22] * w22;
+        out[o + 1] = tex[i11 + 1] * w11 + tex[i21 + 1] * w21 + tex[i12 + 1] * w12 + tex[i22 + 1] * w22;
+        out[o + 2] = tex[i11 + 2] * w11 + tex[i21 + 2] * w21 + tex[i12 + 2] * w12 + tex[i22 + 2] * w22;
+      } else {
+        var wk = tw >> kk, fxk = (lon * R2D + 180) / 360 * wk - 0.5, ixk = Math.floor(fxk), txk = fxk - ixk, xa = ((ixk % wk) + wk) % wk, xb = (xa + 1) % wk, ra = preRow(kk, y1), rb = preRow(kk, y2);
+        var m11 = (1 - txk) * (1 - ty), m21 = txk * (1 - ty), m12 = (1 - txk) * ty, m22 = txk * ty;
+        for (var ch = 0; ch < 3; ch++) out[o + ch] = ra[xa * 3 + ch] * m11 + ra[xb * 3 + ch] * m21 + rb[xa * 3 + ch] * m12 + rb[xb * 3 + ch] * m22;
+      }
+      var over = thD - rimD;
+      if (over <= 0) { out[o + 3] = 255; if (which === 0) counts.R++; else counts.A++; } else out[o + 3] = Math.max(0, 255 * (1 - over / mg));
+    }
+  }
+  return counts;
+};
+
+// ------------------------------------------------------------------ tampilan (DOM)
+DK.init = function (ctx) {
+  var C = ctx.C, LS = ctx.LS, LAY = ctx.LAYERS, REDUCED = ctx.REDUCED;
+  var app = document.getElementById('app'), clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+  var root = document.createElement('div'); root.id = 'disk'; root.className = 'v2-chrome'; root.hidden = true; root.setAttribute('data-z', '2'); app.insertBefore(root, document.getElementById('map').nextSibling);
+  var cv = document.createElement('canvas'); cv.className = 'd-canvas'; cv.tabIndex = 0; cv.setAttribute('role', 'application');
+  cv.setAttribute('aria-label', 'Peta kerja dual-disk Lambert: cakram Rhykar dan cakram Aëris dengan The Scar sebagai batas bersama. Seret untuk menggeser, gulir atau cubit untuk memperbesar, tombol panah menggeser.');
+  root.appendChild(cv); var g = cv.getContext('2d');
+  var pinsEl = document.createElement('div'); pinsEl.className = 'g-labels'; root.appendChild(pinsEl);
+  var tipEl = document.createElement('div'); tipEl.className = 'g-tip'; tipEl.hidden = true; root.appendChild(tipEl);
+  var noteEl = document.createElement('div'); noteEl.className = 'g-epi d-note'; root.appendChild(noteEl);
+  var busyEl = document.createElement('div'); busyEl.className = 'd-busy'; busyEl.hidden = true; root.appendChild(busyEl);
+  var dockEl = document.createElement('div'); dockEl.id = 'd-dock'; dockEl.className = 'v2-chrome'; dockEl.hidden = true; dockEl.setAttribute('role', 'group'); dockEl.setAttribute('aria-label', 'Kontrol peta kerja'); app.appendChild(dockEl);
+  noteEl.innerHTML = '<span>Lambert azimuthal equal-area · luas benar · bentuk terdistorsi di dekat rim ' + C.chip('turunan') + '</span><span>Peta fisik v4 ' + C.chip('kanon') + '</span>' +
+    '<span>Rim cakram Aëris: skala radial ' + C.fmt(M.radialScale(M.RIM_A), 2) + ' (107,5°)</span><span>Cincin dari kurva Scar: Within ≤ 6,5° · Adjacent ≤ 19,5° · Peripheral ≤ 32,5°</span>';
+
+  var DPR = 1, W = 1, H = 1, orient = 'h', orientPref = LS.get('rh-d-orient', 'auto'), L = M.layout('h');
+  var st = { shown: false, cx: 0, cy: 0, scale: 100, hover: null, hoverPx: null };   // (cx, cy): titik lembar (Rs) di pusat area bebas; scale: px per Rs
+  var sheets = {}, texData = null, texW = 0, texH = 0, sheetBuilding = null, RS_PX = 500;
+  var tipTxt = '';
+
+  // ---------------------------------------------------------------- lembar hasil reproyeksi
+  function loadTex() {
+    if (texData) return Promise.resolve();
+    return new Promise(function (res, rej) {
+      var im = new Image(); im.onload = function () { var c = document.createElement('canvas'); c.width = texW = im.width; c.height = texH = im.height; var x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0); texData = x.getImageData(0, 0, texW, texH).data; res(); };
+      im.onerror = function () { rej(new Error('tekstur peta fisik gagal dimuat')); }; im.src = ctx.BASE;
+    });
+  }
+  function buildSheet(or) {
+    if (sheets[or]) return Promise.resolve(sheets[or]);
+    if (sheetBuilding && sheetBuilding.or === or) return sheetBuilding.p;
+    var lay = M.layout(or), RsPx = RS_PX, sw = Math.ceil(lay.W * RsPx), sh = Math.ceil(lay.H * RsPx);
+    var p = loadTex().then(function () {
+      return new Promise(function (res) {
+        var out = new Uint8ClampedArray(sw * sh * 4), row = 0, counts = { R: 0, A: 0 }, t0 = performance.now();
+        busyEl.hidden = false;
+        (function step() {
+          var t = performance.now(), to = Math.min(sh, row + 40);
+          M.reproject(texData, texW, texH, lay, RsPx, out, sw, sh, row, to, counts); row = to;
+          while (row < sh && performance.now() - t < 14) { to = Math.min(sh, row + 20); M.reproject(texData, texW, texH, lay, RsPx, out, sw, sh, row, to, counts); row = to; }
+          busyEl.textContent = 'menyusun peta kerja… ' + Math.round(row / sh * 100) + ' %';
+          if (row < sh) { setTimeout(step, 0); return; }
+          var c = document.createElement('canvas'); c.width = sw; c.height = sh; c.getContext('2d').putImageData(new ImageData(out, sw, sh), 0, 0);
+          busyEl.hidden = true; var sheet = { cv: c, w: sw, h: sh, RsPx: RsPx, L: lay, counts: counts, ms: Math.round(performance.now() - t0) }; sheets[or] = sheet; sheetBuilding = null; res(sheet);
+        })();
+      });
+    });
+    sheetBuilding = { or: or, p: p }; return p;
+  }
+
+  // ---------------------------------------------------------------- tampilan, koordinat, resize
+  // area bebas: di luar panel kiri / lembar bawah; t = tinggi header (judul, perkakas, readout di ponsel) yang tidak boleh tertutup
+  function freeBox() { var ins = ctx.insets ? ctx.insets() : { l: 0, b: 0 }, ti = window.innerWidth <= 760 ? 112 : 64; return { l: ins.l || 0, b: ins.b || 0, t: ti, w: Math.max(120, W - (ins.l || 0)), h: Math.max(120, H - (ins.b || 0)) }; }
+  function fitFor(or) { var f = freeBox(), l = M.layout(or); return Math.min((f.w - 56) / l.W, (f.h - f.t - 90) / l.H); }
+  function pickOrient() { if (orientPref !== 'auto') return orientPref; return fitFor('h') >= fitFor('v') ? 'h' : 'v'; }   // a larger map wins
+  function fitScale() { return fitFor(orient); }
+  function toScreen(x, y) { var f = freeBox(); return { x: f.l + f.w / 2 + (x - st.cx) * st.scale, y: f.t + (f.h - f.t) / 2 + (y - st.cy) * st.scale }; }
+  function toSheet(px, py) { var f = freeBox(); return { x: st.cx + (px - f.l - f.w / 2) / st.scale, y: st.cy + (py - f.t - (f.h - f.t) / 2) / st.scale }; }
+  function limitView() { var fs = fitScale(); st.scale = clamp(st.scale, fs * 0.55, fs * 14); st.cx = clamp(st.cx, -L.W / 2 - 0.3, L.W / 2 + 0.3); st.cy = clamp(st.cy, -L.H / 2 - 0.3, L.H / 2 + 0.3); }
+  function fitAll() { st.cx = 0; st.cy = 0; st.scale = fitScale(); }
+  function resize() {
+    var r = root.getBoundingClientRect(); if (!r.width || !r.height) return;
+    W = Math.round(r.width); H = Math.round(r.height); DPR = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    var no = pickOrient(); if (no !== orient) { var fo = focus(); orient = no; L = M.layout(orient); relocate(fo); buildSheet(orient).then(draw); } else { if (st.shown) limitView(); }
+    draw();
+  }
+  function relocate(f) { if (!f) { fitAll(); return; } var pr = M.project(f.lat, f.lon, L)[0]; if (pr) { st.cx = pr.x; st.cy = pr.y; } else fitAll(); }
+  function focus() { var f = freeBox(), p = toSheet(f.l + f.w / 2, f.t + (f.h - f.t) / 2), u = M.unproject(p.x, p.y, L); if (u) return { lat: u.lat, lon: u.lon }; var dR = Math.hypot(p.x - L.R.cx, p.y - L.R.cy), dA = Math.hypot(p.x - L.A.cx, p.y - L.A.cy); return dR - L.rhoMaxR < dA - L.rhoMaxA ? { lat: M.CENTER.lat, lon: M.CENTER.lon } : { lat: M.ANTIPODE.lat, lon: M.ANTIPODE.lon }; }
+
+  // ---------------------------------------------------------------- marker (DOM) dan anomali
+  var pins = [], zonePlace = ctx.DATA.places.filter(function (p) { return p.zone_r; })[0];
+  ctx.DATA.places.forEach(function (p) {
+    if (p.label_only) return;
+    var sz = p.cat === 'capital' ? 26 : (p.cat === 'town' ? 20 : 23), w = document.createElement('div'); w.className = 'g-pin'; w.style.display = 'none';
+    var el = document.createElement('div'); el.innerHTML = ctx.markerHTML(p, sz); var mk = el.firstChild;
+    mk.setAttribute('role', 'button'); mk.tabIndex = 0; mk.setAttribute('aria-label', p.name + (p.proposal ? ' (usulan)' : '') + ', status koordinat ' + C.EPI[p.epi]); mk.title = p.name;
+    mk.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(p.id); } });
+    w.appendChild(el); pinsEl.appendChild(w); pins.push({ p: p, wrap: w, nm: mk.querySelector('.mk-name'), size: sz, shown: false, sx: 0, sy: 0, copies: [] });
+  });
+  var anoms = ctx.DATA.anomalies.map(function (a) { var w = document.createElement('div'); w.className = 'g-anom'; w.style.display = 'none'; w.innerHTML = '<b></b><i></i>'; pinsEl.appendChild(w); return { a: a, wrap: w, shown: false, sx: 0, sy: 0 }; });
+  function on(k) { return LAY[k] && LAY[k].on; }
+
+  // ---------------------------------------------------------------- gambar
+  var raf = 0; function draw() { if (!st.shown) return; if (!raf) raf = requestAnimationFrame(function () { raf = 0; render(); }); }
+  var TXT_HALO = 'rgba(8,12,16,.92)', INK = '#f4eee1';
+  function text(s, x, y, o) {
+    o = o || {}; g.font = o.font || '600 12px "IBM Plex Sans", system-ui, sans-serif'; g.textAlign = o.align || 'center'; g.textBaseline = o.base || 'middle';
+    g.lineWidth = 4; g.strokeStyle = TXT_HALO; g.lineJoin = 'round'; g.strokeText(s, x, y); g.fillStyle = o.color || INK; g.fillText(s, x, y);
+  }
+  function circle(cx, cy, r) { g.beginPath(); g.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2); }
+  function diskScreen(which) { var d = which === 'R' ? L.R : L.A, c = toScreen(d.cx, d.cy); return { x: c.x, y: c.y, k: st.scale }; }
+  function render() {
+    var sheet = sheets[orient], f = freeBox();
+    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
+    if (sheet) { var tl = toScreen(-L.W / 2, -L.H / 2), k = st.scale / sheet.RsPx; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(sheet.cv, tl.x, tl.y, sheet.w * k, sheet.h * k); }
+    var A = diskScreen('A'), R = diskScreen('R'), S = st.scale;
+    [['R', R], ['A', A]].forEach(function (q) {
+      var which = q[0], c = q[1], rim = which === 'R' ? M.RIM_R : M.RIM_A, rimPx = M.rho(rim) * S, band = M.RIM_R;
+      // proximity rings (θ relatif ke rim: ±6,5° / ±19,5° / ±32,5°) — Within / Adjacent / Peripheral
+      if (on('d_rings')) {
+        var TH = ctx.DATA.thresholds, inside = which === 'R' ? [TH.within, TH.adjacent, TH.peripheral] : [TH.within, TH.adjacent, TH.peripheral];
+        inside.forEach(function (d, i) { var th = rim - d; if (th <= 0) return; g.beginPath(); g.arc(c.x, c.y, M.rho(th) * S, 0, Math.PI * 2); g.strokeStyle = 'rgba(255,214,170,' + (i === 0 ? 0.5 : 0.34) + ')'; g.lineWidth = 1; g.setLineDash([4, 5]); g.stroke(); });
+        g.setLineDash([]);
+      }
+      // pita Scar ±6,5° (annulus) di sekitar rim
+      if (on('band')) {
+        var inner = M.rho(rim - ctx.DATA.thresholds.within) * S, outer = M.rho(Math.min(rim + ctx.DATA.thresholds.within, 179.9)) * S, maxR = (which === 'R' ? L.rhoMaxR : L.rhoMaxA) * S;
+        g.save(); circle(c.x, c.y, Math.min(outer, maxR)); g.arc(c.x, c.y, inner, 0, Math.PI * 2, true); g.fillStyle = 'rgba(255,90,36,.16)'; g.fill('evenodd'); g.restore();
+      }
+      // kurva Scar = lingkaran sempurna
+      if (on('curve')) {
+        circle(c.x, c.y, rimPx); g.strokeStyle = 'rgba(255,90,36,.2)'; g.lineWidth = 7; g.stroke();
+        g.save(); g.shadowColor = 'rgba(255,110,50,.9)'; g.shadowBlur = 6; circle(c.x, c.y, rimPx); g.strokeStyle = '#ff7a3d'; g.lineWidth = 2.2; g.stroke(); g.restore();
+      }
+      // anotasi azimut Scar di rim (label di DALAM rim supaya tidak bertabrakan dengan cakram lawan di celah): puncak (0), lereng timur (+90), lereng barat (−90), palung (±180)
+      if (on('d_azi')) {
+        [[0, 'puncak +17°'], [90, 'lereng timur +90°'], [-90, 'lereng barat −90°'], [180, 'palung ±180°']].forEach(function (an) {
+          var p = M.diskXY(which, which === 'R' ? M.RIM_R : 180 - M.RIM_A, an[0], orient), px = c.x + p.x * S, py = c.y + p.y * S, dxn = p.x / (p.r || 1), dyn = p.y / (p.r || 1);
+          g.beginPath(); g.moveTo(px - dxn * 9, py - dyn * 9); g.lineTo(px + dxn * 7, py + dyn * 7); g.strokeStyle = '#ffc39a'; g.lineWidth = 1.8; g.stroke();
+          text(an[1], px - dxn * 15, py - dyn * 15, { font: '600 10.5px "IBM Plex Mono", monospace', color: '#ffc39a', align: dxn > 0.5 ? 'right' : dxn < -0.5 ? 'left' : 'center', base: dyn > 0.5 ? 'bottom' : dyn < -0.5 ? 'top' : 'middle' });
+        });
+      }
+      // judul cakram: di atas cakram (peta datar-lebar) atau di bawah tanda pusat (peta tegak)
+      var cr = which === 'R' ? 'Cakram Rhykar · θ ≤ 72,5° · 34,96 % luas' : 'Cakram Aëris · θ′ ≤ 107,5° · 65,04 % luas', sub = which === 'R' ? 'pusat −55,5° / 0°' : 'pusat +55,5° / 180° (antipode · Libbāl)';
+      if (orient === 'h') { var topY = Math.max(c.y - (which === 'R' ? L.rhoMaxR : L.rhoMaxA) * S - 14, 80); text(cr, c.x, topY, { font: '600 12px "Cinzel", serif', color: '#e8e3d7' }); text(sub, c.x, topY + 15, { font: '500 10.5px "IBM Plex Mono", monospace', color: '#cfd8dc' }); }
+      else { var ty = c.y + rimPx * 0.52; text(cr, c.x, ty, { font: '600 10.5px "Cinzel", serif', color: '#e8e3d7' }); text(sub, c.x, ty + 14, { font: '500 10px "IBM Plex Mono", monospace', color: '#cfd8dc' }); }
+      g.beginPath(); g.moveTo(c.x - 5, c.y); g.lineTo(c.x + 5, c.y); g.moveTo(c.x, c.y - 5); g.lineTo(c.x, c.y + 5); g.strokeStyle = 'rgba(244,238,225,.55)'; g.lineWidth = 1; g.stroke();
+    });
+    // zona Castra Birath (cincin memudar, bukan titik presisi)
+    if (zonePlace && on('zone')) {
+      [1, 0.72, 0.46, 0.24].forEach(function (k, i) {
+        M.project(zonePlace.lat, zonePlace.lon, L).forEach(function (pr) {
+          var d = pr.disk === 'R' ? L.R : L.A; g.beginPath();
+          for (var b = 0; b <= 60; b++) { var q = C.destination(zonePlace.lat, zonePlace.lon, b * 6, zonePlace.zone_r * k), pp = M.polar(q[0], q[1]), xy = M.diskXY(pr.disk, pp.theta, pp.alpha, orient), s = toScreen(d.cx + xy.x, d.cy + xy.y); if (b) g.lineTo(s.x, s.y); else g.moveTo(s.x, s.y); }
+          g.closePath(); g.fillStyle = 'rgba(255,106,43,.09)'; g.fill(); if (i === 0) { g.setLineDash([3, 4]); g.strokeStyle = '#ffb08a'; g.lineWidth = 1.2; g.stroke(); g.setLineDash([]); }
+        });
+      });
+    }
+    // graticule 15° dan tiga meridian (garis lengkung pada proyeksi)
+    if (on('grat') || on('mer')) { drawGrat(); }
+    placePins();
+    root.setAttribute('data-z', String(clamp(Math.floor(2 + 2.2 * Math.log(st.scale / fitScale()) / Math.LN2), 0, 7)));
+    updateCompass();
+  }
+  function polyline(pts) {   // pts: [lat, lon] padat; gambar per cakram, memutus garis di luar cakram
+    ['R', 'A'].forEach(function (which) {
+      var d = which === 'R' ? L.R : L.A, mx = which === 'R' ? M.RIM_R + M.MARGIN : M.RIM_A + M.MARGIN, open = false; g.beginPath();
+      pts.forEach(function (q) {
+        var pp = M.polar(q[0], q[1]), th = which === 'R' ? pp.theta : 180 - pp.theta;
+        if (th > mx) { open = false; return; }
+        var xy = M.diskXY(which, pp.theta, pp.alpha, orient), s = toScreen(d.cx + xy.x, d.cy + xy.y);
+        if (open) g.lineTo(s.x, s.y); else { g.moveTo(s.x, s.y); open = true; }
+      });
+      g.stroke();
+    });
+  }
+  function dense(a, b, step) { var n = Math.max(2, Math.ceil(Math.abs(b[0] - a[0] || b[1] - a[1]) / step)), out = []; for (var i = 0; i <= n; i++) out.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); return out; }
+  function drawGrat() {
+    g.lineWidth = 1;
+    if (on('grat')) {
+      for (var lo = -180; lo < 180; lo += 15) { if (lo % 180 === 0 && lo !== 0) continue; g.strokeStyle = 'rgba(241,234,216,' + (lo % 30 === 0 ? 0.24 : 0.12) + ')'; polyline(dense([-89.5, lo], [89.5, lo], 1.5)); }
+      for (var la = -75; la <= 75; la += 15) { g.strokeStyle = 'rgba(241,234,216,' + (la === 0 ? 0.34 : (la % 30 === 0 ? 0.24 : 0.12)) + ')'; polyline(dense([la, -180], [la, 180], 1.5)); }
+    }
+    if (on('mer')) ctx.styles.MER.forEach(function (m) { g.strokeStyle = m.col; g.globalAlpha = 0.6; g.lineWidth = 1.3; g.setLineDash([7, 6]); [m.lon, m.lon + 360, m.lon - 360].forEach(function (x) { if (x >= -180 && x <= 180) polyline(dense([-89.5, x], [89.5, x], 1.5)); }); g.setLineDash([]); g.globalAlpha = 1; });
+  }
+  var tmpPins = [];
+  function placePins() {
+    var vis = function (p) { return ctx.visible(p); }, mk = on('markers'), an = on('anom'), obst = [], items = [];
+    pins.forEach(function (n) {
+      var show = mk && vis(n.p), best = null;
+      if (show) { var prs = M.project(n.p.lat, n.p.lon, L); if (prs.length) { best = prs[0]; if (prs.length > 1) best = prs[0].theta <= M.RIM_R ? prs[0] : prs[1]; } }
+      if (!best) { if (n.shown) { n.wrap.style.display = 'none'; n.shown = false; } return; }
+      var d = best.disk === 'R' ? L.R : L.A, s = toScreen(d.cx + (best.x - d.cx), d.cy + (best.y - d.cy));
+      var f = freeBox(); if (s.x < f.l - 30 || s.x > W + 30 || s.y < -30 || s.y > f.h + 30) { if (n.shown) { n.wrap.style.display = 'none'; n.shown = false; } return; }
+      var sp = toScreen(best.x, best.y); n.sx = sp.x; n.sy = sp.y;
+      n.wrap.style.transform = 'translate(' + (sp.x - n.size / 2).toFixed(1) + 'px,' + (sp.y - n.size / 2).toFixed(1) + 'px)';
+      if (!n.shown) { n.wrap.style.display = ''; n.shown = true; }
+      obst.push([sp.x - n.size / 2, sp.y - n.size / 2, sp.x + n.size / 2, sp.y + n.size / 2, n]); if (n.nm) { n.nm.classList.remove('hide'); items.push({ sx: sp.x, sy: sp.y, size: n.size, nm: n.nm, p: n.p, ref: n }); }
+    });
+    anoms.forEach(function (n) {
+      var prs = an ? M.project(n.a.lat, n.a.lon, L) : []; if (!prs.length) { if (n.shown) { n.wrap.style.display = 'none'; n.shown = false; } return; }
+      var best = prs[0].theta <= M.RIM_R ? prs[0] : prs[prs.length - 1], sp = toScreen(best.x, best.y); n.sx = sp.x; n.sy = sp.y;
+      n.wrap.style.transform = 'translate(' + sp.x.toFixed(1) + 'px,' + sp.y.toFixed(1) + 'px)'; if (!n.shown) { n.wrap.style.display = ''; n.shown = true; }
+    });
+    C.declutterNames(items, obst, ctx.DECL);
+  }
+
+  // ---------------------------------------------------------------- hover / klik / kompas
+  function pointToLatLon(px, py) { var p = toSheet(px, py), u = M.unproject(p.x, p.y, L); return u; }
+  function pinAt(px, py, mult) {
+    mult = mult || 1; var best = null, bd = 1e9;
+    pins.forEach(function (n) { if (!n.shown) return; var d = Math.hypot(n.sx - px, n.sy - py); if (d <= (n.size / 2 + 4) * mult && d < bd) { bd = d; best = { id: n.p.id, name: n.p.name }; } });
+    if (best) return best;
+    anoms.forEach(function (n) { if (!n.shown) return; var d = Math.hypot(n.sx - px, n.sy - py); if (d <= 18 * mult && d < bd) { bd = d; best = { id: n.a.id, name: n.a.name }; } });
+    return best;
+  }
+  function refPoint() { if (st.hover) return { lat: st.hover.lat, lon: st.hover.lon, src: 'kursor' }; var f = focus(); return { lat: f.lat, lon: f.lon, src: 'pusat' }; }
+  function screenAngle(lat, lon, brg) {
+    var a = M.project(lat, lon, L), q = C.destination(lat, lon, brg, 0.5), b = M.project(q[0], q[1], L); if (!a.length || !b.length) return 0;
+    var pa = a[0], pb = b.filter(function (x) { return x.disk === pa.disk; })[0] || b[0]; var dx = pb.x - pa.x, dy = pb.y - pa.y; return Math.atan2(dx, -dy) * R2D;
+  }
+  var lastRef = 0;
+  function updateCompass() {
+    var now = performance.now(); if (now - lastRef < 50) return; lastRef = now;
+    var r = refPoint(), sc = C.scarCompass(r.lat, r.lon);
+    if (r.src === 'pusat') ctx.readout({ lat: r.lat, lng: r.lon });
+    ctx.compass.update({ lat: r.lat, lon: r.lon, source: r.src, northDeg: screenAngle(r.lat, r.lon, 0), scarDeg: sc.singular ? 0 : screenAngle(r.lat, r.lon, sc.bearing), behind: false });
+  }
+  function hoverMove(e) {
+    var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; st.hoverPx = { x: px, y: py };
+    var u = pointToLatLon(px, py); st.hover = u ? { lat: u.lat, lon: u.lon, disk: u.disk, theta: u.theta, alpha: u.alpha } : null; if (u) ctx.readout({ lat: u.lat, lng: u.lon });
+    var h = pinAt(px, py); if (h) { tipEl.textContent = h.name; tipEl.hidden = false; tipEl.style.transform = 'translate(' + Math.round(px + 14) + 'px,' + Math.round(py + 14) + 'px)'; root.classList.add('pick'); } else { tipEl.hidden = true; root.classList.remove('pick'); }
+    lastRef = 0; updateCompass();
+  }
+  function openPlace(id) { var p = ctx.placeById[id]; if (!p) return; ctx.card.open(ctx.cards.place(p), 'place:' + id, id); }
+  function closeCard() { ctx.card.close(); }
+
+  // ---------------------------------------------------------------- kontrol: geser, zoom (roda / cubit / keyboard)
+  var ptrs = {}, nPtr = 0, g0 = null, pinch = null;
+  cv.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return; try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+    ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; nPtr++;
+    if (nPtr === 1) { g0 = { x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, t0: performance.now(), moved: false }; pinch = null; }
+    else if (nPtr === 2) { var ks = Object.keys(ptrs), a = ptrs[ks[0]], b = ptrs[ks[1]]; pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: st.scale }; g0 = null; }
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!ptrs[e.pointerId]) { if (e.pointerType !== 'touch') hoverMove(e); return; }
+    ptrs[e.pointerId].x = e.clientX; ptrs[e.pointerId].y = e.clientY;
+    if (nPtr === 2 && pinch) { var ks = Object.keys(ptrs), a = ptrs[ks[0]], b = ptrs[ks[1]]; st.scale = pinch.s0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0; limitView(); draw(); return; }
+    if (nPtr === 1 && g0) {
+      if (!g0.moved && Math.hypot(e.clientX - g0.x0, e.clientY - g0.y0) > 4) { g0.moved = true; root.classList.add('dragging'); tipEl.hidden = true; }
+      if (g0.moved) { st.cx -= (e.clientX - g0.lx) / st.scale; st.cy -= (e.clientY - g0.ly) / st.scale; g0.lx = e.clientX; g0.ly = e.clientY; limitView(); draw(); }
+    }
+  });
+  function up(e) {
+    if (!ptrs[e.pointerId]) return; delete ptrs[e.pointerId]; nPtr = Math.max(0, nPtr - 1); try { cv.releasePointerCapture(e.pointerId); } catch (x) {}
+    if (g0 && nPtr === 0) {
+      root.classList.remove('dragging');
+      if (e.type === 'pointerup' && !g0.moved && performance.now() - g0.t0 < 700) click(e);
+      g0 = null;
+    }
+    if (nPtr < 2) pinch = null;
+    if (nPtr === 1) { var k = Object.keys(ptrs)[0], p = ptrs[k]; g0 = { x0: p.x, y0: p.y, lx: p.x, ly: p.y, t0: performance.now(), moved: true }; }
+  }
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerleave', function (e) { if (!ptrs[e.pointerId]) { st.hover = null; st.hoverPx = null; tipEl.hidden = true; root.classList.remove('pick'); lastRef = 0; updateCompass(); } });
+  function zoomAt(px, py, f) { var before = toSheet(px, py), fs = fitScale(); st.scale = clamp(st.scale * f, fs * 0.55, fs * 14); var after = toSheet(px, py); st.cx += before.x - after.x; st.cy += before.y - after.y; limitView(); draw(); }
+  cv.addEventListener('wheel', function (e) { e.preventDefault(); var r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.04 : 0.0015))); }, { passive: false });
+  cv.addEventListener('dblclick', function (e) { var r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, 1.8); });
+  cv.addEventListener('keydown', function (e) {
+    var step = 60 / st.scale * (e.shiftKey ? 3 : 1), h = true;
+    if (e.key === 'ArrowLeft') st.cx -= step; else if (e.key === 'ArrowRight') st.cx += step; else if (e.key === 'ArrowUp') st.cy -= step; else if (e.key === 'ArrowDown') st.cy += step;
+    else if (e.key === '+' || e.key === '=') { var f = freeBox(); zoomAt(f.l + f.w / 2, f.t + (f.h - f.t) / 2, 1.25); return e.preventDefault(); } else if (e.key === '-' || e.key === '_') { var f2 = freeBox(); zoomAt(f2.l + f2.w / 2, f2.t + (f2.h - f2.t) / 2, 0.8); return e.preventDefault(); }
+    else if (e.key === '0') { fitAll(); } else h = false;
+    if (h) { e.preventDefault(); limitView(); draw(); }
+  });
+  function click(e) {
+    var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, h = pinAt(px, py, e.pointerType === 'touch' ? 1.9 : 1);
+    if (h) { openPlace(h.id); return; }
+    var u = pointToLatLon(px, py); if (u) { ctx.readout({ lat: u.lat, lng: u.lon }); st.hover = { lat: u.lat, lon: u.lon }; }
+    closeCard();
+  }
+
+  // ---------------------------------------------------------------- dock dan pengendali
+  function btn(id, label, title, fn, icon) { var b = document.createElement('button'); b.type = 'button'; b.className = 'tbtn'; b.id = id; b.title = title; b.setAttribute('aria-label', title); b.innerHTML = (icon || '') + '<span class="lbl">' + label + '</span>'; b.addEventListener('click', fn); dockEl.appendChild(b); return b; }
+  var IC = function (p) { return '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">' + p + '</svg>'; };
+  btn('d-fit', 'Pas layar', 'Pas layar: tampilkan kedua cakram', function () { fitAll(); draw(); }, IC('<rect x="2.5" y="4" width="11" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/>'));
+  btn('d-r', 'Rhykar', 'Fokus cakram Rhykar', function () { focusDisk('R'); }, IC('<circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/>'));
+  btn('d-a', 'Aëris', 'Fokus cakram Aëris', function () { focusDisk('A'); }, IC('<circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/>'));
+  var bOr = btn('d-or', 'Orientasi', 'Ganti orientasi: otomatis → datar → tegak', function () { orientPref = orientPref === 'auto' ? 'h' : orientPref === 'h' ? 'v' : 'auto'; LS.set('rh-d-orient', orientPref); bOr.title = 'Orientasi: ' + (orientPref === 'auto' ? 'otomatis' : orientPref === 'h' ? 'datar' : 'tegak'); resize(); }, IC('<path d="M3 5h10M3 8h6M3 11h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'));
+  function focusDisk(which) { var d = which === 'R' ? L.R : L.A, rm = which === 'R' ? L.rhoMaxR : L.rhoMaxA, f = freeBox(); st.cx = d.cx; st.cy = d.cy; st.scale = Math.min(f.w, f.h) * 0.46 / rm; limitView(); draw(); }
+  var ctl = {
+    isShown: function () { return st.shown; },
+    show: function (focus0, o) {
+      root.hidden = false; dockEl.hidden = false; st.shown = true; resize(); orient = pickOrient(); L = M.layout(orient);
+      fitAll(); var z = focus0 && focus0.zoom != null ? focus0.zoom : 2;
+      if (focus0 && z >= 3) { var pr = M.project(focus0.lat, focus0.lon, L)[0]; if (pr) { st.cx = pr.x; st.cy = pr.y; st.scale = fitScale() * Math.min(5, Math.pow(2, (z - 2) / 1.6)); limitView(); } }
+      return buildSheet(orient).then(function () { draw(); ctx.syncLayerUI(); });
+    },
+    hide: function () { st.shown = false; root.hidden = true; dockEl.hidden = true; closeCard(); busyEl.hidden = true; tipEl.hidden = true; },
+    getFocus: function () { var f = focus(), z = clamp(2 + 1.6 * Math.log(st.scale / fitScale()) / Math.LN2, 0.5, 6); return { lat: clamp(f.lat, -85, 85), lon: C.lonN(f.lon), zoom: z }; },
+    goPlace: function (p) { var pr = M.project(p.lat, p.lon, L); if (!pr.length) return; var b = pr[0].theta <= M.RIM_R || pr.length === 1 ? pr[0] : pr[1]; st.cx = b.x; st.cy = b.y; st.scale = Math.max(st.scale, fitScale() * (p.label_only ? 1.6 : 2.6)); limitView(); draw(); setTimeout(function () { openPlace(p.id); }, REDUCED ? 0 : 80); },
+    goFaction: function (id, pts) { var la = 0, lo = [0, 0]; pts.forEach(function (q) { la += q[0]; var a = q[1] * D2R; lo[0] += Math.cos(a); lo[1] += Math.sin(a); }); var cLat = la / pts.length, cLon = Math.atan2(lo[1], lo[0]) * R2D, pr = M.project(cLat, cLon, L); if (!pr.length) return; st.cx = pr[0].x; st.cy = pr[0].y; st.scale = Math.max(st.scale, fitScale() * 2); limitView(); draw(); ctl.openFaction(id); },
+    openFaction: function (id) { ctx.card.open(id === 'anusarri' ? ctx.cards.mandala(0) : ctx.cards.faction(id), 'fac:' + id); },
+    closeCard: closeCard, relayout: function () { if (st.shown) resize(); },
+    layerStatus: function () { var o = {}; Object.keys(LAY).forEach(function (k) { o[k] = { on: LAY[k].on, adapterDisk: !!LAY[k].adapterDisk, reason: LAY[k].reasonDisk || null }; }); return o; },
+    info: function () { var s = sheets[orient]; return { orient: orient, scale: st.scale, fit: fitScale(), cx: st.cx, cy: st.cy, sheet: s ? { w: s.w, h: s.h, RsPx: s.RsPx, counts: s.counts, ms: s.ms } : null, layout: L, W: W, H: H, hover: st.hover, pins: pins.filter(function (n) { return n.shown; }).length }; },
+    _project: function (lat, lon) { return M.project(lat, lon, L).map(function (p) { var s = toScreen(p.x, p.y); return { disk: p.disk, x: s.x, y: s.y }; }); },
+    _unproject: function (px, py) { return pointToLatLon(px, py); }, _sheet: function () { return sheets[orient]; }, _state: st, _ctx: ctx
+  };
+  // adapterDisk: layer yang punya padanan di peta kerja (sisanya nonaktif dengan alasan)
+  var DISK_OK = { grat: 1, mer: 1, band: 1, curve: 1, arcs: 1, markers: 1, anom: 1, zone: 1, d_rings: 1, d_azi: 1 };
+  Object.keys(LAY).forEach(function (k) { if (DISK_OK[k]) LAY[k].adapterDisk = { draw: true }; else if (!LAY[k].only3D) LAY[k].reasonDisk = 'Peta kerja dual-disk sengaja minimal (Scar, cincin Scar Proximity, graticule, marker); lapisan ini tersedia di peta datar 2D dan globe 3D.'; });
+  ctx.onEvent(function (type) { if (!st.shown) return; if (type === 'layer' || type === 'filters') draw(); else if (type === 'layout') ctl.relayout(); });
+  window.__rhDisk = ctl;
+  if (window.ResizeObserver) new ResizeObserver(function () { if (st.shown) resize(); }).observe(root); else window.addEventListener('resize', function () { if (st.shown) resize(); });
+  return Promise.resolve(ctl);
+};
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
 <script id="rh-globe-src" type="text/plain">/* Master Map Rhykaris — globe 3D (v1.5): namespace bersama dan util kecil.
    Berkas app/globe/*.js digabung menjadi satu skrip yang HANYA dievaluasi saat pengguna pertama kali masuk 3D.
    Kerangka adegan: planet berjari-jari 1; y = utara, z → bujur 0°, x → bujur 90° BT (timur ke kanan dari kamera di +Z). */
@@ -889,10 +1390,9 @@ G.createLayers = function (S, ctx, labelsEl) {
   }
   var lastDecl = 0, declT = 0;
   var DEC = ctx.DECL;
-  function overlap(a, b) { return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; }
-  function declutter() {   // sama dengan peta datar: ikon selalu tampil; nama marker kanan/kiri menurut prioritas, disembunyikan bila bentrok
+  function declutter() {   // sama dengan peta datar (C.declutterNames): ikon selalu tampil; nama marker kanan/kiri menurut prioritas, disembunyikan bila bentrok
     declT = 0; lastDecl = performance.now();
-    var cr = labelsEl.getBoundingClientRect(), obst = [], items = [], W = S.W, H = S.H;
+    var cr = labelsEl.getBoundingClientRect(), obst = [], items = [];
     pins.forEach(function (n) {
       if (!n.shown) return;
       if (n.kind === 'marker') {
@@ -903,21 +1403,7 @@ G.createLayers = function (S, ctx, labelsEl) {
         obst.push([r.left - cr.left, r.top - cr.top, r.right - cr.left, r.bottom - cr.top, null]);
       }
     });
-    items.sort(function (a, b) { var pa = DEC.PRI[a.p.cat] != null ? DEC.PRI[a.p.cat] : 4, pb = DEC.PRI[b.p.cat] != null ? DEC.PRI[b.p.cat] : 4; return (pa - pb) || ((DEC.EPR[a.p.epi] || 0) - (DEC.EPR[b.p.epi] || 0)); });
-    var placed = [];
-    items.forEach(function (it) {
-      var w = it.nm.offsetWidth, h = it.nm.offsetHeight; if (!w) return;
-      var x = it.sx, y = it.sy, s2 = it.size / 2;
-      var R = [x + s2 + 1, y - h / 2 + 1, x + s2 + 3 + w, y + h / 2 - 1], Lf = [x - s2 - 3 - w, y - h / 2 + 1, x - s2 - 1, y + h / 2 - 1];
-      var cand = DEC.LBL_SIDE[it.p.id] === 'l' ? [['l', Lf], ['r', R]] : [['r', R], ['l', Lf]], ok = null;
-      for (var i = 0; i < cand.length && !ok; i++) {
-        var rc = cand[i][1], hit = false;
-        for (var j = 0; j < obst.length && !hit; j++) if (obst[j][4] !== it && overlap(rc, obst[j])) hit = true;
-        for (var k = 0; k < placed.length && !hit; k++) if (overlap(rc, placed[k])) hit = true;
-        if (!hit) ok = cand[i];
-      }
-      if (ok) { placed.push(ok[1]); it.nm.classList.toggle('l', ok[0] === 'l'); } else it.nm.classList.add('hide');
-    });
+    C.declutterNames(items, obst, DEC);
   }
   function queueDeclutter() { if (declT) return; var wait = Math.max(0, 140 - (performance.now() - lastDecl)); declT = setTimeout(declutter, wait); }
   S.afterRender(function () { placePins(); queueDeclutter(); });
@@ -1470,8 +1956,7 @@ RH.globe = {
     var labelsEl = G.el('div', 'g-labels'); rootEl.appendChild(labelsEl); G.labelsEl = labelsEl;
     var tipEl = G.el('div', 'g-tip'); tipEl.hidden = true; rootEl.appendChild(tipEl);
     var epiEl = G.el('div', 'g-epi'); rootEl.appendChild(epiEl);
-    var cardEl = G.el('div', 'v2-chrome'); cardEl.id = 'g-card'; cardEl.hidden = true; cardEl.setAttribute('role', 'dialog'); cardEl.setAttribute('aria-label', 'Kartu info');
-    app.appendChild(cardEl);
+    var cardEl = ctx.card.el;   // kartu info bersama (dibuat app.js; isi dari pembangun popup 2D)
     var dockEl = G.el('div', 'v2-chrome'); dockEl.id = 'g-dock'; dockEl.hidden = true; dockEl.setAttribute('role', 'group'); dockEl.setAttribute('aria-label', 'Kontrol globe');
     app.appendChild(dockEl);
 
@@ -1512,17 +1997,11 @@ RH.globe = {
     btnSys = dockBtn('g-dock-sys', ICON_MOON, 'Sistem bulan', 'Lihat sistem bulan: mundurkan kamera agar kedua orbit terlihat', function () { ctl.viewMoonSystem(); });
 
     // ------------------------------------------------------------ kartu info
-    function closeCard() { if (cardEl.hidden) return; cardEl.hidden = true; cardEl.innerHTML = ''; st.cardKey = null; ctx.setHash(null); }
-    function openCard(html, key, hash) {
-      cardEl.innerHTML = '<button type="button" class="g-x" aria-label="Tutup kartu">×</button>' + html;
-      cardEl.hidden = false; cardEl.scrollTop = 0; st.cardKey = key || null; if (hash !== undefined) ctx.setHash(hash);
-      cardEl.querySelector('.g-x').addEventListener('click', closeCard);
-      if (window.innerWidth <= 760) ctx.closePanel && ctx.closePanel();
-    }
-    cardEl.addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-g]');
-      if (b) { var a = b.getAttribute('data-g'); if (a === 'sys') ctl.viewMoonSystem(); else if (a === 'planet') ctl.focusPlanet(); return; }
-      ctx.cardAction(ev);
+    function closeCard() { ctx.card.close(); }
+    function openCard(html, key, hash) { ctx.card.open(html, key, hash); }
+    cardEl.addEventListener('click', function (ev) {   // tombol khusus kartu bulan (aksi umum — salin koordinat, ukur, kuasa — ditangani app.js)
+      var b = ev.target.closest && ev.target.closest('[data-g]'); if (!b) return;
+      var a = b.getAttribute('data-g'); if (a === 'sys') ctl.viewMoonSystem(); else if (a === 'planet') ctl.focusPlanet();
     });
     G.openCard = openCard; G.closeCard = closeCard;
     function openHit(h) {
@@ -1656,7 +2135,7 @@ RH.globe = {
       openFaction: function (id) { openCard(ctx.cards.faction(id), 'fac:' + id); },
       relayout: function () { if (st.shown) S.resize(); },
       /** Status adapter3D per layer (paritas 2D/3D): {key: {on, adapter3D, reason}}. */
-      layerStatus: function () { var o = {}; Object.keys(ctx.LAYERS).forEach(function (k) { var L0 = ctx.LAYERS[k]; o[k] = { on: L0.on, only3D: !!L0.only3D, adapter2D: !!L0.adapter2D, adapter3D: !!L0.adapter3D, reason: L0.reason3D || null }; }); return o; },
+      layerStatus: function () { var o = {}; Object.keys(ctx.LAYERS).forEach(function (k) { var L0 = ctx.LAYERS[k]; o[k] = { on: L0.on, only3D: !!L0.only3D, onlyDisk: !!L0.onlyDisk, adapter2D: !!L0.adapter2D, adapter3D: !!L0.adapter3D, reason: L0.reason3D || null }; }); return o; },
       /** Ringkasan teknis untuk uji: ukuran tekstur, memori GPU, pin DOM, bulan. */
       info: function () { var r = S.renderer.info; return { baseSize: S.baseSize, overlay: layers && layers.overlaySize, maxTex: S.maxTex, geometries: r.memory.geometries, textures: r.memory.textures, frames: S.frames || 0,
         pins: layers ? layers.pins.length : 0, view: { lat: S.view.lat, lon: S.view.lon, dist: S.view.dist }, moons: bodies ? bodies.info() : null, spin: st.spin, dpr: S.dpr, W: S.W, H: S.H }; },
@@ -1801,6 +2280,31 @@ C.createTerrain = function (src) {
   img.src = src;
   t.at = function (lat, lon) { return C.terrainFrom(t.data, t.w, t.h, lat, lon); };
   return t;
+};
+
+// ------------------------------------------------------------------ anti-tabrakan nama marker (dipakai globe 3D dan peta kerja)
+/**
+ * Ikon marker selalu tampil; nama marker ditempatkan kanan/kiri menurut prioritas (ibukota > kota > pelabuhan > lainnya, lalu kanon > turunan > inferensi)
+ * dan disembunyikan bila kedua sisi bertabrakan. items: [{sx, sy, size, nm (elemen nama), p (place), ref?}], obst: [[x0, y0, x1, y1, pemilik]].
+ * DEC = {PRI, EPR, LBL_SIDE} dari app.js. Sama dengan algoritma declutter peta datar.
+ */
+C.declutterNames = function (items, obst, DEC) {
+  function overlap(a, b) { return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; }
+  items.sort(function (a, b) { var pa = DEC.PRI[a.p.cat] != null ? DEC.PRI[a.p.cat] : 4, pb = DEC.PRI[b.p.cat] != null ? DEC.PRI[b.p.cat] : 4; return (pa - pb) || ((DEC.EPR[a.p.epi] || 0) - (DEC.EPR[b.p.epi] || 0)); });
+  var placed = [];
+  items.forEach(function (it) {
+    var w = it.nm.offsetWidth, h = it.nm.offsetHeight; if (!w) return;
+    var x = it.sx, y = it.sy, s2 = it.size / 2, self = it.ref || it;
+    var R = [x + s2 + 1, y - h / 2 + 1, x + s2 + 3 + w, y + h / 2 - 1], Lf = [x - s2 - 3 - w, y - h / 2 + 1, x - s2 - 1, y + h / 2 - 1];
+    var cand = DEC.LBL_SIDE[it.p.id] === 'l' ? [['l', Lf], ['r', R]] : [['r', R], ['l', Lf]], ok = null;
+    for (var i = 0; i < cand.length && !ok; i++) {
+      var rc = cand[i][1], hit = false;
+      for (var j = 0; j < obst.length && !hit; j++) if (obst[j][4] !== self && overlap(rc, obst[j])) hit = true;
+      for (var k = 0; k < placed.length && !hit; k++) if (overlap(rc, placed[k])) hit = true;
+      if (!hit) ok = cand[i];
+    }
+    if (ok) { placed.push(ok[1]); it.nm.classList.toggle('l', ok[0] === 'l'); } else it.nm.classList.add('hide');
+  });
 };
 
 // ------------------------------------------------------------------ three.js (dimuat malas, hanya saat pengguna masuk 3D)
@@ -2082,8 +2586,9 @@ function main() {
   var layerSubs = [];
   function onLayerEvent(fn) { layerSubs.push(fn); }
   function emitLayer(type, key, on) { layerSubs.forEach(function (fn) { try { fn(type, key, on); } catch (e) { console.error(e); } }); }
-  function reg(key, group, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: group, adapter2D: group, adapter3D: null, only3D: false, on: on }; if (on && group) group.addTo(map); return group; }
-  function reg3D(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, only3D: true, on: on }; }
+  function reg(key, group, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: group, adapter2D: group, adapter3D: null, adapterDisk: null, only3D: false, onlyDisk: false, on: on }; if (on && group) group.addTo(map); return group; }
+  function reg3D(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, adapterDisk: null, only3D: true, onlyDisk: false, on: on }; }
+  function regDisk(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, adapterDisk: null, only3D: false, onlyDisk: true, on: on }; }
   function setLayer(key, on) { var L0 = LAYERS[key]; if (!L0) return; L0.on = on; if (L0.group) { if (on) L0.group.addTo(map); else map.removeLayer(L0.group); } saved[key] = on; LS.set('rh-layers-v1', saved); refreshLegend(); emitLayer('layer', key, on); }
 
   // ================================================================ graticule & meridian
@@ -2444,8 +2949,8 @@ function main() {
     if (t.hasAttribute('data-copy')) { ev.preventDefault(); var txt = t.getAttribute('data-copy');
       var done = function () { t.textContent = 'Tersalin ✓'; setTimeout(function () { t.textContent = 'Salin koordinat'; }, 1400); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, function () { t.textContent = txt; }); else t.textContent = txt; }
-    if (t.hasAttribute('data-measure')) { ev.preventDefault(); var p = placeById[t.getAttribute('data-measure')]; if (viewMode === '3d') leave3D(); startMeasure([p.lat, nearestX(p.lon)]); }
-    if (t.hasAttribute('data-fac')) { ev.preventDefault(); if (viewMode === '3d' && globe) globe.openFaction(t.getAttribute('data-fac')); else openFaction(t.getAttribute('data-fac'), popup.getLatLng()); }
+    if (t.hasAttribute('data-measure')) { ev.preventDefault(); var p = placeById[t.getAttribute('data-measure')]; if (viewMode !== '2d') leaveToFlat(); startMeasure([p.lat, nearestX(p.lon)]); }
+    if (t.hasAttribute('data-fac')) { ev.preventDefault(); if (cur()) cur().openFaction(t.getAttribute('data-fac')); else openFaction(t.getAttribute('data-fac'), popup.getLatLng()); }
   }
   map.getContainer().addEventListener('click', cardAction);
 
@@ -2482,14 +2987,14 @@ function main() {
   }
   function zoomFor(p) { return p.cat === 'continent' ? 2.4 : (p.label_only ? 3.4 : 4.6); }
   function goPlace(id) { var p = placeById[id]; if (!p) return;
-    if (viewMode === '3d' && globe) { globe.goPlace(p); if (window.innerWidth <= 760) setPanel(false); return; }
+    if (cur()) { cur().goPlace(p); if (window.innerWidth <= 760) setPanel(false); return; }
     var x = nearestX(p.lon), z = Math.max(map.getZoom(), zoomFor(p));
     if (REDUCED) map.setView([p.lat, x], z, { animate: false }); else map.flyTo([p.lat, x], z, { duration: 0.9 });
     map.once('moveend', function () { openPlace(id); }); if (window.innerWidth <= 760) setPanel(false); }
   function goFaction(id) { var t = DATA.territories.filter(function (x) { return x.id === id; })[0]; var pts = [];
     if (id === 'anusarri') { DATA.mandala.forEach(function (m) { m.rings.forEach(function (r) { pts = pts.concat(r); }); }); } else if (t) t.rings.forEach(function (r) { pts = pts.concat(r); });
     if (!pts.length) return;
-    if (viewMode === '3d' && globe) { globe.goFaction(id, pts); if (window.innerWidth <= 760) setPanel(false); return; }
+    if (cur()) { cur().goFaction(id, pts); if (window.innerWidth <= 760) setPanel(false); return; }
     var b = L.latLngBounds(pts); var c = b.getCenter(), dx = nearestX(c.lng) - c.lng; b = L.latLngBounds(shift(pts, dx));
     map.flyToBounds(b, { padding: [60, 60], maxZoom: 5, duration: REDUCED ? 0 : 0.9 }); map.once('moveend', function () { openFaction(id, L.latLng(b.getCenter())); }); if (window.innerWidth <= 760) setPanel(false); }
   resEl.addEventListener('click', function (e) { var li = e.target.closest('.res'); if (!li) return; if (li.dataset.fac) goFaction(li.dataset.fac); else goPlace(li.dataset.id); });
@@ -2498,13 +3003,14 @@ function main() {
   qEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { var li = resEl.querySelector('.res'); if (li) li.click(); } });
   document.addEventListener('keydown', function (e) {
     if (e.key === '/' && document.activeElement !== qEl) { e.preventDefault(); if (!panelOpen) setPanel(true); document.getElementById('tab-cari').click(); qEl.focus(); }
-    if (e.key === 'Escape') { map.closePopup(); stopMeasure(); if (viewMode === '3d' && globe) globe.closeCard(); }
+    if (e.key === 'Escape') { map.closePopup(); stopMeasure(); if (cur()) cur().closeCard(); }
   });
 
   // ================================================================ tab Layer
-  reg3D('g_moons', true); reg3D('g_orbits', true); reg3D('g_axis', true); reg3D('g_ecl', true);
+  reg3D('g_moons', true); reg3D('g_orbits', true); reg3D('g_axis', true); reg3D('g_ecl', true); regDisk('d_rings', true); regDisk('d_azi', true);
   var LAYER_UI = [
-    ['Globe 3D', [['g_moons', 'Dua bulan (Inferensi AI)'], ['g_orbits', 'Garis orbit bulan · jarak tidak berskala'], ['g_axis', 'Sumbu rotasi (tegak · kemiringan belum ditetapkan)'], ['g_ecl', 'Bidang ekliptika (ilustratif · sejajar ekuator)']], true],
+    ['Globe 3D', [['g_moons', 'Dua bulan (Inferensi AI)'], ['g_orbits', 'Garis orbit bulan · jarak tidak berskala'], ['g_axis', 'Sumbu rotasi (tegak · kemiringan belum ditetapkan)'], ['g_ecl', 'Bidang ekliptika (ilustratif · sejajar ekuator)']], '3d'],
+    ['Peta kerja dual-disk', [['d_rings', 'Cincin Scar Proximity (≤ 6,5° · ≤ 19,5° · ≤ 32,5°)'], ['d_azi', 'Anotasi azimut Scar (puncak, ±90°, palung)']], 'disk'],
     ['Dasar & kartografi', [['grat', 'Graticule 15°'], ['mer', 'Tiga meridian'], ['cland', 'Kontur elevasi (1.000/2.500/4.500 m)'], ['csea', 'Kontur batimetri (−200/−3.000/−6.000 m)'], ['labels', 'Label wilayah & perairan'], ['regions', 'Garis region fisik']]],
     ['The Scar', [['band', 'Pita 13,0°'], ['curve', 'Kurva small circle'], ['arcs', 'Empat busur (batas usulan)'], ['anom', 'Kantong anomali massa'], ['zone', 'Zona Castra Birath (tak dikunci)']]],
     ['Wilayah kuasa AS 1647', [['t_hes', 'Hesperia & vasal Commonwealth', '#c0394b'], ['t_foe', 'Foedera & Provincia Cassivallae', '#2aa38a'], ['t_int', 'Kerajaan Interregna & Nundina', '#e0a33a'], ['t_ana', 'Anabasim (konsolidasi Birath–Satvan)', '#ff6a2b'], ['t_elv', 'Andurā (Zona Ambang)', '#4cc3a8'], ['mandala', 'Mandala Kemurnian (Anušarri)', '#e6d47a'], ['t_lain', 'Lainnya: Liminara, Ktonia, Kloaka, Emporys, Peratēs, Vasundha', '#9b6fd6'], ['fronts', 'Front Florian & arah ekspansi Anabasim']]],
@@ -2514,7 +3020,7 @@ function main() {
   ];
   var secL = document.getElementById('sec-layer');
   LAYER_UI.forEach(function (g) {
-    var d = document.createElement('div'); d.className = 'grp'; d.innerHTML = '<h3>' + esc(g[0]) + '</h3>'; if (g[2]) { d.hidden = true; d.setAttribute('data-only3d', '1'); }
+    var d = document.createElement('div'); d.className = 'grp'; d.innerHTML = '<h3>' + esc(g[0]) + '</h3>'; if (g[2]) { d.hidden = true; d.setAttribute(g[2] === 'disk' ? 'data-onlydisk' : 'data-only3d', '1'); }
     g[1].forEach(function (it) { var k = it[0]; if (!LAYERS[k]) return; var id = 'ly-' + k;
       var lab = document.createElement('label'); lab.className = 'layer'; lab.setAttribute('for', id);
       lab.innerHTML = '<input type="checkbox" id="' + id + '"' + (LAYERS[k].on ? ' checked' : '') + '><span>' + (it[2] ? '<span class="sw" style="background:' + it[2] + '"></span>' : '') + esc(it[1]) + '</span><span class="meta"></span>';
@@ -2543,7 +3049,7 @@ function main() {
     '<dt>Hemisfer Rhykar / Aëris</dt><dd>' + fmt(S.hemR, 2) + ' / ' + fmt(S.hemA, 2) + '</dd><dt>Overlay Scar pada pita 13,0°</dt><dd>' + fmt(S.overlay, 2) + '%</dd>' +
     '<dt>Lebar turunan utk 4,000%</dt><dd>' + fmt(S.width_derived, 2) + '°</dd><dt>Koridor lintas-sutura</dt><dd>1 · ' + esc(S.corridor.split(' (')[0]) + '</dd>' +
     '<dt>Radius planet · keliling</dt><dd>' + fint(S.radius_km) + ' km · ' + fint(S.circ_km) + ' km</dd><dt>Grid raster global</dt><dd>' + esc(S.grid.split(' (')[0]) + ' · 12,7 km/px</dd>' +
-    (DATA.inset ? '<dt>Inset detail wilayah inti</dt><dd>' + DATA.inset.ppd + ' px/° · ' + fmt(KM_DEG / DATA.inset.ppd, 1) + ' km/px</dd>' : '') + '<dt>Versi viewer</dt><dd>v' + esc(RH.version || '') + ' · peta datar + globe 3D</dd></dl></div>' +
+    (DATA.inset ? '<dt>Inset detail wilayah inti</dt><dd>' + DATA.inset.ppd + ' px/° · ' + fmt(KM_DEG / DATA.inset.ppd, 1) + ' km/px</dd>' : '') + '<dt>Versi viewer</dt><dd>v' + esc(RH.version || '') + ' · datar · globe · peta kerja</dd></dl></div>' +
     '<div class="card"><h4>Master Map v4 = peta kanon (29 Sep 2026, Canon Index #208)</h4><p>v4 dibangun ulang dari constraint Master Map v3-D (11 Jul 2026), yang gambar dan script-nya tidak pernah masuk vault. Pipeline baru (seed 1647) memakai semua constraint terkunci sebagai <b>input</b> generator — proporsi, koridor tunggal, teluk, antipode — lalu lapisan fisiknya (garis pantai, relief, sungai, bioma, batimetri) diketok sebagai kanon. Lapisan politik tetap snapshot AS 1647 yang boleh bergeser tanpa versi fisik baru.</p></div>' +
     '<div class="prose"><p><b>Status koordinat.</b> Relasi sebuah lokasi bisa kanon sementara koordinatnya inferensi. Chip di setiap popup menandai status <i>koordinat</i>: ' + chip('kanon') + ' dikunci kanon (bujur 0° teluk, kutub, geometri Scar) · ' + chip('turunan') + ' diturunkan deterministik dari kanon + garis pantai · ' + chip('inferensi') + ' penempatan AI yang patuh relasi kanon · ' + chip('terbuka') + ' sengaja tidak dikunci.</p>' +
     '<p><b>Ambang Scar Proximity (kanon — Canon Index #209, 29 Sep 2026).</b> Pita ±' + fmt(TH.within, 1) + '° = Within · ≤' + fmt(TH.adjacent, 1) + '° (tiga setengah-lebar pita) = Adjacent · ≤' + fmt(TH.peripheral, 1) + '° = Peripheral · selebihnya Unaffected. Polity diukur dari ibukota, wilayah fisik dari sentroid; benua & samudra lintas-cincin tanpa nilai tunggal. Sabuk Transisi Sutura = Adjacent + Peripheral. Semua field kanon cocok setelah Zona Ambang dikoreksi ke Unaffected (#210).</p>' +
@@ -2720,99 +3226,128 @@ function main() {
   function closeStaleTips() { map.eachLayer(function (l) { var t = l.getTooltip && l.getTooltip(); if (t && !t.options.permanent && l.isTooltipOpen()) l.closeTooltip(); }); }
   map.on('dragstart dragend zoomstart', closeStaleTips);
 
-  // ================================================================ tampilan 2D <-> 3D (v1.5)
-  // Peta datar tetap menjadi tampilan utama. Globe 3D (three.js + modul app/globe/*) dimuat MALAS saat tombol "Globe 3D" ditekan
-  // (atau saat pilihan terakhir pengguna adalah 3D); peta datar tidak mengunduh three.js. Bila three.js gagal dimuat atau WebGL tidak ada,
-  // pengguna mendapat pesan ramah dan tetap di 2D.
+  // ================================================================ tampilan: peta datar 2D (bawaan) · globe 3D · peta kerja dual-disk (v1.5 / v1.6)
+  // Peta datar tetap menjadi tampilan utama dan satu-satunya yang dimuat di awal. Globe 3D (three.js + app/globe/*) dan peta kerja dual-disk
+  // (app/disk.js, Canvas 2D murni) dimuat MALAS saat tombolnya ditekan (atau saat pilihan terakhir pengguna). Peta datar tidak mengunduh three.js.
+  // Bila three.js gagal dimuat atau WebGL tidak ada, pengguna mendapat pesan ramah dan tetap di tampilan sebelumnya.
   var MOONS = JSON.parse(document.getElementById('rh-moons').textContent); RH.moons.configure(MOONS);
   compass = RH.compass.create(document.getElementById('app'));
-  var switching = false, globe = null, globeP = null;
-  var vtBtns = Array.prototype.slice.call(document.querySelectorAll('[data-vt]')), tabGlobe = document.getElementById('tab-globe'), toastEl = document.getElementById('v2-toast'), toastT = null;
+  var switching = false, views = { '3d': null, 'disk': null }, loading = { '3d': null, 'disk': null };
+  var vtBtns = Array.prototype.slice.call(document.querySelectorAll('[data-vt]')), dkBtns = Array.prototype.slice.call(document.querySelectorAll('[data-dk]'));
+  var tabGlobe = document.getElementById('tab-globe'), toastEl = document.getElementById('v2-toast'), toastT = null;
+  function cur() { return viewMode === '2d' ? null : views[viewMode]; }
   function toast(html, ms) {
     toastEl.innerHTML = html; toastEl.hidden = false; clearTimeout(toastT);
     toastT = setTimeout(function () { toastEl.hidden = true; }, ms || 9000);
   }
+  function setHash(id) { try { if (id) history.replaceState(null, '', '#' + id); else history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+  // kartu info yang dipakai bersama oleh globe 3D dan peta kerja (isi dibangun oleh pembangun popup 2D yang sama)
+  var cardEl = document.createElement('div'); cardEl.id = 'g-card'; cardEl.className = 'v2-chrome'; cardEl.hidden = true; cardEl.setAttribute('role', 'dialog'); cardEl.setAttribute('aria-label', 'Kartu info');
+  document.getElementById('app').appendChild(cardEl);
+  var card = {
+    el: cardEl,
+    open: function (html, key, hash) {
+      cardEl.innerHTML = '<button type="button" class="g-x" aria-label="Tutup kartu">×</button>' + html; cardEl.hidden = false; cardEl.scrollTop = 0;
+      if (hash !== undefined) setHash(hash); cardEl.querySelector('.g-x').addEventListener('click', card.close); if (window.innerWidth <= 760) setPanel(false);
+    },
+    close: function () { if (cardEl.hidden) return; cardEl.hidden = true; cardEl.innerHTML = ''; setHash(null); }
+  };
+  cardEl.addEventListener('click', cardAction);
   function setViewButton() {
-    var is3 = viewMode === '3d';
-    vtBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(is3)); b.title = is3 ? 'Kembali ke peta datar 2D' : 'Tampilkan globe 3D (peta datar 2D tetap menjadi tampilan utama)'; });
+    vtBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(viewMode === '3d')); b.title = viewMode === '3d' ? 'Kembali ke peta datar 2D' : 'Tampilkan globe 3D (peta datar 2D tetap menjadi tampilan utama)'; });
+    dkBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(viewMode === 'disk')); b.title = viewMode === 'disk' ? 'Kembali ke peta datar 2D' : 'Tampilkan peta kerja dual-disk (Lambert equal-area, luas benar)'; });
   }
   function syncLayerUI() {
-    var is3 = viewMode === '3d';
+    var is3 = viewMode === '3d', isD = viewMode === 'disk';
     Array.prototype.forEach.call(secL.querySelectorAll('[data-only3d]'), function (g) { g.hidden = !is3; });
+    Array.prototype.forEach.call(secL.querySelectorAll('[data-onlydisk]'), function (g) { g.hidden = !isD; });
     Object.keys(LAYERS).forEach(function (k) {
       var L0 = LAYERS[k], inp = document.getElementById('ly-' + k); if (!inp) return;
-      var lab = inp.parentNode, meta = lab.querySelector('.meta'), un = is3 && !L0.adapter3D;
+      var lab = inp.parentNode, meta = lab.querySelector('.meta'), un = (is3 && !L0.only3D && !L0.onlyDisk && !L0.adapter3D) || (isD && !L0.onlyDisk && !L0.only3D && !L0.adapterDisk);
       inp.disabled = un; lab.classList.toggle('na', un);
-      if (un) lab.setAttribute('title', L0.reason3D || 'Belum tersedia di tampilan 3D'); else lab.removeAttribute('title');
-      if (meta) meta.textContent = un ? 'tak ada di 3D' : '';
+      if (un) lab.setAttribute('title', (is3 ? L0.reason3D : L0.reasonDisk) || (is3 ? 'Belum tersedia di tampilan 3D' : 'Tidak tersedia di peta kerja')); else lab.removeAttribute('title');
+      if (meta) meta.textContent = un ? (is3 ? 'tak ada di 3D' : 'tak ada di peta kerja') : '';
     });
   }
   function tgroupOf(t) { return TGROUP[t.id] || (t.id.indexOf('ir_') === 0 ? 'int' : 'lain'); }
-  function globeCtx() {
+  function viewCtx() {
     return {
       DATA: DATA, MOONS: MOONS, C: C, LAYERS: LAYERS, placeById: placeById, FAC: FAC, BASE: BASE, TERR: TERR, REDUCED: REDUCED, LS: LS, version: RH.version,
       styles: { REG_STYLE: REG_STYLE, TGROUP: TGROUP, MOP: MOP, RST: RST, CST: CST, MER: MER, ARCS: ARCS, SC: SC, tgroupOf: tgroupOf },
       scar: { outer: outer, inner: inner, curve: curve },
       visible: visible, groupOf: groupOf, markerHTML: markerHTML, lblClass: lblClass, breakName: breakName, LBL_BREAK: LBL_BREAK, LBL_MINOR: LBL_MINOR,
-      labelHTML: labelHTML, DECL: { LBL_SIDE: LBL_SIDE, PRI: PRI, EPR: EPR }, cardAction: cardAction, closePanel: function () { setPanel(false); },
+      labelHTML: labelHTML, DECL: { LBL_SIDE: LBL_SIDE, PRI: PRI, EPR: EPR }, cardAction: cardAction, closePanel: function () { setPanel(false); }, card: card,
       cards: { place: placeHTML, faction: factionHTML, mandala: mandalaHTML, route: routeHTML, bank: BANK_HTML },
       readout: function (ll) { lastLL = ll; updRO(ll); }, compass: compass, insets: insets, panelOpen: function () { return panelOpen; },
-      onEvent: onLayerEvent, setLayer: setLayer, syncLayerUI: syncLayerUI, toast: toast, esc: esc,
-      setHash: function (id) { try { if (id) history.replaceState(null, '', '#' + id); else history.replaceState(null, '', location.pathname + location.search); } catch (e) {} },
-      to2D: function () { return leave3D(); },
+      onEvent: onLayerEvent, setLayer: setLayer, syncLayerUI: syncLayerUI, toast: toast, esc: esc, setHash: setHash,
+      to2D: function () { return leaveToFlat(); }
     };
   }
-  function loadGlobe() {
-    if (globeP) return globeP;
-    globeP = C.loadThree().then(function (THREE) {
-      if (!RH.globe) { var sc = document.createElement('script'); sc.textContent = document.getElementById('rh-globe-src').textContent; document.head.appendChild(sc); }
+  function injectModule(id) { var sc = document.createElement('script'); sc.textContent = document.getElementById(id).textContent; document.head.appendChild(sc); }
+  function loadView(mode) {
+    if (loading[mode]) return loading[mode];
+    var p;
+    if (mode === '3d') p = C.loadThree().then(function (THREE) {
+      if (!RH.globe) injectModule('rh-globe-src');
       if (!RH.globe || !RH.globe.init) throw new Error('modul globe tidak terpasang');
-      return RH.globe.init(THREE, globeCtx());
-    }).catch(function (e) { globeP = null; throw e; });
-    return globeP;
+      return RH.globe.init(THREE, viewCtx());
+    });
+    else p = Promise.resolve().then(function () {
+      if (!RH.disk) injectModule('rh-disk-src');
+      if (!RH.disk || !RH.disk.init) throw new Error('modul peta kerja tidak terpasang');
+      return RH.disk.init(viewCtx());
+    });
+    loading[mode] = p.then(function (c) { views[mode] = c; return c; }).catch(function (e) { loading[mode] = null; throw e; });
+    return loading[mode];
   }
-  function enter3D(opts) {
+  function busy(on) { switching = on; vtBtns.concat(dkBtns).forEach(function (b) { if (on) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy'); b.disabled = on; }); }
+  var VIEW_ERR = {
+    '3d': '<b>Globe 3D tidak bisa dimuat.</b> Pustaka three.js gagal diunduh (periksa koneksi internet; sumber CDN dan salinan lokal sudah dicoba). Peta datar 2D tetap berfungsi penuh.',
+    'disk': '<b>Peta kerja tidak bisa dibuka.</b> Peta datar 2D tetap berfungsi penuh.'
+  };
+  /** Pindah tampilan. mode: '2d' | '3d' | 'disk'. Titik fokus (lat/lon pusat area bebas) dipertahankan bila memungkinkan. */
+  function switchTo(mode, opts) {
     opts = opts || {};
-    if (viewMode === '3d' || switching) return Promise.resolve(viewMode === '3d');
-    if (!C.hasWebGL()) { toast('<b>Globe 3D tidak bisa dibuka:</b> peramban ini tidak mendukung WebGL (atau WebGL dimatikan). Peta datar 2D tetap berfungsi penuh.'); return Promise.resolve(false); }
-    switching = true; vtBtns.forEach(function (b) { b.setAttribute('aria-busy', 'true'); b.disabled = true; });
-    var ins = insets(), sz = map.getSize(), c = map.containerPointToLatLng([ins.l + (sz.x - ins.l) / 2, (sz.y - ins.b) / 2]);   // pusat area yang tidak tertutup panel
-    var focus = { lat: Math.max(-85, Math.min(85, c.lat)), lon: lonN(c.lng), zoom: map.getZoom() };
-    return loadGlobe().then(function (g) {
-      globe = g; viewMode = '3d';
-      document.body.classList.add('in-3d'); tabGlobe.hidden = false;
+    if (switching) return Promise.resolve(false);
+    if (mode === viewMode) return Promise.resolve(true);
+    if (mode === '2d') { leaveToFlat(); return Promise.resolve(true); }
+    if (mode === '3d' && !C.hasWebGL()) { toast('<b>Globe 3D tidak bisa dibuka:</b> peramban ini tidak mendukung WebGL (atau WebGL dimatikan). Peta datar 2D tetap berfungsi penuh.'); return Promise.resolve(false); }
+    busy(true);
+    var from = cur(), focus;
+    if (from) focus = from.getFocus();
+    else { var ins = insets(), sz = map.getSize(), c = map.containerPointToLatLng([ins.l + (sz.x - ins.l) / 2, (sz.y - ins.b) / 2]);   // pusat area yang tidak tertutup panel
+      focus = { lat: Math.max(-85, Math.min(85, c.lat)), lon: lonN(c.lng), zoom: map.getZoom() }; }
+    return loadView(mode).then(function (v) {
+      if (from) from.hide();
+      viewMode = mode; document.body.classList.remove('in-3d', 'in-disk'); document.body.classList.add('in-' + mode);
+      tabGlobe.hidden = mode !== '3d'; if (mode !== '3d' && tabGlobe.getAttribute('aria-selected') === 'true') document.getElementById('tab-layer').click();
       map.closePopup(); stopMeasure(); btnMeas.disabled = true; btnMeas.title = 'Ukur jarak tersedia di tampilan 2D';
-      LS.set('rh-view', '3d'); setViewButton(); syncLayerUI();
-      g.show(focus, { instant: REDUCED || !!opts.instant });
-      return true;
-    }).catch(function (e) {
-      console.error(e);
-      toast('<b>Globe 3D tidak bisa dimuat.</b> Pustaka three.js gagal diunduh (periksa koneksi internet; sumber CDN dan salinan lokal sudah dicoba). Peta datar 2D tetap berfungsi penuh.');
-      return false;
-    }).then(function (ok) { switching = false; vtBtns.forEach(function (b) { b.removeAttribute('aria-busy'); b.disabled = false; }); return ok; });
+      LS.set('rh-view', mode); setViewButton(); syncLayerUI();
+      return Promise.resolve(v.show(focus, { instant: REDUCED || !!opts.instant })).then(function () { return true; });
+    }).catch(function (e) { console.error(e); toast(VIEW_ERR[mode]); return false; }).then(function (ok) { busy(false); return ok; });
   }
-  function leave3D() {
-    if (viewMode !== '3d' || !globe) return;
-    var f = globe.getFocus();
-    globe.hide();
-    viewMode = '2d'; document.body.classList.remove('in-3d'); tabGlobe.hidden = true;
-    if (document.getElementById('tab-globe').getAttribute('aria-selected') === 'true') document.getElementById('tab-layer').click();
+  function leaveToFlat() {
+    var v = cur(); if (!v) return;
+    var f = v.getFocus(); v.hide();
+    viewMode = '2d'; document.body.classList.remove('in-3d', 'in-disk'); tabGlobe.hidden = true;
+    if (tabGlobe.getAttribute('aria-selected') === 'true') document.getElementById('tab-layer').click();
     btnMeas.disabled = false; btnMeas.title = 'Ukur jarak: ketuk dua titik di peta';
     LS.set('rh-view', '2d'); setViewButton(); syncLayerUI();
     map.invalidateSize(); map.setView([f.lat, nearestX(f.lon)], Math.max(map.getMinZoom(), Math.min(6, f.zoom)), { animate: false });
-    var ins = insets(); map.panBy([-ins.l / 2, ins.b / 2], { animate: false });   // fokus globe → pusat area bebas peta datar
+    var ins = insets(); map.panBy([-ins.l / 2, ins.b / 2], { animate: false });   // fokus tampilan lain → pusat area bebas peta datar
     hoverOn = false; updRO(map.getCenter()); drawGratLabels(); queueDeclutter();
   }
-  vtBtns.forEach(function (b) { b.addEventListener('click', function () { if (viewMode === '3d') leave3D(); else enter3D(); }); });
+  vtBtns.forEach(function (b) { b.addEventListener('click', function () { switchTo(viewMode === '3d' ? '2d' : '3d'); }); });
+  dkBtns.forEach(function (b) { b.addEventListener('click', function () { switchTo(viewMode === 'disk' ? '2d' : 'disk'); }); });
   setViewButton();
 
   // ================================================================ render awal & tautan dalam
   applyFilters(); drawGratLabels(); queueDeclutter();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(queueDeclutter);
   var h0 = (location.hash || '').replace('#', '');
-  var qv = (location.search.match(/[?&]view=(2d|3d)\b/) || [])[1];
+  var qv = (location.search.match(/[?&]view=(2d|3d|disk)\b/) || [])[1];
   var bootView = qv || LS.get('rh-view', '2d');
-  if (bootView === '3d') enter3D({ instant: true }).then(function (ok) { if (ok && h0 && placeById[h0]) setTimeout(function () { goPlace(h0); }, 200); else if (!ok && h0 && placeById[h0]) goPlace(h0); });
+  if (bootView === '3d' || bootView === 'disk') switchTo(bootView, { instant: true }).then(function (ok) { if (ok && h0 && placeById[h0]) setTimeout(function () { goPlace(h0); }, 200); else if (!ok && h0 && placeById[h0]) goPlace(h0); });
   else if (h0 && placeById[h0]) setTimeout(function () { goPlace(h0); }, 300);
   map.on('popupclose', function () { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} });
 }

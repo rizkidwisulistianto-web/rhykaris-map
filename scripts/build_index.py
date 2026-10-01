@@ -6,6 +6,7 @@ Inputs (all inside this repository):
     app/body.html, app/style.css               viewer markup and styles
     app/core.js, moons.js, compass.js, app.js  viewer logic, concatenated in this order into one classic script
     app/globe/*.js                             3D globe (Stage 2); inlined but inert until the user enters 3D
+    app/disk.js                                dual-disk Lambert working map (Stage 2, optional); inert until opened, no three.js needed
                                                (the relief assets in assets/3d/ are NOT inlined: fetched only when relief is switched on)
     data/data.json                             places, factions, territories, routes, audit, ...
     data/moons.json                            the two moons (AI inference, not canon) — single source of moon parameters
@@ -57,7 +58,7 @@ VIEWER_VERSION = "1.6"
 # Order matters: each file extends the shared window.RH namespace created by the previous ones.
 APP_JS = ["app/core.js", "app/moons.js", "app/compass.js", "app/app.js"]
 # Inlined as inert text and only evaluated when the user first enters 3D (so the flat map never pays for it).
-LAZY_JS = [("rh-globe", ["app/globe/kit.js", "app/globe/scene.js", "app/globe/layers.js", "app/globe/bodies.js", "app/globe/relief.js", "app/globe/ui.js"])]
+LAZY_JS = [("rh-disk", ["app/disk.js"]), ("rh-globe", ["app/globe/kit.js", "app/globe/scene.js", "app/globe/layers.js", "app/globe/bodies.js", "app/globe/relief.js", "app/globe/ui.js"])]
 THREE_VENDOR = "vendor/three/three.module.min.js"
 
 DESCRIPTION = ("Peta induk interaktif dunia Rhykaris — proyeksi equirectangular, The Scar, "

@@ -156,8 +156,14 @@ await run('controls', async () => {
   await page.locator('canvas.g-canvas').focus(); const k0 = await g(); await page.keyboard.press('ArrowRight'); await frame(page, 2);
   t('keyboard: ArrowRight rotates east by 8°', near((await g()).lon - k0.lon, 8, 0.01));
   await page.keyboard.press('+'); t('keyboard: + zooms in', (await g()).dist < k0.dist);
-  await page.mouse.move(900, 450); await page.mouse.down(); await page.mouse.move(930, 450, { steps: 2 }); await page.waitForTimeout(30); await page.mouse.move(980, 450); await page.mouse.up();
-  const i0 = (await g()).lon; await page.waitForTimeout(500); t('inertia keeps coasting after a fast flick', Math.abs((await g()).lon - i0) > 1);
+  // a quick flick, dispatched inside the page in one go so the event timing does not depend on the (slow, software-rendered) test machine
+  const flick = await page.evaluate(() => new Promise((res) => {
+    const cv = document.querySelector('canvas.g-canvas'), S = window.__rhGlobe._S, mk = (ty, x) => new PointerEvent(ty, { pointerId: 7, pointerType: 'mouse', button: 0, buttons: ty === 'pointerup' ? 0 : 1, clientX: x, clientY: 450, bubbles: true, cancelable: true });
+    S.inertia = null; cv.dispatchEvent(mk('pointerdown', 900)); let x = 900, n = 0;
+    const iv = setInterval(() => { x += 26; cv.dispatchEvent(mk('pointermove', x)); if (++n === 5) { clearInterval(iv); cv.dispatchEvent(mk('pointerup', x)); res({ inertia: !!S.inertia, v: S.inertia && S.inertia.vLon, lon: S.view.lon }); } }, 12);
+  }));
+  t(`inertia keeps coasting after a fast flick (v = ${flick.v && flick.v.toFixed(0)} °/s)`, flick.inertia === true && Math.abs(flick.v) > 8, JSON.stringify(flick));
+  await page.waitForTimeout(700); { const d = ((((await g()).lon - flick.lon) % 360) + 540) % 360 - 180; t(`…and the globe really keeps turning (Δlon ${d.toFixed(1)}° after 0,7 s)`, Math.abs(d) > 1); }
   await ctx.close();
 });
 
@@ -165,7 +171,7 @@ await run('controls', async () => {
 await run('layer parity', async () => {
   const { ctx, page } = await open3D({ settle: 300 });
   const st = await page.evaluate(() => window.__rhGlobe.layerStatus());
-  const keys2D = Object.keys(st).filter((k) => !st[k].only3D);
+  const keys2D = Object.keys(st).filter((k) => !st[k].only3D && !st[k].onlyDisk);
   const expected = ['grat', 'mer', 'cland', 'csea', 'band', 'curve', 'arcs', 'markers', 'labels', 'zone', 'anom', 'regions', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'mandala', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts', 'banks'];
   t('all 25 v1.4 layers are registered', expected.every((k) => keys2D.includes(k)) && keys2D.length === 25, keys2D.join());
   t('every v1.4 layer has an adapter3D (no silent omission)', keys2D.every((k) => st[k].adapter3D), keys2D.filter((k) => !st[k].adapter3D).join());
@@ -210,7 +216,9 @@ await run('overlay, hit-test, cards', async () => {
   t('hit-test: Scar arc (Culmen) at azimuth 10°', hits.arc && hits.arc.id === 'culmen', JSON.stringify(hits.arc));
   t('hit-test: open ocean returns nothing', hits.none === null || hits.none.type === 'bank', JSON.stringify(hits.none));
   // card content comes from the same builders as the 2D popups
-  const h = await page.evaluate(() => { const g = window.__rhGlobe; g.goPlace(g._ctx.placeById.dies_ignis); return new Promise((r) => setTimeout(() => r(document.getElementById('g-card').innerText), 1800)); });
+  await page.evaluate(() => { const g = window.__rhGlobe; g.goPlace(g._ctx.placeById.dies_ignis); });
+  await page.waitForFunction(() => !document.getElementById('g-card').hidden, null, { timeout: 30000 });
+  const h = await page.evaluate(() => document.getElementById('g-card').innerText);
   t('place card (Dies Ignis) shows the epistemic chip, coordinates and the Scar line', /TURUNAN|Turunan/i.test(h) && /Scar/.test(h) && /dari kurva/.test(h) && /Salin koordinat/.test(h), h.slice(0, 120));
   await page.keyboard.press('Escape'); t('Esc closes the card', await page.evaluate(() => document.getElementById('g-card').hidden));
   await ctx.close();
@@ -337,7 +345,8 @@ await run('filters, search, epistemic labels, wording', async () => {
   t('proposal marker (Portus) carries the amber badge like 2D', badge === true);
   const ring = await page.evaluate(() => { const c = window.__rhGlobe._ctx, p = c.placeById.aurelia; return Array.from(document.querySelectorAll('#globe .g-pin .mk')).find((e) => e.title === 'Aurelia').innerHTML === c.markerHTML(p, 26).replace(/^<div[^>]*>/, '').replace(/<\/div>$/, '') || true; });
   // search → fly to place in 3D and open the card
-  await page.locator('#q').fill('Libb'); await page.locator('#results .res').first().click(); await page.waitForTimeout(1800);
+  await page.locator('#q').fill('Libb'); await page.locator('#results .res').first().click();
+  await page.waitForFunction(() => !document.getElementById('g-card').hidden, null, { timeout: 30000 });
   const card = await page.evaluate(() => document.getElementById('g-card').innerText);
   t('search result in 3D flies to the place and opens its card', /Libbāl/.test(card), card.slice(0, 60));
   const f = await page.evaluate(() => window.__rhGlobe.getFocus()); const lb = DATA.places.find((p) => p.id === 'libbal');
