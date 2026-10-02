@@ -198,8 +198,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       DATA.territories.forEach(function (t) {
         if (t.id === 'anusarri' || ST.tgroupOf(t) !== grp) return;
         var f = FAC[t.id] || { name: t.name, color: '#cccccc' };
-        shape(t.rings, { stroke: f.color, sa: 0.22, w: 6 });
-        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.95, w: 1.4, dash: f.dashed ? '5 4' : null });
+        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: 1.4, dash: f.dashed ? '5 4' : null });
       });
     } });
   });

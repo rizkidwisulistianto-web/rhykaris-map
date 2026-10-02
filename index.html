@@ -892,8 +892,7 @@ DK.init = function (ctx) {
       if (on('mandala')) Gm.mand.forEach(function (m) { paintRings(m.rings, which, c, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
       Gm.terr.forEach(function (q) {
         if (!on('t_' + q.grp)) return; var f = q.f;
-        paintRings(q.rings, which, c, { stroke: f.color, sa: 0.22, w: 6 });
-        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.95, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
+        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
       });
       Gm.routes.forEach(function (q) {
         if (!on(RKEY[q.r.kind])) return; var rs = ST.RST[q.r.kind];
@@ -1776,8 +1775,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       DATA.territories.forEach(function (t) {
         if (t.id === 'anusarri' || ST.tgroupOf(t) !== grp) return;
         var f = FAC[t.id] || { name: t.name, color: '#cccccc' };
-        shape(t.rings, { stroke: f.color, sa: 0.22, w: 6 });
-        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.95, w: 1.4, dash: f.dashed ? '5 4' : null });
+        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: 1.4, dash: f.dashed ? '5 4' : null });
       });
     } });
   });
@@ -3097,8 +3095,7 @@ function main() {
     var fillC = f.color;
     if (f.hatch) { hatchIds[t.id] = f.color; fillC = 'url(#h-' + t.id + ')'; }
     t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
-      TG[gname].addLayer(L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 6, opacity: 0.22, fill: false, interactive: false, lineJoin: 'round', smoothFactor: 1 }));
-      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 1.4, opacity: 0.95, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 });
+      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 1.4, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 });
       pl.on('click', function (e) { openFaction(t.id, e.latlng); });
       pl.on('mouseover', function () { this.setStyle({ weight: 2.6 }); }); pl.on('mouseout', function () { this.setStyle({ weight: 1.4 }); });
       pl.bindTooltip(f.name, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
