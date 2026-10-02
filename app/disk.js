@@ -360,8 +360,7 @@ DK.init = function (ctx) {
       if (on('mandala')) Gm.mand.forEach(function (m) { paintRings(m.rings, which, c, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
       Gm.terr.forEach(function (q) {
         if (!on('t_' + q.grp)) return; var f = q.f;
-        paintRings(q.rings, which, c, { stroke: f.color, sa: 0.22, w: 6 });
-        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.95, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
+        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
       });
       Gm.routes.forEach(function (q) {
         if (!on(RKEY[q.r.kind])) return; var rs = ST.RST[q.r.kind];

@@ -306,8 +306,7 @@ function main() {
     var fillC = f.color;
     if (f.hatch) { hatchIds[t.id] = f.color; fillC = 'url(#h-' + t.id + ')'; }
     t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
-      TG[gname].addLayer(L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 6, opacity: 0.22, fill: false, interactive: false, lineJoin: 'round', smoothFactor: 1 }));
-      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 1.4, opacity: 0.95, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 });
+      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 1.4, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 });
       pl.on('click', function (e) { openFaction(t.id, e.latlng); });
       pl.on('mouseover', function () { this.setStyle({ weight: 2.6 }); }); pl.on('mouseout', function () { this.setStyle({ weight: 1.4 }); });
       pl.bindTooltip(f.name, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
