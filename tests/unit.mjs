@@ -18,6 +18,16 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
 function nearName(name, a, b, tol) { t(name, near(a, b, tol), `got ${a}, want ${b} ±${tol}`); }
 let seed = 1647; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 
+// ---------------------------------------------------------------- data-line widths (shared by flat map, globe and disk)
+{
+  let mono = true; for (let z = 0.5; z < 6.5; z += 0.25) if (C.lineW(1.1, z + 0.25) > C.lineW(1.1, z) + 1e-12) mono = false;
+  t('line width never grows when zooming in', mono);
+  t('line width is thinner at zoom 6 than at zoom 3', C.lineW(C.LINE.terr, 6) < C.lineW(C.LINE.terr, 3));
+  t('line width never drops below the visible floor', C.lineW(0.1, 6.5) >= C.LINE_MIN && C.lineW(C.LINE.terr, 6.5) >= C.LINE_MIN);
+  t('territory border is thin (≤ 1.3 px) at every zoom', [1, 2, 3, 4, 5, 6].every(z => C.lineW(C.LINE.terr, z) <= 1.3));
+  t('arrow scale shrinks with zoom but stays ≥ 0.5', C.arrowK(6) < C.arrowK(3) && C.arrowK(6.5) >= 0.5);
+}
+
 // ---------------------------------------------------------------- sphere math
 for (let i = 0; i < 2000; i++) {
   const lat = (rnd() - 0.5) * 178, lon = (rnd() - 0.5) * 359.9;

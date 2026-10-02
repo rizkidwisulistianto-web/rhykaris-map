@@ -18,6 +18,15 @@ C.configure = function (stats, th) {
   return C.cfg;
 };
 
+// ------------------------------------------------------------------ tebal garis data (batas teritori, rute, front, panah)
+/* Satu aturan untuk peta datar, globe dan cakram. Garis dibuat tipis dan MENGECIL saat zoom masuk, supaya lebarnya di lapangan
+   tetap kecil dibanding wilayah yang digambarnya (di zoom 3 satu piksel ≈ 18 km; di zoom 6,5 ≈ 1,6 km). `z` = zoom setara peta datar. */
+C.LINE = { terr: 1.1, terrHot: 2.0, under: 1.8, front: 1.7, florian: 2.0, shaft: 1.7, shaftFlorian: 1.4, arrow: 0.85 };
+C.LINE_MIN = 0.7;   // piksel layar: di bawah ini garis putus-putus nyaris tak terlihat
+C.lineK = function (z) { return Math.max(0.45, Math.min(1.15, Math.pow(0.82, z - 3))); };
+C.lineW = function (base, z) { return Math.max(C.LINE_MIN, base * C.lineK(z)); };
+C.arrowK = function (z) { return Math.max(0.6, C.lineK(z)) * C.LINE.arrow; };
+
 // ------------------------------------------------------------------ state (localStorage dengan prefiks rh-, selalu try/catch)
 C.LS = {
   get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },

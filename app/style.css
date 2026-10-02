@@ -172,6 +172,7 @@ body.panel-closed #readout{left:var(--gut)}
 .leaflet-marker-icon.dim{opacity:.25}
 .scar-core{filter:drop-shadow(0 0 3px rgba(255,110,50,.9)) drop-shadow(0 0 8px rgba(255,90,30,.55))}
 .arrowhead{width:0;height:0}
+.ah{width:14px;height:14px;transform:scale(var(--ak,.85));transform-origin:50% 50%}
 .qzone{font:700 14px/1 var(--f-display);color:#ffd7b8;text-shadow:0 0 4px #3a1004,0 0 8px #3a1004;transform:translate(-50%,-50%);pointer-events:none}
 
 /* ---------- popup ---------- */
