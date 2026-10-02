@@ -53,7 +53,7 @@ var s=document.createElement('script');s.src=srcs[i++];s.onload=function(){if(wi
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" onerror="__rhFallback()"></script>"""
 
 # Viewer version shown in the UI (Metode tab) and exposed as window.RH.version.
-VIEWER_VERSION = "1.6.3"
+VIEWER_VERSION = "1.6.4"
 
 # Order matters: each file extends the shared window.RH namespace created by the previous ones.
 APP_JS = ["app/core.js", "app/moons.js", "app/compass.js", "app/app.js"]
