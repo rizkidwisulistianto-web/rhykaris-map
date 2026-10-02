@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) **v1.6.3** (moon names, chip strip removed from the globe, §13) **v1.6.4** (the *Empat busur* layer works on the dual-disk working map, §14) and **v1.6.5** (every flat-map layer on the dual-disk working map, §15). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
+Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) **v1.6.3** (moon names, chip strip removed from the globe, §13) **v1.6.4** (the *Empat busur* layer works on the dual-disk working map, §14) **v1.6.5** (every flat-map layer on the dual-disk working map, §15) and **v1.7.0** (one shared territory table for the three views, §16; the political content is in [`POLITICS_V3_NOTES.md`](POLITICS_V3_NOTES.md)). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
@@ -21,7 +21,7 @@ This file records what was built, **why each judgment call went the way it did**
 
 ### Layer parity
 
-All 25 layers of the v1.4 flat map have a globe adapter, and (since v1.6.5, §15) a working-map adapter. Four layers exist only in 3D, two only on the disk.
+All 27 layers of the flat map (the 25 of v1.4, plus `t_hesb` and `t_sat` of v1.7, §16) have a globe adapter, and (since v1.6.5, §15) a working-map adapter. Four layers exist only in 3D, two only on the disk.
 
 | Layer (key) | Flat | Globe | Disk |
 |---|:-:|:-:|:-:|
@@ -29,7 +29,7 @@ All 25 layers of the v1.4 flat map have a globe adapter, and (since v1.6.5, §15
 | The Scar: 13° band (`band`) · small-circle curve (`curve`) · four arcs (`arcs`) | ✓ | ✓ | ✓ |
 | Mass-anomaly pockets (`anom`) · Castra Birath zone (`zone`) · location markers (`markers`) | ✓ | ✓ | ✓ |
 | Elevation contours (`cland`) · bathymetry contours (`csea`) · place and water labels (`labels`) · physical region outlines (`regions`) | ✓ | ✓ | ✓ |
-| Seven territory groups (`t_hes`, `t_foe`, `t_int`, `t_ana`, `t_elv`, `t_lain`, `mandala`) · fronts (`fronts`) | ✓ | ✓ | ✓ |
+| Eight territory groups (`t_sat`, `t_hes`, `t_hesb`, `t_foe`, `t_int`, `t_ana`, `t_elv`, `t_lain`; the last two of v1.7 are `t_sat` and `t_hesb`) · the Mandala (`mandala`) · fronts (`fronts`) | ✓ | ✓ | ✓ |
 | Four route kinds (`r_historic`, `r_land`, `r_story`, `r_sea`) · ocean banks (`banks`) | ✓ | ✓ | ✓ |
 | Two moons · orbit lines · rotation axis · ecliptic plane (`g_moons`, `g_orbits`, `g_axis`, `g_ecl`) | — | ✓ | — |
 | Scar Proximity rings · Scar azimuth annotations (`d_rings`, `d_azi`) | — | — | ✓ |
@@ -196,7 +196,7 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 
 **Tests.** `feature3d.mjs` asserts the new names on both cards and the panel buttons, that no *Bulan Besar / Bulan Kecil* placeholder is left in the moon UI, that `#globe .g-epi` no longer exists, and that *tidak berskala* is stated by each moon label, the orbit note and the panel. The strip assertions in `relief.mjs`, `measure.mjs` and `a11y.mjs` were removed (measure.mjs is now 45 checks, was 46). In this headless SwiftShader sandbox two checks in `measure.mjs` (the start dot's canvas pixels, and *Selesai* clearing the drawing) fail identically on the unmodified v1.6.2 build, and the moon-clock rate check in `feature3d.mjs` is load-dependent (0.20–0.33 vs 0.5 expected, 0.30 on v1.6.2).
 
-**Not regenerated.** The documentation screenshots `docs/images/06-globe-3d.jpg`, `07-moons.jpg` and `10-mobile-globe.jpg` still show the old strip and names; `tests/docshots.mjs` rebuilds them.
+**Not regenerated.** The documentation screenshots `docs/images/06-globe-3d.jpg`, `07-moons.jpg` and `10-mobile-globe.jpg` still show the old strip and names; `tests/docshots.mjs` rebuilds them. *(Retaken in v1.7.0 — see `POLITICS_V3_NOTES.md` §9.)*
 
 ## 14. Follow-up v1.6.4 — the Scar arcs layer on the dual-disk working map
 
@@ -225,4 +225,16 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 
 **Evidence.** `tests/disk.mjs` 127 → 185 checks. A new block (both orientations) verifies that each of the 16 vector layers repaints the canvas; that mid-line vertices of every route and front sit on the drawn line (the placement check that would catch a wrong projection); that hovering ≥ 8 territories returns the topmost faction and that a switched-off group gives no tooltip; tooltips and cards for routes, fronts, the Mandala, a bank, a physical region and a label; that no two visible labels overlap; that switching every layer off returns the canvas to the plain base, pixel for pixel; and that the console stays clean. The old panel assertions ("every other layer is shown as unavailable with a reason") were replaced by "no layer is disabled; only the four 3D-only layers lack an adapter". The block found one defect in this very change (a render error when contours were on) before merge.
 
-**Known limits.** Distortion near the Aëris rim (radial scale 0,59 at 107,5°) bends shapes there, by design of the projection. Rings are drawn from the same unwrapped coordinates the flat map uses and clipped per disk; with every layer on, no fill inverts around the poles or around the disk centres (checked by eye on both disks, at the fit scale and zoomed on Libbāl), but this is a visual check, not an automated one. Doc screenshots (`docs/images/09-dual-disk.jpg`) were not regenerated; `tests/docshots.mjs` rebuilds them.
+**Known limits.** Distortion near the Aëris rim (radial scale 0,59 at 107,5°) bends shapes there, by design of the projection. Rings are drawn from the same unwrapped coordinates the flat map uses and clipped per disk; with every layer on, no fill inverts around the poles or around the disk centres (checked by eye on both disks, at the fit scale and zoomed on Libbāl), but this is a visual check, not an automated one. Doc screenshots (`docs/images/09-dual-disk.jpg`) were not regenerated; `tests/docshots.mjs` rebuilds them. *(Retaken in v1.7.0.)*
+
+## 16. Follow-up v1.7.0 — one territory table for the flat map, the globe and the working map
+
+**Finding.** The flat map stacked its territory layers in the order in which the layers were switched on (the DOM order of the SVG), while the globe and the working map used the order of the data. With the old uniform fills the difference was hard to see; the political layer v3 adds layers that look very different from each other (dot zones with no outline, hatching, optional tints), and a layer drawn over another on one view and under it on another would be a defect of the map, not of the lore.
+
+**What was built.**
+- **One table** in `app/core.js`: `C.TGROUPS` (the groups, bottom → top: Satvan zone, Hesperia + *marka*, Hesperia belts, Foedera, Interregna, Anabasim, Andurā + Anušarri, the rest), `C.TDEFAULT` (the one group that starts off: the Hesperia belts), `C.tgroupOf`, `C.terrOrder`, `C.terrStyle` (fill kind — flat, hatch or dots — colour, outline) and `C.patKey` / `patSVG` / `patTile` (the same pattern as an SVG `<pattern>` for the flat map and the legend, and as a canvas tile for the globe and the disk). The flat map, `app/globe/layers.js` and `app/disk.js` read it; no view has a style table of its own.
+- **Flat map**: a `restack()` after every layer toggle (`LAYERS[key].after`) puts the SVG paths back in the canonical order, so the stacking no longer depends on the toggling history. Long popups scroll (`maxHeight`).
+- **Hit-test**: the same rule on all three views — the topmost visible polygon in the canonical order answers; a *tier* record (a denser step inside a dot zone) answers as its parent faction.
+- **Layers 25 → 27**: `t_hesb` (the Hesperia province belts; default off) and `t_sat` (the Satvan dispersal zone). `LAYER_UI` labels say *usulan*.
+
+**Evidence.** `tests/politics.mjs` (new, 84 checks): the canonical order and the restacking after toggles on the flat map, pattern definitions and persistence, click and hover on all three views, the globe's painting and hit-test. `tests/disk.mjs`: 18-layer repaint check and the hover test walk the canonical order. `tests/feature3d.mjs`: 27 layers registered. Screenshots in `docs/images/` were retaken at the end, with production-family fonts from the `@fontsource` packages (see `POLITICS_V3_NOTES.md` §9).

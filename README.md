@@ -61,8 +61,8 @@ The map is **derived, not drawn.** The locked canon constraints — land/water p
 | **Planet** | radius 8,282 km (≈ 1.3 × Earth) · circumference 52,039 km |
 | **Land / water** | 38 % land (Rhykar 23.0 % + Aëris 15.0 %) · 62 % water |
 | **Seed** | `1647` — same seed and constraints, same planet |
-| **Content** | 44 map entries · 3 anomaly pockets · 41 territories · 13 physical regions · 4 routes · 3 fronts |
-| **Viewer** | Leaflet 1.9.4 · vanilla JavaScript · one self-contained 1.9 MB HTML file — plus, only when you enter 3D, three.js r160 and ≈ 9 MB of relief textures |
+| **Content** | 44 map entries · 3 anomaly pockets · 45 territories · 13 physical regions · 4 routes · 3 fronts |
+| **Viewer** | Leaflet 1.9.4 · vanilla JavaScript · one self-contained ≈ 2 MB HTML file — plus, only when you enter 3D, three.js r160 and ≈ 9 MB of relief textures |
 
 Because the planet is a sphere, the map **wraps seamlessly** across the antimeridian, and every distance is a **great-circle distance on the sphere** — never flat pixels.
 
@@ -94,9 +94,11 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 
 ### Faction Boundary / Territorial Layers
 
-- **41 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Provincia Cassivallae, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below), three unnamed vassal commonwealths, and a mosaic of 23 illustrative, unnamed **Interregna** polities — eleven kingdoms, six free cities, three tribal lands and three micro-polities, some of them enclaves (one nested two deep) and one with an exclave — toggled in groups from the **Layer** tab.
+- **45 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Cassivalla, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below); a narrow belt of **kerajaan marka**, the Commonwealth's vassals on the edge of Hesperia's direct land; the **Satvan Pedalaman dispersal zone**; Hesperia's three optional province belts, Foedera's inhabited core and Kloaka's control zone (see below); and a mosaic of 23 illustrative, unnamed **Interregna** polities — eleven kingdoms, six free cities, three tribal lands and three micro-polities, some of them enclaves (one nested two deep) and one with an exclave — toggled in groups from the **Layer** tab. *(The three numbered "Vasal Commonwealth" polygons of earlier versions were retired in v1.7: they rested on a reading of Hesperia that is not canon.)*
+- **A polygon says what is *claimed*, not what is *settled* (v1.7).** **Hesperia** is one polygon of nominal jurisdiction, not clipped; its about 50 provinces, in three belts by distance to the sea (Pesisir 24 · Transisi 19 · Pedalaman 7), are an **optional layer, off by default** — and no single province border is drawn. **Foedera** keeps its big polygon (control there is cheap: garrisons on the line) as light hatching, with a thin-populated core along the waterways on top. **Kloaka** has a thin dashed polygon for its nominal claim and a dotted zone with no hard edge for the control that shifts — its popup says *kerajaan nominal, tanpa penegakan*. The **Satvan Pedalaman** zone is a band of very low density in the southern interior: dots only, **no border line**, not a sovereign land. Everything in this paragraph that is not canon is labelled *usulan* / *Inferensi AI* in the viewer; details in [`docs/POLITICS_V3_NOTES.md`](docs/POLITICS_V3_NOTES.md).
+- **One word, one rule (#214).** *Provinsi* is used only for land ruled directly by Hesperia; Commonwealth members are *kerajaan*; Cassivalla is named *Cassivalla* (*Provincia Cassivallae* appears only as a labelled Foedera exonym in its popup).
 - **Terrain-aware borders:** frontiers are computed by a Dijkstra partition whose movement cost rises in mountains and along great rivers, grown from canon anchors — not hand-drawn polygons. The Interregna mosaic is redrawn by `src/interregna.py` from one table of seeds and sizes (`src/interregna_table.py`); see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md).
-- **Hatching** marks contested, annexed and vassal land; **fronts** and expansion arrows show campaigns in motion.
+- **Hatching** marks contested, annexed, claimed and vassal land; **dots** mark a diffuse zone with no edge (Satvan Pedalaman, Kloaka's shifting control); **fronts** and expansion arrows show campaigns in motion.
 - **The Mandala of Purity** (the Elvari empire, Anušarri) is drawn as a four-ring gradient with no border at all — power that radiates from its centre and thins out.
 - Click any territory for its faction card.
 
@@ -110,17 +112,17 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 A second view of the **same data**, behind one button (**Globe 3D**, next to the Ukur button; or open `index.html?view=3d`, optionally with a place such as `index.html?view=3d#litus_primum`). The flat map is the default for new visitors (the viewer remembers the last view you used) and is untouched: it never downloads three.js, and its pixels are identical to v1.4.
 
 - **Real sphere, real texture.** The canon v4 raster is wrapped on a sphere. Drag to rotate (with inertia), scroll / pinch to zoom, double-click to fly to a point; arrow keys and <kbd>+</kbd> <kbd>−</kbd> work too. The planet **turns by itself** — slowly, west to east — and **stops the moment you touch it** (the *Putar* button in the dock and the panel's *Putaran planet* group bring it back; with a *reduce motion* system setting it stays off).
-- **Every layer, both views.** All 25 layers of the v1.4 flat map have a 3D counterpart (graticule, meridians, Scar band and curve, arcs, anomaly pockets, territories, routes, fronts, banks, markers…). Toggles are shared: switch a layer in 2D, it is on in 3D. The panel lists, per layer, whether it exists in the current view.
+- **Every layer, both views.** All 27 layers of the flat map (the 25 of v1.4, plus the Hesperia belts and the Satvan zone of v1.7) have a 3D counterpart (graticule, meridians, Scar band and curve, arcs, anomaly pockets, territories, routes, fronts, banks, markers…). Toggles are shared: switch a layer in 2D, it is on in 3D. The panel lists, per layer, whether it exists in the current view.
 - **Two moons.** *Ferrea* (the big moon) and *Errans* (the small moon) orbit on Kepler ellipses, drawn **not to scale**: true relative radii (0.2415 : 0.0604), distances compressed monotonically (the label says *jarak tidak berskala*), orbit periods in the real ratio 3.41 : 1. Click a moon for its parameters. **All moon parameters are *Inferensi AI*, not canon** — and so are the names: *Ferrea* ("iron-bearing", from its dark iron-red grey) and *Errans* ("wandering", from its swaying orbit) are working names, the human exonyms, chosen on 1 Oct 2026; the names each race uses are still undecided. The small moon's mean distance stays ≤ 125,000 km (the stability cliff is ≈ 131,000 km); eccentricity and inclination ranges are shown as ranges, never animated.
 - **Working compass.** A north needle and a **second needle that points to The Scar** (bearing and great-circle distance to the curve; it deliberately has no direction at the pole of the circle). Works in 2D, 3D and the disk view, from the point under the cursor or the centre of the view.
 - **Relief (2b).** Heights from a **regenerated 16-bit heightmap** (checked against the canon data grid: 100 % of pixels identical), a slope map for per-pixel lighting, and an albedo texture **without baked-in hillshade**. A slider sets the **vertical exaggeration** (0–60×, default 15×; real relief is ≈ ±10 km on an 8,282 km radius — about 0.1 %, so the exaggeration is for legibility only and is labelled *tidak berskala*). Relief is *Turunan*.
 - **Measure tool in every view (v1.6.1).** **Ukur** works on the flat map, the globe and the working map: tap two points (a marker is taken at its exact position, anywhere else the point under the finger) and the viewer draws the **great-circle line**, the two dots and a result box with the distance and rough travel times — the same wording as on the flat map. "Ukur dari sini" on a place card starts from that place without leaving the view, and a finished measurement follows you when you switch views. On the working map the line is drawn per disk, so it stops at a rim and continues on the other disk.
 - **Honest 3D.** Each moon's label says *Inferensi AI · tidak berskala*, and the Globe panel states the open axial tilt; Castra Birath is still a fading zone, never a point; nothing on the globe predicts or schedules the Great Wave. The axis is drawn upright with a neutral, camera-attached light — there is **no terminator, night side or seasons** because the axial tilt is still *Terbuka*.
-- **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work. Since v1.6.5 it carries **every layer of the flat map** — contours, physical regions, ocean banks, the seven territory groups, routes, fronts, place and water labels — plus the Scar layers, with the same hover tooltips and cards; only the four 3D-only layers (moons, orbits, axis, ecliptic) are absent.
+- **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work. Since v1.6.5 it carries **every layer of the flat map** — contours, physical regions, ocean banks, the eight territory groups and the Mandala, routes, fronts, place and water labels — plus the Scar layers, with the same hover tooltips and cards; only the four 3D-only layers (moons, orbits, axis, ecliptic) are absent. Since v1.7 all three views read one shared table for territory groups, drawing order and patterns, so a layer stacks and answers a click the same way on the flat map, the globe and the working map.
 
 <table>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/06-globe-3d.jpg" alt="The 3D globe with the layer panel, compass, and two moons"><br><sub><b>Globe</b> — compass with the Scar needle, layer panel. <i>(Screenshot predates v1.6.3: the chip strip it shows was removed, and the moons were still called Bulan Besar / Bulan Kecil.)</i></sub></td>
+<td width="50%" valign="top"><img src="docs/images/06-globe-3d.jpg" alt="The 3D globe with the layer panel, compass, and two moons"><br><sub><b>Globe</b> — compass with the Scar needle, layer panel.</sub></td>
 <td width="50%" valign="top"><img src="docs/images/07-moons.jpg" alt="The two moons and their orbits, marked not to scale"><br><sub><b>Two moons</b> — true relative radii, compressed distances (<i>jarak tidak berskala</i>), Inferensi AI.</sub></td>
 </tr>
 <tr>
@@ -143,7 +145,7 @@ Design notes, every autonomous decision, the moon provenance and the regeneratio
 | **Live readout** | Coordinates, distance and side to The Scar, plus elevation and biome for any point, read from a 1024 × 512 data grid |
 | **Measure tool** | Great-circle distance between any two points, with rough travel times on foot, on horseback and by sailing ship |
 | **Cartography layers** | 15° graticule · elevation contours (1,000 / 2,500 / 4,500 m) · bathymetry (−200 / −3,000 / −6,000 m) · six ocean banks · four kinds of route |
-| **Audit tab** | The map's own consistency findings — frictions, blank spots, patterns, closed items — and the open *location debt* ledger |
+| **Audit tab** | The map's own consistency findings — frictions, blank spots, patterns, closed items — and the open *location debt* ledger. Since v1.7 it also carries the blank spots of the political layer (Satvan's legal status, the number and names of the Interregna, Hesperia's coast, Kloaka's position) |
 | **Compass** | North needle + a second needle toward The Scar, with distance, in every view |
 | **Viewer comforts** | Dark / light theme · legend · scale bar · responsive layout with touch hints · respects *reduced motion* |
 
@@ -202,7 +204,7 @@ python3 scripts/build_index.py
 
 ```bash
 cd tests && npm install
-node run-all.mjs                    # unit · 3D features · relief · dual-disk · accessibility · measure tool
+node run-all.mjs                    # unit · political layer · 3D features · relief · dual-disk · accessibility · measure tool
 RH_BASELINE=/path/to/baseline node run-all.mjs   # + pixel-identical 2D regression against a baseline captured on main
 ```
 
@@ -246,10 +248,10 @@ rhykaris-map/
 │   └── 3d/                    relief for the globe: height_4096.png · slope.webp · albedo_q84.webp · relief.json (Turunan)
 ├── scripts/build_index.py     bundles app/ + data/ + assets/ into index.html
 ├── src/                       Python terrain & data pipeline (seed 1647) · make_relief.py (Stage 2b)
-├── tests/                     Playwright suites: unit · 3D features · relief · dual-disk · a11y · 2D regression
+├── tests/                     Playwright suites: unit · political layer · 3D features · relief · dual-disk · a11y · 2D regression
 ├── vendor/leaflet/            Leaflet 1.9.4 stylesheet + license
 ├── vendor/three/              three.js r160 module build + license (offline fallback for the lazy loader)
-├── docs/                      archive notes · STAGE2_NOTES.md (design decisions of the 3D stage) + screenshots
+├── docs/                      archive notes · STAGE2_NOTES.md (3D stage) · INTERREGNA_V2_NOTES.md · POLITICS_V3_NOTES.md (political layer) + screenshots
 ├── LICENSE · LICENSE-CONTENT.md · THIRD_PARTY_NOTICES.md
 └── README.md
 ```
@@ -263,11 +265,11 @@ rhykaris-map/
 |---|---|
 | `places` | 44 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
 | `anomalies` | 3 mass-anomaly pockets |
-| `factions` | 42 powers: name, kind, colour, epistemic status, blurb |
-| `territories` · `mandala` | Polygon rings for the 41 territories and the four Mandala rings |
+| `factions` | 46 powers: name, kind, colour, epistemic status, blurb, and — for the political layer — method, limits and canon facts with their chips |
+| `territories` · `mandala` | Polygon rings for the 45 territories (49 records: four are draw-only density tiers of a dot zone) and the four Mandala rings |
 | `regions` · `contours` · `banks` | Physical region outlines · 198 contour lines · six ocean banks |
 | `routes` · `fronts` | 4 routes (historic, land, story, sea) · 3 fronts |
-| `audit` · `ledger` · `unmapped` | 11 audit cards · 14 open location-debt slots · 11 entries deliberately left off the map |
+| `audit` · `ledger` · `unmapped` | 20 audit cards · 14 open location-debt slots · 11 entries deliberately left off the map |
 | `stats` · `thresholds` | Measured land/water/hemisphere balance · Scar proximity thresholds |
 
 `data/politics.json` holds the raw geometry of the political layer (territories, regions, mandala, contours). In this public edition, links from popups to the author's private worldbuilding vault were removed: every `url` field is `null`.
@@ -288,6 +290,7 @@ The Python pipeline in [`src/`](src/) needs Python 3.11 with `numpy`, `scipy`, `
 | 5 | `make_datagrid.py` | `datagrid.png` |
 | 6 | `politics.py` | `politics.json` |
 | 6b | `interregna.py` | the Interregna block of `politics.json` — it reads and rewrites only that block, so it also runs on its own (see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md)) |
+| 6c | `politics_v3.py` | the v3 blocks of `politics.json` (Hesperia belts, *kerajaan marka*, Satvan zone, Foedera core, Kloaka claim and zone) — reads and rewrites only those blocks, validates, idempotent (see [`docs/POLITICS_V3_NOTES.md`](docs/POLITICS_V3_NOTES.md)) |
 | 7 | `build_data.py` | `data.json` |
 | 8 | `scripts/build_index.py` | `index.html` |
 | 9 | `make_svg_preview.py` | `rhykaris_master_map_v4.svg` |
@@ -305,13 +308,13 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 |---|---|---|
 | Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
 | Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
-| Interactive viewer | ✅ **v1.6.5** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
-| Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer; individual Interregna kingdoms are added when the story needs them |
+| Interactive viewer | ✅ **v1.7.0** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
+| Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer. Since 2 Oct 2026 a polygon is nominal jurisdiction, not settled land; the Commonwealth's numbered vassals are retired; every non-canon number is a labelled placeholder. Individual Interregna kingdoms are added when the story needs them |
 | Coordinates | 🟡 8 canon · 11 derived · 24 AI-inferred · 1 open *(of 44)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
 | Proposals | 🟡 11 of 44 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
 | Atlas ↔ map v4 reconciliation | 🟠 In progress | Scar rings and the Zona Ambang Ellumāt settled on 29 Sep 2026; coordinates and the sea corridor are the next gates |
 | Location-debt ledger | 🟠 14 open of 22 slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
-| Audit findings | 🟠 8 awaiting a decision · 3 closed | 2 frictions · 3 blank spots · 3 patterns — see the Audit tab |
+| Audit findings | 🟠 16 awaiting a decision · 4 closed | 3 frictions · 7 blank spots · 6 patterns — see the Audit tab |
 
 **Done**
 
@@ -324,7 +327,8 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 - [x] Viewer v1.6.3 — the two moons get working names, *Ferrea* and *Errans* *(AI-inferred)*; the chip strip under the coordinate readout is gone from the globe
 - [x] Viewer v1.6.4 — the *Empat busur* layer now works on the dual-disk working map (it was switched on in the panel but drew nothing and could not be hovered or clicked)
 - [x] Viewer v1.6.5 — all flat-map layers on the dual-disk working map: contours, regions, banks, territories, Mandala, routes, fronts and labels, with hover and cards (they were listed as *tak ada di peta kerja*)
-- [x] 44 map entries · 41 territories · 4 routes · 3 fronts · 3 anomaly pockets
+- [x] Viewer v1.7.0 — political layer v3 (2 Oct 2026): the three numbered Vasal Commonwealth polygons retired; a narrow *kerajaan marka* belt; the Satvan Pedalaman dispersal zone (dots, no border); Hesperia's ~50 provinces as three optional belts (24 · 19 · 7), the polygon itself unclipped; Foedera's claim and inhabited core; Kloaka's nominal claim and shifting zone; the vocabulary rule for *provinsi*; nine new audit cards; 27 layers; one shared territory style and order for the flat map, the globe and the working map
+- [x] 44 map entries · 45 territories · 4 routes · 3 fronts · 3 anomaly pockets
 - [x] Interregna redrawn as a varied mosaic (2 Oct 2026) — large and small kingdoms, free cities, tribal lands, micro-polities, nested enclaves and an exclave, all unnamed placeholders; the count, names and borders stay open knobs
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
 - [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
@@ -346,7 +350,7 @@ In the author's order. 🔒 marks a gate: other work waits on it.
 - [ ] **The aquatic segment of The Scar** — about 62 % of the curve crosses sea. The ledger slot was unblocked on 29 Sep 2026; still to decide: an atlas entry of its own, or just an attribute of Tâmtu.
 - [ ] **The trans-suture supercontinent** (≈ 7.6 % of the surface) — the largest landmass without a name or an atlas entry. Who lives there is a major lore decision; parked.
 - [ ] **The ocean on the antimeridian side of the Rhykar cap** (≈ 9 %) — flagged by the audit; no sub-entry yet.
-- [ ] **Extend the political layer** — name and settle the Interregna placeholders (count, names, borders, who is next on Florian's list), and add more as the story calls for them.
+- [ ] **Extend the political layer** — name and settle the Interregna placeholders (count, names, borders, who is next on Florian's list), and add more as the story calls for them. The map deliberately leaves open: how many kingdoms the *marka* belt holds, whether the Satvan living inside a jurisdiction count in law, and the three open questions on Kloaka.
 
 **Later — Interactive Map v2** *(parked wishlist — no commitment yet)*
 
