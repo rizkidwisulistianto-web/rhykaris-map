@@ -5,6 +5,12 @@ data/politics.json kini digambar oleh src/interregna.py (mozaik v2: 13 kerajaan,
 enklaf, eksklaf; tabel di src/interregna_table.py). Footprint-nya dipinjam dari keluaran skrip ini, jadi blok lama tetap
 dibutuhkan sebagai acuan. Kalau politics.py dijalankan ulang, jalankan `python src/interregna.py --write` sesudahnya;
 lihat docs/INTERREGNA_V2_NOTES.md.
+
+CATATAN (02 Okt 2026, lapisan politik v3): tiga polygon Vasal Commonwealth bernomor (prefiks id "cw") DICABUT (Canon Index #213 — dibuat dengan asumsi
+"Hesperia = kekaisaran berpayung vasal luas", itu bukan kanon). Tiga entri partisi lama itu tetap ada di daftar POL di bawah
+HANYA sebagai pesaing Dijkstra (legacy_w1..w3), supaya footprint Interregna tidak bergeser; mereka tidak diekspor sebagai
+teritori. Poligon Hesperia/marka/sabuk, Satvan Pedalaman, inti Foedera, dan lapis Kloaka digambar oleh src/politics_v3.py
+(urutan: politics.py -> interregna.py --write -> politics_v3.py --write); lihat docs/POLITICS_V3_NOTES.md.
 """
 import numpy as np, sys, json, heapq, time
 from numba import njit
@@ -82,9 +88,10 @@ cost = (cost.reshape(h, w) * (1.0 + 0.45 * nbord).clip(0.5, 2.0)).ravel()
 # id, nama, seeds, bias_km, range_km, (pusat zona, radius zona deg), batasan keras tambahan
 POL = [
  ('hesperia', 'Hesperia', [(-5.49, -8.31), (-4.5, -18.0), (-6.8, -27.0), (-9.5, -36.0), (-12.5, -44.0)], 900, 2600, ((-9.0, -26.0), 17.0), notband & ~silva),
- ('cw_a', 'Vasal Commonwealth (tak bernama) I', [(-27.0, -60.0), (-28.0, -66.0)], 250, 1500, ((-29.0, -63.0), 8.0), notband),
- ('cw_b', 'Vasal Commonwealth (tak bernama) II', [(-21.0, -48.0)], 250, 1300, ((-23.0, -48.0), 7.0), notband),
- ('cw_c', 'Vasal Commonwealth (tak bernama) III', [(-21.5, -31.0)], 250, 1300, ((-23.0, -31.0), 7.0), notband),
+ # legacy_w1..w3 = bekas tiga polygon Vasal Commonwealth bernomor (prefiks id "cw", DICABUT #213). Hanya pesaing partisi; tidak diekspor (lihat OUT di bawah).
+ ('legacy_w1', 'pesaing partisi lama W1 (bukan entitas peta)', [(-27.0, -60.0), (-28.0, -66.0)], 250, 1500, ((-29.0, -63.0), 8.0), notband),
+ ('legacy_w2', 'pesaing partisi lama W2 (bukan entitas peta)', [(-21.0, -48.0)], 250, 1300, ((-23.0, -48.0), 7.0), notband),
+ ('legacy_w3', 'pesaing partisi lama W3 (bukan entitas peta)', [(-21.5, -31.0)], 250, 1300, ((-23.0, -31.0), 7.0), notband),
  ('kloaka', 'Kloaka', [(-3.8, -4.3)], 0, 480, ((-3.8, -4.3), 2.4), ~silva),
  ('aventalia', 'Aventalia', [(-12.5, -7.5)], 0, 850, ((-12.5, -7.5), 4.0), ~silva),
  ('tarvenna', 'Tarvenna', [(-13.5, -1.8)], 60, 850, ((-13.5, -1.8), 4.2), ~silva),
@@ -167,6 +174,9 @@ def mask_to_rings(mask, sigma=1.1, tol=0.9, min_px=25, offset=(0, 0), wrap=False
 
 OUT = {'territories': [], 'regions': []}
 for k, (pid, name, seeds, bias, rng, zone, hard) in enumerate(POL, start=1):
+    if pid.startswith('legacy_'):          # pesaing partisi saja (bekas Vasal Commonwealth) — bukan teritori peta
+        print(f'{pid:11s} px={int((lab==k).sum()):7d} (tidak diekspor)')
+        continue
     rings = mask_to_rings(lab == k, offset=(i0, j0))
     OUT['territories'].append({'id': pid, 'name': name, 'rings': rings, 'px': int((lab == k).sum())})
     print(f'{pid:11s} px={int((lab==k).sum()):7d} rings={len(rings)}')

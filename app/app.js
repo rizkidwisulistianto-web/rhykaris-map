@@ -97,7 +97,7 @@ function main() {
   function reg(key, group, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: group, adapter2D: group, adapter3D: null, adapterDisk: null, only3D: false, onlyDisk: false, on: on }; if (on && group) group.addTo(map); return group; }
   function reg3D(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, adapterDisk: null, only3D: true, onlyDisk: false, on: on }; }
   function regDisk(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, adapterDisk: null, only3D: false, onlyDisk: true, on: on }; }
-  function setLayer(key, on) { var L0 = LAYERS[key]; if (!L0) return; L0.on = on; if (L0.group) { if (on) L0.group.addTo(map); else map.removeLayer(L0.group); } saved[key] = on; LS.set('rh-layers-v1', saved); refreshLegend(); emitLayer('layer', key, on); }
+  function setLayer(key, on) { var L0 = LAYERS[key]; if (!L0) return; L0.on = on; if (L0.group) { if (on) { L0.group.addTo(map); if (L0.after) L0.after(); } else map.removeLayer(L0.group); } saved[key] = on; LS.set('rh-layers-v1', saved); refreshLegend(); emitLayer('layer', key, on); }
 
   // ================================================================ graticule & meridian
   var gGrat = L.layerGroup(), gMer = L.layerGroup(), gGratLbl = L.layerGroup().addTo(map);
@@ -304,24 +304,29 @@ function main() {
   map.on('zoomend', lnApply);
 
   var FAC = DATA.factions;
-  var TGROUP = { hesperia: 'hes', cw_a: 'hes', cw_b: 'hes', cw_c: 'hes', kloaka: 'lain', foedera: 'foe', cassivalla: 'foe', liminara: 'lain', ktonia: 'lain', pylora: 'lain', anabasim: 'ana',
-                 emporys: 'lain', perates: 'lain', andura: 'elv', anusarri: 'elv', vasundha: 'lain', nundina: 'int', aventalia: 'int', tarvenna: 'int' };
-  var TG = { hes: L.layerGroup(), foe: L.layerGroup(), int: L.layerGroup(), ana: L.layerGroup(), elv: L.layerGroup(), lain: L.layerGroup() };
-  var gTerrAll = L.layerGroup();
-  var hatchIds = {};
+  // Kelompok layer wilayah, urutan tumpukan, dan gaya = tabel bersama di core (C.TGROUPS, C.tgroupOf, C.terrStyle): peta datar, globe, dan cakram memakai aturan yang sama.
+  var TG = {}; C.TGROUPS.forEach(function (k) { TG[k] = L.layerGroup(); });   // dibuat menurut urutan C.TGROUPS (= urutan tumpukan, bawah → atas)
+  var PATS = {};   // kunci pola (arsir / bintik) → deskriptor, disuntik ke <defs> SVG
   DATA.territories.forEach(function (t) {
     if (t.id === 'anusarri') return;  // digambar sebagai gradasi mandala
-    var f = FAC[t.id] || { name: t.name, color: '#cccccc', kind: '' };
-    var gname = TGROUP[t.id] || (t.id.indexOf('ir_') === 0 ? 'int' : 'lain');
-    var fillC = f.color;
-    if (f.hatch) { hatchIds[t.id] = f.color; fillC = 'url(#h-' + t.id + ')'; }
+    var fid = t.of || t.id;           // rekaman jenjang (zona difus: Satvan, zona kontrol Kloaka) hanya bahan gambar: kartu, tooltip, dan pencarian memakai faksi induk
+    var f = FAC[fid] || { name: t.name, color: '#cccccc', kind: '' };
+    var ts = C.terrStyle(f, t), fl = ts.fill, sk = ts.stroke, pk = C.patKey(fl);
+    if (pk) PATS[pk] = fl;
     t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
-      var pl = lnAdd(L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: C.LINE.terr, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 }), C.LINE.terr);
-      pl.on('click', function (e) { openFaction(t.id, e.latlng); });
-      pl.on('mouseover', function () { this.setStyle({ weight: C.lineW(C.LINE.terrHot, map.getZoom()) }); }); pl.on('mouseout', function () { this.setStyle({ weight: C.lineW(C.LINE.terr, map.getZoom()) }); });
+      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, stroke: !!sk, color: sk ? sk.col : f.color, weight: C.LINE.terr * (sk ? sk.k : 1), opacity: sk ? sk.a : 0, dashArray: sk && sk.dash ? sk.dash : null,
+        fillColor: pk ? 'url(#' + pk + ')' : fl.col, fillOpacity: pk ? 1 : fl.a, smoothFactor: 1 });
+      if (sk) {   // zona difus tanpa garis tepi (sabuk, inti, bintik) tidak punya tebal garis untuk diskalakan atau disorot
+        lnAdd(pl, C.LINE.terr * sk.k);
+        pl.on('mouseover', function () { this.setStyle({ weight: C.lineW(C.LINE.terrHot * sk.k, map.getZoom()) }); }); pl.on('mouseout', function () { this.setStyle({ weight: C.lineW(C.LINE.terr * sk.k, map.getZoom()) }); });
+      }
+      pl.on('click', function (e) { openFaction(fid, e.latlng); });
       pl.bindTooltip(f.name, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
-      TG[gname].addLayer(pl); }); });
+      TG[C.tgroupOf(t)].addLayer(pl); }); });
   });
+  /** Urutan tumpukan wilayah = C.TGROUPS lalu urutan data (sama dengan globe dan cakram). Leaflet menaruh grup yang baru dinyalakan di paling atas, jadi setelah
+   *  layer wilayah dihidupkan semua poligon yang tampil dinaikkan lagi menurut urutan kanonik. */
+  function restack() { C.TGROUPS.forEach(function (k) { if (map.hasLayer(TG[k])) TG[k].eachLayer(function (pl) { pl.bringToFront(); }); }); }
   // mandala Elvari: gradasi tanpa tepi
   var gMand = L.layerGroup(); var MOP = [0.46, 0.32, 0.18, 0.07];
   var RINGTXT = ['Ring 0 — Libbāl: kursi Sarum, kuil Lex Aēlis, arsip standar, jangkar meridian Elvari.', 'Ring 1 — dataran inti: kota-kota Sarum/Marum, kanon budaya penuh (entri menyusul).',
@@ -330,16 +335,15 @@ function main() {
     var pl = L.polygon(shift(ring, dx), { renderer: svgMand, stroke: false, fillColor: FAC.anusarri.color, fillOpacity: MOP[m.ring], smoothFactor: 1.5 });
     pl.bindTooltip('Mandala Kemurnian · Ring ' + m.ring, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
     pl.on('click', function (e) { openMandala(m.ring, e.latlng); }); gMand.addLayer(pl); }); }); });
-  Object.keys(TG).forEach(function (k) { reg('t_' + k, TG[k], true); });
+  C.TGROUPS.forEach(function (k) { var d = C.TDEFAULT[k]; reg('t_' + k, TG[k], d === undefined ? true : d); LAYERS['t_' + k].after = restack; });
   reg('mandala', gMand, true);
   // pola SVG (hatch & hutan) — disuntik ke kontainer renderer setelah ada
   function injectDefs() {
-    var list = [[svgTerr, hatchIds], [svgReg, null]];
+    var list = [[svgTerr, PATS], [svgReg, null]];
     list.forEach(function (it) { var r = it[0]; if (!r._container || r._container.querySelector('defs[data-rh]')) return;
       var ns = 'http://www.w3.org/2000/svg', defs = document.createElementNS(ns, 'defs'); defs.setAttribute('data-rh', '1');
       var html = '';
-      if (it[1]) Object.keys(it[1]).forEach(function (id) { var c = it[1][id];
-        html += '<pattern id="h-' + id + '" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(40)"><rect width="9" height="9" fill="' + c + '" fill-opacity=".16"/><rect width="2.6" height="9" fill="' + c + '" fill-opacity=".55"/></pattern>'; });
+      if (it[1]) Object.keys(it[1]).forEach(function (k) { html += C.patSVG(it[1][k], k); });
       html += '<pattern id="p-forest" patternUnits="userSpaceOnUse" width="12" height="12"><rect width="12" height="12" fill="#6fb46a" fill-opacity=".10"/><path d="M3 9l2-4 2 4zM8.5 5l1.5-3 1.5 3z" fill="#bfe8a8" fill-opacity=".55"/></pattern>';
       html += '<pattern id="p-blank" patternUnits="userSpaceOnUse" width="14" height="14" patternTransform="rotate(-35)"><rect width="14" height="14" fill="#f2d9a0" fill-opacity=".05"/><rect width="1.2" height="14" fill="#f2d9a0" fill-opacity=".30"/></pattern>';
       defs.innerHTML = html; r._container.insertBefore(defs, r._container.firstChild); });
@@ -384,7 +388,7 @@ function main() {
   DATA.banks.forEach(function (b, i) { OFFS.forEach(function (dx) {
     var c = L.circle([b.lat, b.lon + dx], { renderer: svgReg, radius: b.r, color: '#8fe3e0', weight: 1.2, dashArray: '2 5', fillColor: '#8fe3e0', fillOpacity: 0.05 });
     c.bindTooltip('Bank samudra (lapisan fisik v4)', { sticky: true, className: 'rt' });
-    c.on('click', function (e) { if (measuring) return; popup.setLatLng(e.latlng).setContent(BANK_HTML).openOn(map); });
+    c.on('click', function (e) { if (measuring) return; showPopup(e.latlng, BANK_HTML); });
     gBanks.addLayer(c); }); });
   reg('banks', gBanks, false);
 
@@ -426,23 +430,31 @@ function main() {
   }
   function actCopy(p) { return '<button class="act" data-copy="' + fmt(p.lat, 3).replace(',', '.') + ', ' + fmt(lonN(p.lon), 3).replace(',', '.') + '">Salin koordinat</button>'; }
   var popup = L.popup({ maxWidth: 400, autoPanPadding: [40, 60], className: 'rhp' });
+  /** Buka popup; kartu panjang (faksi dengan banyak baris status) bergulir di dalam popup alih-alih terpotong di tepi layar. */
+  function showPopup(ll, html) { popup.options.maxHeight = Math.max(260, map.getSize().y - 170); popup.setLatLng(ll).setContent(html).openOn(map); }
   function openPlace(id, at) {
     if (measuring) return;
     var p = placeById[id]; if (!p) return;
     var ll = at ? at : L.latLng(p.lat, nearestX(p.lon));
-    popup.setLatLng(ll).setContent(placeHTML(p)).openOn(map);
+    showPopup(ll, placeHTML(p));
     try { history.replaceState(null, '', '#' + id); } catch (e) {}
   }
+  var BATAS_STD = 'Batas digambar lewat partisi sadar-medan (biaya gerak naik di pegunungan & sungai besar) dari jangkar kanon; snapshot AS 1647.';
+  /** Kartu faksi. Field opsional di data.json: `method` (menggantikan kalimat batas standar), `tag` (label tebal, mis. "PLACEHOLDER, bukan kanon"),
+   *  `facts` = [[label, status epistemik, teks(, tingkat keyakinan)], …] — setiap baris diberi chip Kanon / Turunan / Inferensi AI / Terbuka. */
   function factionHTML(id) {
     var f = FAC[id]; if (!f) return null;
-    return '<div class="pp"><h2>' + esc(f.name) + '</h2><p class="aka">' + esc(f.kind) + '</p><div class="pos"><div class="ph">Batas wilayah ' + chip(f.epi) + '</div>' +
-      (f.gradient ? 'Gradasi mandala, bukan garis — ' : '') + 'Batas digambar lewat partisi sadar-medan (biaya gerak naik di pegunungan & sungai besar) dari jangkar kanon; snapshot AS 1647.</div>' +
-      '<p class="nt">' + esc(f.blurb || '') + '</p><div class="acts">' + (f.url ? '<a class="act" href="' + esc(f.url) + '" target="_blank" rel="noopener">Entri Powers & Factions ↗</a>' : '') + '</div></div>';
+    var tag = f.tag ? '<div class="tags"><span class="tag ' + (/^PLACEHOLDER/.test(f.tag) ? 'bad' : 'warn') + '">' + esc(f.tag) + '</span></div>' : '';
+    var facts = (f.facts && f.facts.length) ? '<div class="fxs">' + f.facts.map(function (r) {
+      return '<div class="fx"><div class="fh">' + esc(r[0]) + ' ' + chip(r[1], r[3]) + '</div>' + esc(r[2]) + '</div>'; }).join('') + '</div>' : '';
+    return '<div class="pp"><h2>' + esc(f.name) + '</h2><p class="aka">' + esc(f.kind) + '</p>' + tag + '<div class="pos"><div class="ph">Batas wilayah ' + chip(f.epi) + '</div>' +
+      (f.gradient ? 'Gradasi mandala, bukan garis — ' : '') + esc(f.method || BATAS_STD) + '</div>' +
+      '<p class="nt">' + esc(f.blurb || '') + '</p>' + facts + '<div class="acts">' + (f.url ? '<a class="act" href="' + esc(f.url) + '" target="_blank" rel="noopener">Entri Powers & Factions ↗</a>' : '') + '</div></div>';
   }
   function openFaction(id, at) {
     if (measuring) return;
     var h = factionHTML(id); if (!h) return;
-    popup.setLatLng(at).setContent(h).openOn(map);
+    showPopup(at, h);
   }
   function mandalaHTML(ring) {
     return '<div class="pp"><h2>Mandala Kemurnian</h2><p class="aka">Ring ' + ring + ' · Anušarri / Elvari</p><div class="pos"><div class="ph">Struktur ' + chip('kanon') + ' · radius ' + chip('inferensi') + '</div>' +
@@ -451,7 +463,7 @@ function main() {
   }
   function openMandala(ring, at) {
     if (measuring) return;
-    popup.setLatLng(at).setContent(mandalaHTML(ring)).openOn(map);
+    showPopup(at, mandalaHTML(ring));
   }
   function routeHTML(r) {
     return '<div class="pp"><h2>' + esc(r.name) + '</h2><div class="pos"><div class="ph">Garis ' + chip(r.epi) + (r.topo ? ' · topologi ' + chip(r.topo) : '') + '</div>' + esc(r.note) + '</div>' +
@@ -459,7 +471,7 @@ function main() {
   }
   function openRoute(r, at) {
     if (measuring) return;
-    popup.setLatLng(at).setContent(routeHTML(r)).openOn(map);
+    showPopup(at, routeHTML(r));
   }
   function gcDeg(a, b) { return C.angDist(a[0], a[1], b[0], b[1]); }
   function pathKm(pts) { var s = 0; for (var i = 1; i < pts.length; i++) s += gcDeg(pts[i - 1], pts[i]); return s * KM_DEG; }
@@ -532,7 +544,7 @@ function main() {
     ['Peta kerja dual-disk', [['d_rings', 'Cincin Scar Proximity (≤ 6,5° · ≤ 19,5° · ≤ 32,5°)'], ['d_azi', 'Anotasi azimut Scar (puncak, ±90°, palung)']], 'disk'],
     ['Dasar & kartografi', [['grat', 'Graticule 15°'], ['mer', 'Tiga meridian'], ['cland', 'Kontur elevasi (1.000/2.500/4.500 m)'], ['csea', 'Kontur batimetri (−200/−3.000/−6.000 m)'], ['labels', 'Label wilayah & perairan'], ['regions', 'Garis region fisik']]],
     ['The Scar', [['band', 'Pita 13,0°'], ['curve', 'Kurva small circle'], ['arcs', 'Empat busur (batas usulan)'], ['anom', 'Kantong anomali massa'], ['zone', 'Zona Castra Birath (tak dikunci)']]],
-    ['Wilayah kuasa AS 1647', [['t_hes', 'Hesperia & vasal Commonwealth', '#c0394b'], ['t_foe', 'Foedera & Provincia Cassivallae', '#2aa38a'], ['t_int', 'Mozaik Interregna & Nundina', '#e0a33a'], ['t_ana', 'Anabasim (konsolidasi Birath–Satvan)', '#ff6a2b'], ['t_elv', 'Andurā (Zona Ambang)', '#4cc3a8'], ['mandala', 'Mandala Kemurnian (Anušarri)', '#e6d47a'], ['t_lain', 'Lainnya: Liminara, Ktonia, Kloaka, Emporys, Peratēs, Vasundha', '#9b6fd6'], ['fronts', 'Front Florian & arah ekspansi Anabasim']]],
+    ['Wilayah kuasa AS 1647', [['t_hes', 'Hesperia (yurisdiksi nominal) & kerajaan marka Commonwealth', '#c0394b'], ['t_hesb', 'Sabuk provinsi Hesperia · Pesisir / Transisi / Pedalaman (usulan, opsional)', '#ee7d86'], ['t_sat', 'Zona persebaran Satvan Pedalaman (usulan · bukan wilayah berdaulat)', '#e6dcc3'], ['t_foe', 'Foedera (klaim luas + inti berpenduduk tipis) & Cassivalla', '#2aa38a'], ['t_int', 'Mozaik Interregna & Nundina', '#e0a33a'], ['t_ana', 'Anabasim (konsolidasi Birath–Satvan)', '#ff6a2b'], ['t_elv', 'Andurā (Zona Ambang)', '#4cc3a8'], ['mandala', 'Mandala Kemurnian (Anušarri)', '#e6d47a'], ['t_lain', 'Lainnya: Liminara, Ktonia, Kloaka (klaim nominal + zona kontrol bergeser), Emporys, Peratēs, Vasundha', '#9b6fd6'], ['fronts', 'Front Florian & arah ekspansi Anabasim']]],
     ['Rute', [['r_historic', 'Rute Penyeberangan The Scar', '#f6e7bd'], ['r_land', 'Jalur darat barat (Sutura)', '#e79a6a'], ['r_story', 'Rute Arc 1 (Sulis)', '#ffd35c'], ['r_sea', 'Usulan koridor angin & jalur laut', '#7fe0ec']]],
     ['Oseanografi', [['banks', 'Bank samudra (lapisan fisik v4)']]],
     ['Marker', [['markers', 'Tampilkan marker lokasi']]]
@@ -580,14 +592,30 @@ function main() {
   // ================================================================ legenda
   var legEl = document.getElementById('legend'), btnLeg = document.getElementById('btn-legend');
   var legOpen = LS.get('rh-legend', false);
+  var legN = 0;
+  function legFlat(col) { return '<svg width="18" height="12"><rect x=".5" y=".5" width="17" height="11" rx="2" fill="' + col + '" fill-opacity=".3" stroke="' + col + '"/></svg>'; }
+  /** Swatch legenda dari gaya gambar yang sama dengan peta (C.terrStyle): arsir, bintik, garis putus-putus, atau isian rata. tier memilih jenjang kepadatan bintik. */
+  function legSw(id, tier) {
+    var f = FAC[id]; if (!f) return legFlat('#cccccc');
+    var ts = C.terrStyle(f, { id: id, tier: tier || 0 }), fl = ts.fill, sk = ts.stroke, pk = C.patKey(fl), uid = 'lg' + (++legN);
+    if (pk && fl.k === 'dots') fl = Object.assign({}, fl, { g: Math.min(fl.g, 6), r: 0.9 });   // swatch 18×12 px: bintik dirapatkan supaya terbaca
+    return '<svg width="18" height="12">' + (pk ? '<defs>' + C.patSVG(fl, uid) + '</defs>' : '') + '<rect x=".5" y=".5" width="17" height="11" rx="2" fill="' + (pk ? 'url(#' + uid + ')' : fl.col) + '"' + (pk ? '' : ' fill-opacity="' + Math.max(fl.a, 0.3) + '"') +
+      (sk ? ' stroke="' + sk.col + '" stroke-opacity="' + sk.a + '"' + (sk.dash ? ' stroke-dasharray="' + sk.dash + '"' : '') : ' stroke="none"') + '/></svg>';
+  }
   function refreshLegend() {
     var h = '<h3>Status koordinat</h3>';
     ['kanon', 'turunan', 'inferensi', 'terbuka'].forEach(function (k) { var r = RING[k]; h += '<div class="li"><svg width="18" height="18" viewBox="0 0 24 24">' + glyph(k === 'terbuka' ? 'zone' : 'city', r[0], r[1]) + '</svg>' + EPI[k] + '</div>'; });
     h += '<div class="li"><svg width="18" height="18" viewBox="0 0 24 24">' + glyph('city', RING.inferensi[0], RING.inferensi[1]) + '<circle cx="19.6" cy="4.6" r="2.6" fill="#f2b25a"/></svg>Usulan — posisi belum dikunci (entri Atlas Draft)</div>';
     h += '<h3>The Scar</h3><div class="li"><svg width="30" height="12"><rect y="1" width="30" height="10" fill="#ff5a24" fill-opacity=".25"/><path d="M0 6h30" stroke="#ff7a3d" stroke-width="2.2"/></svg>Pita 13,0° & kurva</div>';
-    var act = [['t_hes', '#c0394b', 'Hesperia / vasal'], ['t_foe', '#2aa38a', 'Foedera'], ['t_int', '#e0a33a', 'Interregna'], ['t_ana', '#ff6a2b', 'Anabasim'], ['mandala', '#e6d47a', 'Anušarri (gradasi)'], ['t_elv', '#4cc3a8', 'Andurā'], ['t_lain', '#9b6fd6', 'Faksi lain']]
+    var act = [
+      ['t_hes', legSw('hesperia'), 'Hesperia (yurisdiksi nominal)'], ['t_hes', legSw('hes_marka'), 'Kerajaan marka Commonwealth (usulan)'],
+      ['t_hesb', legSw('hes_pesisir'), 'Sabuk Pesisir · 24 provinsi (usulan)'], ['t_hesb', legSw('hes_transisi'), 'Sabuk Transisi · 19 (usulan)'], ['t_hesb', legSw('hes_pedalaman'), 'Sabuk Pedalaman · 7 (usulan)'],
+      ['t_sat', legSw('satvan_pedalaman', 2), 'Satvan Pedalaman: zona persebaran (usulan)'],
+      ['t_foe', legSw('foedera'), 'Foedera: klaim luas'], ['t_foe', legSw('foedera_inti'), 'Foedera: inti berpenduduk tipis (usulan)'], ['t_foe', legSw('cassivalla'), 'Cassivalla'],
+      ['t_int', legFlat('#e0a33a'), 'Interregna'], ['t_ana', legFlat('#ff6a2b'), 'Anabasim'], ['mandala', legFlat('#e6d47a'), 'Anušarri (gradasi)'], ['t_elv', legFlat('#4cc3a8'), 'Andurā'],
+      ['t_lain', legSw('kloaka'), 'Kloaka: klaim nominal'], ['t_lain', legSw('kloaka_zona', 2), 'Kloaka: zona kontrol bergeser (usulan)'], ['t_lain', legFlat('#9b6fd6'), 'Faksi lain']]
       .filter(function (a) { return LAYERS[a[0]] && LAYERS[a[0]].on; });
-    if (act.length) { h += '<h3>Wilayah kuasa</h3>'; act.forEach(function (a) { h += '<div class="li"><svg width="18" height="12"><rect x=".5" y=".5" width="17" height="11" rx="2" fill="' + a[1] + '" fill-opacity=".3" stroke="' + a[1] + '"/></svg>' + a[2] + '</div>'; }); h += '<div class="li" style="font-size:11px">Arsir = contested / dianeksasi / vasal</div>'; }
+    if (act.length) { h += '<h3>Wilayah kuasa</h3>'; act.forEach(function (a) { h += '<div class="li">' + a[1] + a[2] + '</div>'; }); h += '<div class="li" style="font-size:11px">Arsir = klaim luas / contested / dianeksasi / vasal · bintik = zona difus tanpa garis tepi</div>'; }
     h += '<h3>Rute</h3>';
     [['#f6e7bd', '8 7', 'Penyeberangan bersejarah'], ['#e79a6a', '2 6', 'Jalur darat Sutura'], ['#ffd35c', '', 'Rute Arc 1'], ['#7fe0ec', '12 5 2 5', 'Koridor angin (usulan)']].forEach(function (r) {
       h += '<div class="li"><svg width="30" height="12"><rect width="30" height="12" rx="3" fill="#1d2a33"/><path d="M3 6h24" stroke="' + r[0] + '" stroke-width="2.2"' + (r[1] ? ' stroke-dasharray="' + r[1] + '"' : '') + '/></svg>' + r[2] + '</div>'; });
@@ -824,11 +852,10 @@ function main() {
       if (meta) meta.textContent = un ? (is3 ? 'tak ada di 3D' : 'tak ada di peta kerja') : '';
     });
   }
-  function tgroupOf(t) { return TGROUP[t.id] || (t.id.indexOf('ir_') === 0 ? 'int' : 'lain'); }
   function viewCtx() {
     return {
       DATA: DATA, MOONS: MOONS, C: C, LAYERS: LAYERS, placeById: placeById, FAC: FAC, BASE: BASE, TERR: TERR, REDUCED: REDUCED, LS: LS, version: RH.version,
-      styles: { REG_STYLE: REG_STYLE, TGROUP: TGROUP, MOP: MOP, RST: RST, CST: CST, MER: MER, ARCS: ARCS, SC: SC, tgroupOf: tgroupOf },
+      styles: { REG_STYLE: REG_STYLE, TGROUP: C.TGROUP, MOP: MOP, RST: RST, CST: CST, MER: MER, ARCS: ARCS, SC: SC, tgroupOf: C.tgroupOf },
       scar: { outer: outer, inner: inner, curve: curve },
       visible: visible, groupOf: groupOf, markerHTML: markerHTML, lblClass: lblClass, breakName: breakName, LBL_BREAK: LBL_BREAK, LBL_MINOR: LBL_MINOR,
       labelHTML: labelHTML, DECL: { LBL_SIDE: LBL_SIDE, PRI: PRI, EPR: EPR }, cardAction: cardAction, closePanel: function () { setPanel(false); }, card: card,

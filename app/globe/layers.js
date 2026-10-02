@@ -19,7 +19,7 @@ G.createLayers = function (S, ctx, labelsEl) {
   var pend = false, needs = true, shown = false, lastPR = 0;
   // Tebal garis data konstan di LAYAR (bukan di tekstur): tekstur membesar saat kamera mendekat, jadi lebar tekstur dikompensasi, lalu mengecil mengikuti zoom (C.lineK).
   // Tekstur digambar ulang bila pembesarannya bergeser > ~15 % sejak gambar terakhir (lihat afterRender di bawah).
-  var LINE_KEYS = ['t_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
+  var LINE_KEYS = C.TGROUPS.map(function (k) { return 't_' + k; }).concat(['r_historic', 'r_land', 'r_story', 'r_sea', 'fronts']);
   function texPerScreen() { return OW / (2 * Math.PI * S.pxPerRad()) / LW; }
   function gw(b) { return Math.max(1 / LW, C.lineW(b, S.zoomOf(S.view.dist)) * texPerScreen()); }   // ≥ 1 piksel tekstur: lebih tipis dari itu jadi bayangan pudar
   function ga() { return Math.max(0.3 / LW, C.arrowK(S.zoomOf(S.view.dist)) * texPerScreen()); }   // kepala panah ≥ ~3 piksel tekstur, kalau tidak tak terlihat saat zoom dalam
@@ -54,10 +54,11 @@ G.createLayers = function (S, ctx, labelsEl) {
     var q = c.getContext('2d'); q.scale(c.width / w, c.height / h); draw(q);
     var p = g.createPattern(c, 'repeat'); if (rot && p.setTransform) p.setTransform(new DOMMatrix().rotate(rot)); return p;
   }
-  var pForest = null, pBlank = null, pHatch = {};
+  var pForest = null, pBlank = null, pFill = {};
   function forest() { return pForest || (pForest = mkPattern(12, 12, function (q) { q.fillStyle = 'rgba(111,180,106,.10)'; q.fillRect(0, 0, 12, 12); q.fillStyle = 'rgba(191,232,168,.55)'; q.fill(new Path2D('M3 9l2-4 2 4zM8.5 5l1.5-3 1.5 3z')); })); }
   function blank() { return pBlank || (pBlank = mkPattern(14, 14, function (q) { q.fillStyle = 'rgba(242,217,160,.05)'; q.fillRect(0, 0, 14, 14); q.fillStyle = 'rgba(242,217,160,.30)'; q.fillRect(0, 0, 1.2, 14); }, -35)); }
-  function hatch(col) { return pHatch[col] || (pHatch[col] = mkPattern(9, 9, function (q) { q.globalAlpha = 0.16; q.fillStyle = col; q.fillRect(0, 0, 9, 9); q.globalAlpha = 0.55; q.fillRect(0, 0, 2.6, 9); }, 40)); }
+  /** Isian bukan-rata (arsir atau bintik) dari deskriptor bersama C.terrStyle → pola kanvas; di-cache per kunci pola. */
+  function pat(fl) { var k = C.patKey(fl), tl; return pFill[k] || (tl = C.patTile(fl), pFill[k] = mkPattern(tl.w, tl.h, tl.draw, tl.rot)); }
 
   // ------------------------------------------------------------------ penjadwalan repaint
   function repaint() {
@@ -201,13 +202,15 @@ G.createLayers = function (S, ctx, labelsEl) {
     DATA.mandala.forEach(function (m) { shape(m.rings, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
   } });
 
-  // ================================================================== teritori AS 1647 (enam kelompok)
-  ['hes', 'foe', 'int', 'ana', 'elv', 'lain'].forEach(function (grp) {
+  // ================================================================== teritori AS 1647 (kelompok = C.TGROUPS)
+  // Satu tabel gaya dan satu urutan gambar untuk semua tampilan: kelompok menurut C.TGROUPS (bawah → atas; semua z = 390, urutan penyisipan adapter = urutan kelompok), lalu urutan data.
+  var TORD = C.terrOrder(DATA.territories);   // urutan gambar bawah → atas; hit-test memakai kebalikannya
+  C.TGROUPS.forEach(function (grp) {
     add('t_' + grp, { z: 390, paint: function () {
-      DATA.territories.forEach(function (t) {
-        if (t.id === 'anusarri' || ST.tgroupOf(t) !== grp) return;
-        var f = FAC[t.id] || { name: t.name, color: '#cccccc' };
-        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: gw(C.LINE.terr), dash: f.dashed ? '5 4' : null });
+      TORD.forEach(function (t) {
+        if (t.id === 'anusarri' || C.tgroupOf(t) !== grp) return;
+        var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }, ts = C.terrStyle(f, t), fl = ts.fill, sk = ts.stroke;
+        shape(t.rings, { fill: C.patKey(fl) ? pat(fl) : fl.col, fa: C.patKey(fl) ? 1 : fl.a, stroke: sk ? sk.col : null, sa: sk ? sk.a : 1, w: gw(C.LINE.terr * (sk ? sk.k : 1)), dash: sk && sk.dash ? sk.dash : null });
       });
     } });
   });
@@ -348,9 +351,9 @@ G.createLayers = function (S, ctx, labelsEl) {
       }
     }
     // teritori (pane 390)
-    for (i = DATA.territories.length - 1; i >= 0; i--) {
-      var t = DATA.territories[i]; if (t.id === 'anusarri' || !on('t_' + ST.tgroupOf(t))) continue;
-      for (var q = 0; q < t.rings.length; q++) if (inRing(lat, lon, t.rings[q])) { var f = FAC[t.id]; return { type: 'faction', id: t.id, name: f ? f.name : t.name }; }
+    for (i = TORD.length - 1; i >= 0; i--) {   // atas dulu = kebalikan urutan gambar (kelompok C.TGROUPS lalu urutan data)
+      var t = TORD[i]; if (t.id === 'anusarri' || !on('t_' + C.tgroupOf(t))) continue;
+      for (var q = 0; q < t.rings.length; q++) if (inRing(lat, lon, t.rings[q])) { var fid = t.of || t.id, f = FAC[fid]; return { type: 'faction', id: fid, name: f ? f.name : t.name }; }
     }
     // mandala (pane 385): yang digambar terakhir ada di atas
     if (on('mandala')) for (i = DATA.mandala.length - 1; i >= 0; i--) { var m = DATA.mandala[i]; for (q = 0; q < m.rings.length; q++) if (inRing(lat, lon, m.rings[q])) return { type: 'mandala', ring: m.ring, name: 'Mandala Kemurnian · Ring ' + m.ring }; }

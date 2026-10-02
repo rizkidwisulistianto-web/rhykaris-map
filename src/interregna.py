@@ -185,9 +185,11 @@ cost_legacy = (_cost0.reshape(h, w) * (1.0 + 0.45 * _nbord).clip(0.5, 2.0))
 # polity lama yang menentukan footprint + tetangganya (id, benih, bias, range, (pusat zona, radius), batasan keras)
 LEGACY = [
     ('hesperia', [(-5.49, -8.31), (-4.5, -18.0), (-6.8, -27.0), (-9.5, -36.0), (-12.5, -44.0)], 900, 2600, ((-9.0, -26.0), 17.0), notband & ~silva),
-    ('cw_a', [(-27.0, -60.0), (-28.0, -66.0)], 250, 1500, ((-29.0, -63.0), 8.0), notband),
-    ('cw_b', [(-21.0, -48.0)], 250, 1300, ((-23.0, -48.0), 7.0), notband),
-    ('cw_c', [(-21.5, -31.0)], 250, 1300, ((-23.0, -31.0), 7.0), notband),
+    # legacy_w1..w3 = bekas tiga polygon Vasal Commonwealth bernomor (prefiks id "cw"; DICABUT — Canon Index #213, lapisan politik v3). Tetap di sini HANYA
+    # sebagai pesaing partisi lama agar footprint Interregna (PR #9) tidak bergeser; bukan entitas peta dan tidak ditulis ke data.
+    ('legacy_w1', [(-27.0, -60.0), (-28.0, -66.0)], 250, 1500, ((-29.0, -63.0), 8.0), notband),
+    ('legacy_w2', [(-21.0, -48.0)], 250, 1300, ((-23.0, -48.0), 7.0), notband),
+    ('legacy_w3', [(-21.5, -31.0)], 250, 1300, ((-23.0, -31.0), 7.0), notband),
     ('kloaka', [(-3.8, -4.3)], 0, 480, ((-3.8, -4.3), 2.4), ~silva),
     ('aventalia', [(-12.5, -7.5)], 0, 850, ((-12.5, -7.5), 4.0), ~silva),
     ('tarvenna', [(-13.5, -1.8)], 60, 850, ((-13.5, -1.8), 4.2), ~silva),

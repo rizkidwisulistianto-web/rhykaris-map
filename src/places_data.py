@@ -79,7 +79,7 @@ dict(id='tarvenna', name='Tarvenna', type='Nation', cat='kingdom', lat=-13.5, lo
      strategic='Simpul perlintasan koridor tengah (jalur darat/dagang) — kontrolnya menentukan tempo aneksasi lebih jauh ke barat. Satu-satunya kerajaan Interregna yang pernah berupaya merintis liga pertahanan kolektif.',
      notes='Endonim: tar- + venna (venia) — "tempat yang meminta kerelaan". Kini ironis: dipaksa "meminta izin" pada Florian. Status AS 1647: Contested.',
      url=None),
-dict(id='cassivalla', name='Cassivalla', aka='Provincia Cassivallae', type='Nation', cat='ruin', lat=-14.6, lon=5.0,
+dict(id='cassivalla', name='Cassivalla', aka='eksonim Foedera: Provincia Cassivallae', type='Nation', cat='ruin', lat=-14.6, lon=5.0,
      epi='inferensi', conf='Sedang', faction='cassivalla',
      pos='Urutan relatif terkunci: segmen paling TIMUR (paling dekat sfera Foedera), ditelan pertama ~AS 1630-an [Kanon — entri]. Koordinat presisi [Inferensi AI].',
      canon='Draft', status='Destroyed', access='Restricted', hemi='Rhykar', scar='Peripheral', pop='Sparse', hazards=['Political', 'Warfare'], region='Interregna — koridor tengah (kerajaan jatuh, fase awal aneksasi)', parent='Interregna',
@@ -113,7 +113,7 @@ dict(id='foedera', name='Foedera', type='Nation', cat='region', lat=-4.0, lon=17
      pos='Relasi terkunci: marka timur Ferria — sektor timur/tenggara Sinus Adventus, frontier menghadap sabuk Scar [Kanon — entri]. Batas barat bergerak (Tension #19) — digambar snapshot AS 1647 [Inferensi AI].',
      canon='Established', status='Active', access='Open', hemi='Rhykar', scar='Adjacent', pop='Large', hazards=['Warfare', 'Political'], region='Hemisfer Rhykar — marka timur / frontier Scar', parent='Ferria',
      strategic='Frontier satu-satunya penyangga antara ekspansi Anabasim dan koridor manusia; markas Ordo Foederis dengan akses Sistem II-B; proto-imperium yang menantang Hesperia dari luar payung; pusat zona standar Pactum.',
-     notes='Berdiri AS 1435 ketika garis militer Ordo Foederis memformalkan provinsi terjauh jadi kerajaan. Ironi geografis: frontier timur = wilayah Satvan yang erosinya paling segar.',
+     notes='Berdiri AS 1435 ketika garis militer Ordo Foederis memformalkan wilayah terjauh yang dipegangnya jadi kerajaan. Ironi geografis: frontier timur = wilayah Satvan yang erosinya paling segar.',
      url=None),
 dict(id='synodia', name='Synodia', type='City', cat='capital', lat=3.03, lon=25.53,
      epi='inferensi', conf='Sedang', faction='foedera',
@@ -345,7 +345,7 @@ ROUTES = [
 
 FRONTS = [
     dict(id='front_florian', name='Front kampanye Florian (snapshot AS 1647)', epi='inferensi',
-         note='Arah timur→barat & urutan Cassivalla → Tarvenna → … → Aventalia [Kanon]. Garis front = batas Provincia Cassivallae / Silva Nullius vs Tarvenna — Tension #19 (batas barat Foedera bergerak).',
+         note='Arah timur→barat & urutan Cassivalla → Tarvenna → … → Aventalia [Kanon]. Garis front = batas Cassivalla / Silva Nullius vs Tarvenna — Tension #19 (batas barat Foedera bergerak).',
          pts=[(-7.4, 2.4), (-10.8, 1.9), (-13.5, 2.6), (-16.0, 2.1), (-19.0, 2.8), (-22.0, 2.4)], arrow_to=(-15.0, -1.2)),
     dict(id='anabasim_fase1', name='Ekspansi Anabasim — Fase 1 (zona penyangga → frontier Rhykar)', epi='inferensi',
          note='Kanon: dari The Scar ke perbatasan hemisfer Rhykar, membentuk zona buffer yang defensible [Races — Birath].', pts=[(6.0, 31.0), (3.2, 27.0)], arrow_to=(1.5, 24.0)),
