@@ -27,6 +27,67 @@ C.lineK = function (z) { return Math.max(0.45, Math.min(1.15, Math.pow(0.82, z -
 C.lineW = function (base, z) { return Math.max(C.LINE_MIN, base * C.lineK(z)); };
 C.arrowK = function (z) { return Math.max(0.6, C.lineK(z)) * C.LINE.arrow; };
 
+// ------------------------------------------------------------------ wilayah kuasa: kelompok layer, urutan gambar, gaya (v1.7)
+/* SATU tabel untuk peta datar, globe 3D dan peta kerja dual-disk (satu data.json, tanpa salinan gaya per tampilan).
+   Kelompok = satu layer di panel. C.TGROUPS berurutan dari BAWAH ke ATAS: zona persebaran Satvan, Hesperia + kerajaan marka, sabuk provinsi Hesperia
+   (layer opsional di atas Hesperia), Foedera (klaim luas lalu inti), Interregna, Anabasim, Andurā, lainnya. Di dalam kelompok urutannya mengikuti data.json.
+   Tanpa aturan ini tumpukan peta datar (urutan DOM) bergantung pada urutan layer dihidup-matikan dan bisa berbeda dari globe dan cakram. */
+C.TGROUPS = ['sat', 'hes', 'hesb', 'foe', 'int', 'ana', 'elv', 'lain'];
+C.TDEFAULT = { hesb: false };   // kelompok yang default mati (sabuk provinsi Hesperia: layer opsional); selebihnya default nyala
+C.TGROUP = {
+  satvan_pedalaman: 'sat',
+  hesperia: 'hes', hes_marka: 'hes', hes_pesisir: 'hesb', hes_transisi: 'hesb', hes_pedalaman: 'hesb',
+  foedera: 'foe', foedera_inti: 'foe', cassivalla: 'foe',
+  nundina: 'int', aventalia: 'int', tarvenna: 'int', anabasim: 'ana', andura: 'elv', anusarri: 'elv',
+  kloaka: 'lain', kloaka_zona: 'lain', liminara: 'lain', ktonia: 'lain', pylora: 'lain', emporys: 'lain', perates: 'lain', vasundha: 'lain'
+};
+/** Kelompok sebuah wilayah. Rekaman jenjang (t.of = id induk) ikut induknya; Interregna (ir_*) selalu 'int'. */
+C.tgroupOf = function (t) { var id = t.of || t.id; return C.TGROUP[id] || (id.indexOf('ir_') === 0 ? 'int' : 'lain'); };
+/** Wilayah dalam urutan gambar bawah → atas: kelompok menurut C.TGROUPS, lalu urutan data. Stabil. Hit-test memakai urutan terbaliknya. */
+C.terrOrder = function (list) {
+  return list.map(function (t, i) { return { t: t, g: C.TGROUPS.indexOf(C.tgroupOf(t)), i: i }; })
+    .sort(function (a, b) { return (a.g - b.g) || (a.i - b.i); }).map(function (o) { return o.t; });
+};
+/* Gaya per kunci `style` di faksi (data.json). Tanpa `style` = tampilan lama (isian rata 26 % atau arsir 9 px). `tiers` = jenjang kepadatan pola titik
+   (rekaman wilayah dengan `tier` n memakai baris n; wilayah induk jenjang 0). Pola: {k:'hatch', a1, a2, g, b, rot} garis miring; {k:'dots', a, g, r}
+   bintik selang-seling berjarak g piksel layar — kepadatan konstan di layar, tidak ikut zoom. `stroke:null` = tanpa garis tepi (zona difus). */
+var HATCH = { k: 'hatch', a1: 0.16, a2: 0.55, g: 9, b: 2.6, rot: 40 };
+var TSTYLE = {
+  marka:     { fill: { k: 'hatch', a1: 0.2, a2: 0.6, g: 8, b: 2.4, rot: 40 }, stroke: { a: 0.85, k: 1 } },
+  belt0:     { col: '#ee7d86', fill: { k: 'flat', a: 0.34 }, stroke: null },
+  belt1:     { col: '#c0394b', fill: { k: 'flat', a: 0.36 }, stroke: null },
+  belt2:     { col: '#6f1d33', fill: { k: 'flat', a: 0.55 }, stroke: null },
+  foe_claim: { fill: { k: 'hatch', a1: 0.06, a2: 0.34, g: 13, b: 2, rot: 40 }, stroke: { a: 0.8, k: 1 } },
+  foe_core:  { fill: { k: 'flat', a: 0.55 }, stroke: null },
+  klo_claim: { fill: { k: 'flat', a: 0.05 }, stroke: { a: 0.85, k: 0.85, dash: '3 4' } },
+  klo_zone:  { tiers: [{ k: 'dots', a: 0.7, g: 12, r: 1.15 }, { k: 'dots', a: 0.75, g: 8, r: 1.2 }, { k: 'dots', a: 0.8, g: 5.5, r: 1.2 }], stroke: null },
+  sat:       { tiers: [{ k: 'dots', a: 0.55, g: 20, r: 1.1 }, { k: 'dots', a: 0.6, g: 13, r: 1.15 }, { k: 'dots', a: 0.65, g: 8.5, r: 1.2 }], stroke: null }
+};
+function withCol(p, col) { var o = { col: col }; Object.keys(p).forEach(function (k) { o[k] = p[k]; }); return o; }
+/** Gaya gambar sebuah wilayah: {fill:{k:'flat'|'hatch'|'dots', col, …}, stroke:{col, a, k (pengali tebal garis), dash}|null}. f = faksi (data.json), t = rekaman wilayah. */
+C.terrStyle = function (f, t) {
+  var s = f && f.style ? TSTYLE[f.style] : null, col = (s && s.col) || (f && f.color) || '#cccccc';
+  if (!s) return { fill: f && f.hatch ? withCol(HATCH, col) : { k: 'flat', col: col, a: 0.26 }, stroke: { col: col, a: 0.8, k: 1, dash: f && f.dashed ? '5 4' : null } };
+  var tier = (t && t.tier) || 0, fl = s.tiers ? s.tiers[Math.min(tier, s.tiers.length - 1)] : s.fill;
+  return { fill: withCol(fl, col), stroke: s.stroke ? { col: col, a: s.stroke.a, k: s.stroke.k, dash: s.stroke.dash || null } : null };
+};
+/** Kunci pola untuk isian bukan-rata (hatch/dots); null untuk isian rata. Dipakai sebagai id SVG di peta datar dan kunci cache kanvas di globe dan cakram. */
+C.patKey = function (p) {
+  if (!p || p.k === 'flat') return null;
+  return p.k + '-' + String(p.col).replace('#', '') + '-' + [p.a1, p.a2, p.a, p.g, p.b, p.r, p.rot].filter(function (x) { return x != null; }).join('_').replace(/\./g, 'p');
+};
+/** Markup <pattern> SVG (peta datar dan swatch legenda) untuk pola p dengan id tertentu. */
+C.patSVG = function (p, id) {
+  var c = p.col;
+  if (p.k === 'dots') return '<pattern id="' + id + '" patternUnits="userSpaceOnUse" width="' + p.g + '" height="' + p.g + '"><circle cx="' + p.g * 0.25 + '" cy="' + p.g * 0.25 + '" r="' + p.r + '" fill="' + c + '" fill-opacity="' + p.a + '"/><circle cx="' + p.g * 0.75 + '" cy="' + p.g * 0.75 + '" r="' + p.r + '" fill="' + c + '" fill-opacity="' + p.a + '"/></pattern>';
+  return '<pattern id="' + id + '" patternUnits="userSpaceOnUse" width="' + p.g + '" height="' + p.g + '" patternTransform="rotate(' + p.rot + ')"><rect width="' + p.g + '" height="' + p.g + '" fill="' + c + '" fill-opacity="' + p.a1 + '"/><rect width="' + p.b + '" height="' + p.g + '" fill="' + c + '" fill-opacity="' + p.a2 + '"/></pattern>';
+};
+/** Ubin pola untuk kanvas (globe, cakram): {w, h, rot, draw(q)} — gambar yang sama dengan patSVG. */
+C.patTile = function (p) {
+  if (p.k === 'dots') return { w: p.g, h: p.g, rot: 0, draw: function (q) { q.fillStyle = p.col; q.globalAlpha = p.a; [0.25, 0.75].forEach(function (u) { q.beginPath(); q.arc(p.g * u, p.g * u, p.r, 0, 2 * Math.PI); q.fill(); }); q.globalAlpha = 1; } };
+  return { w: p.g, h: p.g, rot: p.rot, draw: function (q) { q.fillStyle = p.col; q.globalAlpha = p.a1; q.fillRect(0, 0, p.g, p.g); q.globalAlpha = p.a2; q.fillRect(0, 0, p.b, p.g); q.globalAlpha = 1; } };
+};
+
 // ------------------------------------------------------------------ state (localStorage dengan prefiks rh-, selalu try/catch)
 C.LS = {
   get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },

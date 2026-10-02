@@ -279,7 +279,7 @@ DK.init = function (ctx) {
     GEO.regions = DATA.regions.filter(function (r) { return ST.REG_STYLE[r.id]; }).map(function (r) { return { id: r.id, st: ST.REG_STYLE[r.id], rings: r.rings.map(function (q) { return mkRing(q, true); }) }; });
     GEO.banks = DATA.banks.map(function (b) { var q = []; for (var i = 0; i <= 72; i++) q.push(C.destination(b.lat, b.lon, i * 5, b.r)); return mkRing(q, true); });
     GEO.mand = DATA.mandala.map(function (m) { return { ring: m.ring, rings: m.rings.map(function (q) { return mkRing(q, true); }) }; });
-    GEO.terr = DATA.territories.filter(function (t) { return t.id !== 'anusarri'; }).map(function (t) { return { t: t, f: FAC[t.id] || { name: t.name, color: '#cccccc' }, grp: ST.tgroupOf(t), rings: t.rings.map(function (q) { return mkRing(q, true); }) }; });
+    GEO.terr = C.terrOrder(DATA.territories.filter(function (t) { return t.id !== 'anusarri'; })).map(function (t) { var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }; return { t: t, f: f, ts: C.terrStyle(f, t), grp: C.tgroupOf(t), rings: t.rings.map(function (q) { return mkRing(q, true); }) }; });   // urutan gambar = kelompok C.TGROUPS lalu urutan data
     GEO.routes = DATA.routes.map(function (r) { return { r: r, parts: [r.pts].concat(r.pts2 ? [r.pts2] : []).map(function (q) { return mkRing(q, false); }) }; });
     GEO.fronts = DATA.fronts.map(function (f) {
       var fl = f.id === 'front_florian', last = f.pts[f.pts.length - 1], from = fl ? f.pts[Math.floor(f.pts.length / 2)] : last;
@@ -298,7 +298,8 @@ DK.init = function (ctx) {
   }
   function forest() { return mkPattern('forest', 12, 12, function (q) { q.fillStyle = 'rgba(111,180,106,.10)'; q.fillRect(0, 0, 12, 12); q.fillStyle = 'rgba(191,232,168,.55)'; q.fill(new Path2D('M3 9l2-4 2 4zM8.5 5l1.5-3 1.5 3z')); }); }
   function blank() { return mkPattern('blank', 14, 14, function (q) { q.fillStyle = 'rgba(242,217,160,.05)'; q.fillRect(0, 0, 14, 14); q.fillStyle = 'rgba(242,217,160,.30)'; q.fillRect(0, 0, 1.2, 14); }, -35); }
-  function hatch(col) { return mkPattern('hatch' + col, 9, 9, function (q) { q.globalAlpha = 0.16; q.fillStyle = col; q.fillRect(0, 0, 9, 9); q.globalAlpha = 0.55; q.fillRect(0, 0, 2.6, 9); }, 40); }
+  /** Isian bukan-rata (arsir atau bintik) dari deskriptor bersama C.terrStyle → pola kanvas (ukuran piksel layar, di-cache per kunci pola dan DPR). */
+  function pat(fl) { var tl = C.patTile(fl); return mkPattern(C.patKey(fl), tl.w, tl.h, tl.draw, tl.rot); }
   function trace(xy, c, S, close) {
     g.beginPath();
     var n = xy.length, lx = 0, ly = 0;
@@ -342,7 +343,7 @@ DK.init = function (ctx) {
     g.save(); g.translate(x1, y1); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.scale(ak, ak); g.beginPath(); g.moveTo(-5, -5); g.lineTo(5, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.closePath();
     g.fillStyle = col; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 0.8; g.stroke(); g.fill(); g.restore();
   }
-  var RKEY = { historic: 'r_historic', land: 'r_land', story: 'r_story', sea: 'r_sea' }, GEO_KEYS = ['cland', 'csea', 'regions', 'banks', 'mandala', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
+  var RKEY = { historic: 'r_historic', land: 'r_land', story: 'r_story', sea: 'r_sea' }, GEO_KEYS = ['cland', 'csea', 'regions', 'banks', 'mandala'].concat(C.TGROUPS.map(function (k) { return 't_' + k; }), ['r_historic', 'r_land', 'r_story', 'r_sea', 'fronts']);
   function paintGeo() {
     if (!GEO_KEYS.some(on)) return;
     var Gm = geo(), zq = 2 + 1.6 * Math.log(st.scale / fitScale()) / Math.LN2, LN = C.LINE;   // zq: zoom setara peta datar → tebal garis ikut mengecil saat zoom masuk
@@ -360,8 +361,8 @@ DK.init = function (ctx) {
       if (on('banks')) paintRings(Gm.banks, which, c, { fill: '#8fe3e0', fa: 0.05, stroke: '#8fe3e0', sa: 1, w: 1.2, dash: '2 5' });
       if (on('mandala')) Gm.mand.forEach(function (m) { paintRings(m.rings, which, c, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
       Gm.terr.forEach(function (q) {
-        if (!on('t_' + q.grp)) return; var f = q.f;
-        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: lw(q.t.id === hotFac ? LN.terrHot : LN.terr), dash: f.dashed ? '5 4' : null });
+        if (!on('t_' + q.grp)) return; var fl = q.ts.fill, sk = q.ts.stroke, pk = C.patKey(fl);
+        paintRings(q.rings, which, c, { fill: pk ? pat(fl) : fl.col, fa: pk ? 1 : fl.a, stroke: sk ? sk.col : null, sa: sk ? sk.a : 1, w: sk ? lw((q.t.of || q.t.id) === hotFac ? LN.terrHot * sk.k : LN.terr * sk.k) : 0, dash: sk && sk.dash ? sk.dash : null });
       });
       Gm.routes.forEach(function (q) {
         if (!on(RKEY[q.r.kind])) return; var rs = ST.RST[q.r.kind];
@@ -405,9 +406,10 @@ DK.init = function (ctx) {
     if (on('fronts')) for (i = 0; i < DATA.fronts.length; i++) { r = DATA.fronts[i]; if (nearLine(lat, lon, r.pts, tol)) return { type: 'route', route: r, name: r.name }; }
     if (zonePlace && on('zone') && C.angDist(lat, lon, zonePlace.lat, zonePlace.lon) <= zonePlace.zone_r) return { type: 'place', id: zonePlace.id, name: zonePlace.name };
     if ((h = arcAt(u))) return { type: 'place', id: h.id, name: h.name };
-    for (i = DATA.territories.length - 1; i >= 0; i--) {
-      var t = DATA.territories[i]; if (t.id === 'anusarri' || !on('t_' + ST.tgroupOf(t))) continue;
-      for (q = 0; q < t.rings.length; q++) if (inRing(lat, lon, t.rings[q])) { var f = FAC[t.id]; return { type: 'faction', id: t.id, name: f ? f.name : t.name }; }
+    var tord = geo().terr;   // urutan gambar bawah → atas (kelompok C.TGROUPS lalu urutan data); atas dulu = dari belakang
+    for (i = tord.length - 1; i >= 0; i--) {
+      var t = tord[i].t; if (!on('t_' + tord[i].grp)) continue;
+      for (q = 0; q < t.rings.length; q++) if (inRing(lat, lon, t.rings[q])) { var fid = t.of || t.id, f = FAC[fid]; return { type: 'faction', id: fid, name: f ? f.name : t.name }; }
     }
     if (on('mandala')) for (i = DATA.mandala.length - 1; i >= 0; i--) { var m = DATA.mandala[i]; for (q = 0; q < m.rings.length; q++) if (inRing(lat, lon, m.rings[q])) return { type: 'mandala', ring: m.ring, name: 'Mandala Kemurnian · Ring ' + m.ring }; }
     if (on('banks')) for (i = 0; i < DATA.banks.length; i++) if (C.angDist(lat, lon, DATA.banks[i].lat, DATA.banks[i].lon) <= DATA.banks[i].r) return { type: 'bank', name: 'Bank samudra (lapisan fisik v4)' };
@@ -704,8 +706,9 @@ DK.init = function (ctx) {
     _unproject: function (px, py) { return pointToLatLon(px, py); }, _sheet: function () { return sheets[orient]; }, _state: st, _ctx: ctx
   };
   // adapterDisk: layer yang punya padanan di peta kerja. Semua layer peta datar kini ada; yang tersisa hanya yang khas 3D (bulan, sumbu, ekliptika).
-  var DISK_OK = { grat: 1, mer: 1, cland: 1, csea: 1, band: 1, curve: 1, arcs: 1, markers: 1, labels: 1, zone: 1, anom: 1, regions: 1, banks: 1, mandala: 1, t_hes: 1, t_foe: 1, t_int: 1, t_ana: 1, t_elv: 1, t_lain: 1,
+  var DISK_OK = { grat: 1, mer: 1, cland: 1, csea: 1, band: 1, curve: 1, arcs: 1, markers: 1, labels: 1, zone: 1, anom: 1, regions: 1, banks: 1, mandala: 1,
     r_historic: 1, r_land: 1, r_story: 1, r_sea: 1, fronts: 1, d_rings: 1, d_azi: 1 };
+  C.TGROUPS.forEach(function (k) { DISK_OK['t_' + k] = 1; });   // layer wilayah = kelompok di tabel bersama C.TGROUPS (tidak didaftar ulang di sini: kelompok baru otomatis ikut)
   Object.keys(LAY).forEach(function (k) { if (DISK_OK[k]) LAY[k].adapterDisk = { draw: true }; else if (!LAY[k].only3D) LAY[k].reasonDisk = 'Lapisan ini belum punya padanan di peta kerja dual-disk.'; });
   ctx.onEvent(function (type) { if (!st.shown) return; if (type === 'layer' || type === 'filters') draw(); else if (type === 'layout') ctl.relayout(); });
   window.__rhDisk = ctl;

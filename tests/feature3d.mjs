@@ -172,9 +172,9 @@ await run('layer parity', async () => {
   const { ctx, page } = await open3D({ settle: 300 });
   const st = await page.evaluate(() => window.__rhGlobe.layerStatus());
   const keys2D = Object.keys(st).filter((k) => !st[k].only3D && !st[k].onlyDisk);
-  const expected = ['grat', 'mer', 'cland', 'csea', 'band', 'curve', 'arcs', 'markers', 'labels', 'zone', 'anom', 'regions', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'mandala', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts', 'banks'];
-  t('all 25 v1.4 layers are registered', expected.every((k) => keys2D.includes(k)) && keys2D.length === 25, keys2D.join());
-  t('every v1.4 layer has an adapter3D (no silent omission)', keys2D.every((k) => st[k].adapter3D), keys2D.filter((k) => !st[k].adapter3D).join());
+  const expected = ['grat', 'mer', 'cland', 'csea', 'band', 'curve', 'arcs', 'markers', 'labels', 'zone', 'anom', 'regions', 't_hes', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'mandala', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts', 'banks'];
+  t('all 27 flat-map layers are registered (25 from v1.4 + belts and Satvan zone of v1.7)', expected.every((k) => keys2D.includes(k)) && keys2D.length === 27, keys2D.join());
+  t('every flat-map layer has an adapter3D (no silent omission)', keys2D.every((k) => st[k].adapter3D), keys2D.filter((k) => !st[k].adapter3D).join());
   t('3D-only layers: moons, orbits, axis, ecliptic', ['g_moons', 'g_orbits', 'g_axis', 'g_ecl'].every((k) => st[k] && st[k].only3D && st[k].adapter3D && !st[k].adapter2D));
   if (process.env.RH_PARITY) console.log('PARITY ' + JSON.stringify(st));
   // every layer checkbox enabled in 3D, 3D-only group visible
