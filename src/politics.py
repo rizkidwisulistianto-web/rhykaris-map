@@ -1,4 +1,11 @@
-"""Rhykaris Master Map — partisi teritorial AS 1647 (sadar-medan) + poligon region -> JSON lat/lon."""
+"""Rhykaris Master Map — partisi teritorial AS 1647 (sadar-medan) + poligon region -> JSON lat/lon.
+
+CATATAN (02 Okt 2026): blok Interregna di bawah (aventalia, tarvenna, ir_1..ir_7) adalah GENERASI LAMA. Batas Interregna di
+data/politics.json kini digambar oleh src/interregna.py (mozaik v2: 13 kerajaan, 6 kota merdeka, 3 wilayah adat, 3 mikro-polity,
+enklaf, eksklaf; tabel di src/interregna_table.py). Footprint-nya dipinjam dari keluaran skrip ini, jadi blok lama tetap
+dibutuhkan sebagai acuan. Kalau politics.py dijalankan ulang, jalankan `python src/interregna.py --write` sesudahnya;
+lihat docs/INTERREGNA_V2_NOTES.md.
+"""
 import numpy as np, sys, json, heapq, time
 from numba import njit
 from scipy import ndimage as ndi
