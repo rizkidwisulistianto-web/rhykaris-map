@@ -61,7 +61,7 @@ The map is **derived, not drawn.** The locked canon constraints — land/water p
 | **Planet** | radius 8,282 km (≈ 1.3 × Earth) · circumference 52,039 km |
 | **Land / water** | 38 % land (Rhykar 23.0 % + Aëris 15.0 %) · 62 % water |
 | **Seed** | `1647` — same seed and constraints, same planet |
-| **Content** | 44 map entries · 3 anomaly pockets · 25 territories · 13 physical regions · 4 routes · 3 fronts |
+| **Content** | 44 map entries · 3 anomaly pockets · 41 territories · 13 physical regions · 4 routes · 3 fronts |
 | **Viewer** | Leaflet 1.9.4 · vanilla JavaScript · one self-contained 1.9 MB HTML file — plus, only when you enter 3D, three.js r160 and ≈ 9 MB of relief textures |
 
 Because the planet is a sphere, the map **wraps seamlessly** across the antimeridian, and every distance is a **great-circle distance on the sphere** — never flat pixels.
@@ -94,8 +94,8 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 
 ### Faction Boundary / Territorial Layers
 
-- **25 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Provincia Cassivallae, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below) plus three unnamed vassal commonwealths and seven illustrative Interregna kingdoms — toggled in groups from the **Layer** tab.
-- **Terrain-aware borders:** frontiers are computed by a Dijkstra partition whose movement cost rises in mountains and along great rivers, grown from canon anchors — not hand-drawn polygons.
+- **41 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Provincia Cassivallae, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below), three unnamed vassal commonwealths, and a mosaic of 23 illustrative, unnamed **Interregna** polities — eleven kingdoms, six free cities, three tribal lands and three micro-polities, some of them enclaves (one nested two deep) and one with an exclave — toggled in groups from the **Layer** tab.
+- **Terrain-aware borders:** frontiers are computed by a Dijkstra partition whose movement cost rises in mountains and along great rivers, grown from canon anchors — not hand-drawn polygons. The Interregna mosaic is redrawn by `src/interregna.py` from one table of seeds and sizes (`src/interregna_table.py`); see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md).
 - **Hatching** marks contested, annexed and vassal land; **fronts** and expansion arrows show campaigns in motion.
 - **The Mandala of Purity** (the Elvari empire, Anušarri) is drawn as a four-ring gradient with no border at all — power that radiates from its centre and thins out.
 - Click any territory for its faction card.
@@ -263,8 +263,8 @@ rhykaris-map/
 |---|---|
 | `places` | 44 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
 | `anomalies` | 3 mass-anomaly pockets |
-| `factions` | 26 powers: name, kind, colour, epistemic status, blurb |
-| `territories` · `mandala` | Polygon rings for the 25 territories and the four Mandala rings |
+| `factions` | 42 powers: name, kind, colour, epistemic status, blurb |
+| `territories` · `mandala` | Polygon rings for the 41 territories and the four Mandala rings |
 | `regions` · `contours` · `banks` | Physical region outlines · 198 contour lines · six ocean banks |
 | `routes` · `fronts` | 4 routes (historic, land, story, sea) · 3 fronts |
 | `audit` · `ledger` · `unmapped` | 11 audit cards · 14 open location-debt slots · 11 entries deliberately left off the map |
@@ -287,6 +287,7 @@ The Python pipeline in [`src/`](src/) needs Python 3.11 with `numpy`, `scipy`, `
 | 4 | `render_inset.py` | `inset_40.png` + `inset_40_q84.webp` |
 | 5 | `make_datagrid.py` | `datagrid.png` |
 | 6 | `politics.py` | `politics.json` |
+| 6b | `interregna.py` | the Interregna block of `politics.json` — it reads and rewrites only that block, so it also runs on its own (see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md)) |
 | 7 | `build_data.py` | `data.json` |
 | 8 | `scripts/build_index.py` | `index.html` |
 | 9 | `make_svg_preview.py` | `rhykaris_master_map_v4.svg` |
@@ -323,7 +324,8 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 - [x] Viewer v1.6.3 — the two moons get working names, *Ferrea* and *Errans* *(AI-inferred)*; the chip strip under the coordinate readout is gone from the globe
 - [x] Viewer v1.6.4 — the *Empat busur* layer now works on the dual-disk working map (it was switched on in the panel but drew nothing and could not be hovered or clicked)
 - [x] Viewer v1.6.5 — all flat-map layers on the dual-disk working map: contours, regions, banks, territories, Mandala, routes, fronts and labels, with hover and cards (they were listed as *tak ada di peta kerja*)
-- [x] 44 map entries · 25 territories · 4 routes · 3 fronts · 3 anomaly pockets
+- [x] 44 map entries · 41 territories · 4 routes · 3 fronts · 3 anomaly pockets
+- [x] Interregna redrawn as a varied mosaic (2 Oct 2026) — large and small kingdoms, free cities, tribal lands, micro-polities, nested enclaves and an exclave, all unnamed placeholders; the count, names and borders stay open knobs
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
 - [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
 - [x] Public edition on GitHub, ready for GitHub Pages
@@ -344,7 +346,7 @@ In the author's order. 🔒 marks a gate: other work waits on it.
 - [ ] **The aquatic segment of The Scar** — about 62 % of the curve crosses sea. The ledger slot was unblocked on 29 Sep 2026; still to decide: an atlas entry of its own, or just an attribute of Tâmtu.
 - [ ] **The trans-suture supercontinent** (≈ 7.6 % of the surface) — the largest landmass without a name or an atlas entry. Who lives there is a major lore decision; parked.
 - [ ] **The ocean on the antimeridian side of the Rhykar cap** (≈ 9 %) — flagged by the audit; no sub-entry yet.
-- [ ] **Extend the political layer** — more Interregna kingdoms and borders, when the story calls for them.
+- [ ] **Extend the political layer** — name and settle the Interregna placeholders (count, names, borders, who is next on Florian's list), and add more as the story calls for them.
 
 **Later — Interactive Map v2** *(parked wishlist — no commitment yet)*
 

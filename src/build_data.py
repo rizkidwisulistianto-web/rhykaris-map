@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 # Public edition: links to the private Notion vault were removed (url=None).
-import json, sys, numpy as np
+import json, os, sys, numpy as np
 sys.path.insert(0, '/home/claude/rhykaris_map')
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))   # interregna_table.py duduk di samping skrip ini
 from geo import *
 from places_data import PLACES, ANOMALIES, ROUTES, FRONTS, N
+import interregna_table as IRT
 Z = np.load('/home/claude/rhykaris_map/terrain_4096.npz')
 land = Z['land']; elev = Z['elev']; H, W = land.shape
 ADJ, PER = 19.5, 32.5
@@ -28,7 +30,6 @@ C = dict(  # warna faksi (terbaca di atas terrain)
     hesperia='#c0394b', cw='#e08a96', kloaka='#8a8a8a', foedera='#2aa38a', cassivalla='#7fd1bd', liminara='#9b6fd6', ktonia='#9fb6c6', pylora='#d4a76a',
     anabasim='#ff6a2b', emporys='#f5c542', perates='#4f86e8', anusarri='#e6d47a', andura='#4cc3a8', vasundha='#b58a52', nundina='#ffd970',
     tarvenna='#e0a33a', aventalia='#86a8e6', ir='#b99ad6')
-IR_COLS = ['#c9a86a', '#a58fd0', '#d88b6b', '#8fb07a', '#c98fb2', '#7fa4c9', '#b8a27d']
 FACTIONS = {
  'hesperia': dict(name='Hesperia', kind='Empire · Active · Continental', color=C['hesperia'], epi='inferensi', url=None,
      blurb='Payung Commonwealth yang menyusut; militer terbesar Rhykaris; penjaga standar Fides. Rival: Foedera, Interregna, Anabasim.'),
@@ -58,9 +59,9 @@ FACTIONS = {
      blurb='Generasi kedua Napûm yang tidak bisa diancam kehilangan sesuatu yang tidak pernah mereka miliki. Territory = Zona Ambang [Kanon].'),
  'vasundha': dict(name='Vasundha', kind='Tribe (Satvan) · Local — posisi usulan', color=C['vasundha'], epi='inferensi', dashed=True, url=None, blurb='Satvan pedalaman yang menolak memilih.'),
 }
-for k in range(1, 8):
-    FACTIONS[f'ir_{k}'] = dict(name=f'Kerajaan Interregna (tak bernama) {["I","II","III","IV","V","VI","VII"][k-1]}', kind='Interregna · ilustratif', color=IR_COLS[k - 1], epi='inferensi',
-                               blurb='Salah satu dari "belasan kedaulatan terpisah" [Kanon]; nama & batas = knob terbuka (jumlah di peta ini ilustratif).')
+# Mozaik Interregna v2 (02 Okt 2026): nama, jenis, warna, dan blurb semua polity ir_* datang dari src/interregna_table.py
+# (satu sumber kebenaran bersama src/interregna.py yang menggambar batasnya). Aventalia & Tarvenna tetap ditulis tangan di atas.
+FACTIONS.update(IRT.ir_factions())
 
 UNMAPPED = [
  ('Iluhar', 'Kanon: hadir "tanpa alamat" — kasta, bukan teritori. Sengaja tidak dipetakan.', None),
@@ -110,7 +111,9 @@ LEDGER = [
  ('Simpul pasar netral Emporys', 'Besar', 'Usulan: pulau pita Scar di mulut teluk (turunan Culmen).'),
  ('HQ faksi tertutup (Abaton, Liminara, Ordo Lacunae, Ktonia, Kloaka, dkk.)', 'Besar', 'Usulan: Liminara, Ktonia, Kloaka. Abaton & Ordo Lacunae sengaja tidak dipetakan.'),
  ('Teritori Satvan: Pedalaman, Frontier Konsolidasi, + posisi Vasundha', 'Kecil', 'Usulan: Vasundha di pedalaman selatan Foedera.'),
- ('Kerajaan-kerajaan Interregna individual + medan Kampanye Florian', 'Besar', 'Peta menggambar ~10 kerajaan ilustratif + front AS 1647.'),
+ ('Kerajaan-kerajaan Interregna individual + medan Kampanye Florian', 'Besar',
+  'Peta menggambar mozaik ilustratif: %(K)d kerajaan (termasuk Aventalia & Tarvenna), %(C)d kota merdeka, %(A)d wilayah adat, %(M)d mikro-polity '
+  '(+ Cassivalla & Nundina) + front AS 1647. Jumlah, nama, dan batas = knob terbuka.' % IRT.composition()),
  ('Waypoint jalur Economy: Jalur Laut Utama, Jalur Darat, Koridor Xenograft', 'Kecil', 'Usulan: koridor angin Puncak + jalur darat Sutura.'),
  ('Wilayah komunitas Tehari (Pesisir / Sungai Pedalaman / Laut Dalam)', 'Kecil', 'Peta hanya menampilkan bank samudra (lapisan fisik v4: bentuk & posisi Turunan; kaitan ke komunitas Tehari = Inferensi AI).'),
  ('Jaringan wilayah klan Dharên (bawah tanah Ferria)', 'Kecil', 'Hanya Zona Garbhên yang ditandai (turunan).'),
