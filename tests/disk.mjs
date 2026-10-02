@@ -150,6 +150,31 @@ await run('hover readout parity, compass', async () => {
   await ctx.close();
 });
 
+await run('compass on/off and minimize on the working map', async () => {
+  const { ctx, page, ev } = await openDisk();
+  await page.evaluate(() => { const c = window.__rhDisk._ctx; ['markers', 'anom'].forEach((k) => c.setLayer(k, false)); });
+  const st = () => page.evaluate(() => { const c = document.getElementById('compass'); return { shown: !c.hidden && getComputedStyle(c).display !== 'none', mini: c.classList.contains('mini'), txt: getComputedStyle(c.querySelector('.cp-txt')).display, pressed: document.getElementById('btn-compass').getAttribute('aria-pressed'), l1: c.querySelector('.cp-l1').textContent, n: c.querySelector('.cp-n').style.transform }; });
+  const hoverAt = async (la, lo) => { const pr = (await proj(page, la, lo))[0]; await page.mouse.move(5, 5); await page.mouse.move(pr.x, pr.y); await page.waitForTimeout(250); await frame(page, 2); return page.evaluate(() => window.__rhDisk._state.hover); };
+  // (clicking a button moves the cursor off the canvas, so the compass reference falls back to the view centre: hover again before reading)
+  let hv = await hoverAt(P.libbal.lat, P.libbal.lon), s = await st();
+  t('working map: compass shown at full size by default', s.shown && !s.mini && s.txt !== 'none' && s.pressed === 'true', JSON.stringify(s));
+  await page.locator('#compass .cp-min').click(); await page.waitForTimeout(100); s = await st();
+  t('working map: minimize hides the text', s.shown && s.mini && s.txt === 'none', JSON.stringify(s));
+  hv = await hoverAt(P.libbal.lat, P.libbal.lon); s = await st();
+  t(`working map: minimized, the reading and the needles still follow the cursor (Libbāl ≈ 15.540 km: ${s.l1})`, /15\.5[34]\d km/.test(s.l1) && /rotate\(/.test(s.n), JSON.stringify(s));
+  hv = await hoverAt(-20, 25); const ex = C.scarCompass(hv.lat, hv.lon); s = await st();
+  t(`working map: minimized compass follows the cursor to another point (${s.l1})`, s.l1.includes(C.fint(ex.distKm)), s.l1 + ' vs ' + C.fint(ex.distKm));
+  await page.locator('#btn-compass').click(); await page.waitForTimeout(100); s = await st(); const frozen = s.l1;
+  t('working map: off hides the compass and un-presses the toolbar toggle', !s.shown && s.pressed === 'false', JSON.stringify(s));
+  hv = await hoverAt(10, 60); const exL = C.scarCompass(hv.lat, hv.lon);
+  t('working map: nothing is repainted while off', (await st()).l1 === frozen && !frozen.includes(C.fint(exL.distKm)));
+  // switch it on from the keyboard so the cursor stays on the canvas: the latest state is then the hovered point, which differs from what was frozen
+  await page.locator('#btn-compass').focus(); await page.keyboard.press('Space'); await page.waitForTimeout(100); s = await st();
+  t(`working map: on again → minimized (state kept) and already repainted from the latest state (${s.l1}, frozen was ${frozen})`, s.shown && s.mini && s.l1.includes(C.fint(exL.distKm)) && s.l1 !== frozen, JSON.stringify(s) + ' vs ' + C.fint(exL.distKm));
+  t('working map: no console errors', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
+  await ctx.close();
+});
+
 await run('layer panel, rings, pan/zoom, orientation, focus', async () => {
   const { ctx, page } = await openDisk();
   await page.locator('#tab-layer').click();

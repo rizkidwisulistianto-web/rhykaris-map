@@ -814,6 +814,11 @@ function main() {
   // Bila three.js gagal dimuat atau WebGL tidak ada, pengguna mendapat pesan ramah dan tetap di tampilan sebelumnya.
   var MOONS = JSON.parse(document.getElementById('rh-moons').textContent); RH.moons.configure(MOONS);
   compass = RH.compass.create(document.getElementById('app'));
+  // v1.7.1: tombol toolbar menyalakan/mematikan kompas (kecil/penuh diatur tombol di kartu kompas); keadaannya diingat oleh modul kompas
+  var cpBtns = Array.prototype.slice.call(document.querySelectorAll('[data-cp]'));   // toolbar (layar lebar) + kembarannya di header panel (ponsel)
+  function syncCompassBtn() { var o = compass.isOn(); cpBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(o)); b.title = o ? 'Sembunyikan kompas' : 'Tampilkan kompas'; }); }
+  cpBtns.forEach(function (b) { b.addEventListener('click', function () { compass.setOn(!compass.isOn()); }); });
+  compass.onChange(syncCompassBtn); syncCompassBtn();
   var switching = false, views = { '3d': null, 'disk': null }, loading = { '3d': null, 'disk': null };
   var vtBtns = Array.prototype.slice.call(document.querySelectorAll('[data-vt]')), dkBtns = Array.prototype.slice.call(document.querySelectorAll('[data-dk]'));
   var tabGlobe = document.getElementById('tab-globe'), toastEl = document.getElementById('v2-toast'), toastT = null;
