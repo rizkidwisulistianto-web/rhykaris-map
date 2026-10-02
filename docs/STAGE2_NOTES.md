@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) and **v1.6.3** (moon names, chip strip removed from the globe, §13). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
+Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) **v1.6.3** (moon names, chip strip removed from the globe, §13) and **v1.6.4** (the *Empat busur* layer works on the dual-disk working map, §14). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
@@ -197,3 +197,14 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 **Tests.** `feature3d.mjs` asserts the new names on both cards and the panel buttons, that no *Bulan Besar / Bulan Kecil* placeholder is left in the moon UI, that `#globe .g-epi` no longer exists, and that *tidak berskala* is stated by each moon label, the orbit note and the panel. The strip assertions in `relief.mjs`, `measure.mjs` and `a11y.mjs` were removed (measure.mjs is now 45 checks, was 46). In this headless SwiftShader sandbox two checks in `measure.mjs` (the start dot's canvas pixels, and *Selesai* clearing the drawing) fail identically on the unmodified v1.6.2 build, and the moon-clock rate check in `feature3d.mjs` is load-dependent (0.20–0.33 vs 0.5 expected, 0.30 on v1.6.2).
 
 **Not regenerated.** The documentation screenshots `docs/images/06-globe-3d.jpg`, `07-moons.jpg` and `10-mobile-globe.jpg` still show the old strip and names; `tests/docshots.mjs` rebuilds them.
+
+## 14. Follow-up v1.6.4 — the Scar arcs layer on the dual-disk working map
+
+**Finding.** *Empat busur (batas usulan)* (`arcs`) was registered as supported on the working map (`DISK_OK` in `app/disk.js`, and a ✓ in the layer-parity table of §2), so its checkbox was enabled — but `render()` never drew anything for it, and neither hover nor click knew about it. Switching it on or off changed nothing. The other nine supported layers all worked. The existing 62 disk checks did not catch it because none toggled `arcs` and looked at the canvas.
+
+**Fix (`app/disk.js` only).** Same geometry as the flat map and the globe, in the disk's own coordinates:
+- **Ticks.** Four short marks at azimuth α = −135°, −25°, +25°, +135° across the band (rim ± 6,5° ± 1,5°), colour and weight as on the other views (`#ffc39a`, 1,4 px, 85 %). They are clipped to the part of each disk that is drawn (rim + the 4° margin), so on Rhykar they stop at 76,5° and on Aëris they start at 68,5°.
+- **Hover and click.** Inside the ±6,5° band the arc is found from the azimuth α of the point under the cursor — the *same* number as the bearing from the Scar centre that the flat map and the globe use (`tests/disk.mjs` checks the two agree to 1e-6° on 400 random points). Ranges: Culmen −25…25, Latus Orientale 25…135, Ima 135…180 and −180…−135, Latus Occidentale −135…−25. Hover shows the arc name and the pointer cursor; click opens the arc's card, like clicking an arc on the flat map. Markers still win over arcs, and in measure mode only markers snap (an arc is a region, not a point).
+- **Status.** Unchanged: the arcs remain *turunan* proposals, and nothing about them is canon.
+
+**Evidence.** `tests/disk.mjs` gained a block of 65 checks (both orientations, both disks): each of the four ticks brightens its pixels when the layer goes on and the four non-tick azimuths do not; hover gives the right name for all four arcs (including both halves of Ima); click opens the card; away from the band, and with the layer off, there is no tooltip and no card. Run against the v1.6.3 build, the tick and hover checks fail (pixels do not change, tooltip stays hidden); they pass now. `disk.mjs`: 62 → 127 checks.

@@ -758,6 +758,16 @@ DK.init = function (ctx) {
   });
   var anoms = ctx.DATA.anomalies.map(function (a) { var w = document.createElement('div'); w.className = 'g-anom'; w.style.display = 'none'; w.innerHTML = '<b></b><i></i>'; pinsEl.appendChild(w); return { a: a, wrap: w, shown: false, sx: 0, sy: 0 }; });
   function on(k) { return LAY[k] && LAY[k].on; }
+  // empat busur Scar (layer 'arcs'): penanda batas di α = ±25° dan ±135°, ditarik melintang pita (rim ± 6,5° ± 1,5°) — sama dengan peta datar dan globe
+  var SCAR = ctx.styles.SC, ARCS = ctx.styles.ARCS, ARC_TICKS = [-135, -25, 25, 135];
+  /** Busur Scar di titik hasil pointToLatLon (u): hanya bila layer 'arcs' aktif dan titik berada di dalam pita ±6,5°. α (azimut sekeliling sumbu C–C′) = bearing dari pusat Scar. */
+  function arcAt(u) {
+    if (!u || !on('arcs') || Math.abs(C.scarD(u.lat, u.lon)) > SCAR.half) return null;
+    for (var i = 0; i < ARCS.length; i++) for (var j = 0; j < ARCS[i].a.length; j++) {
+      var rg = ARCS[i].a[j]; if (u.alpha >= rg[0] && u.alpha <= rg[1]) { var pa = ctx.placeById[ARCS[i].id]; return { id: ARCS[i].id, name: pa ? pa.name : ARCS[i].id }; }
+    }
+    return null;
+  }
 
   // ---------------------------------------------------------------- gambar
   var raf = 0; function draw() { if (!st.shown) return; if (!raf) raf = requestAnimationFrame(function () { raf = 0; render(); }); }
@@ -790,6 +800,14 @@ DK.init = function (ctx) {
       if (on('curve')) {
         circle(c.x, c.y, rimPx); g.strokeStyle = 'rgba(255,90,36,.2)'; g.lineWidth = 7; g.stroke();
         g.save(); g.shadowColor = 'rgba(255,110,50,.9)'; g.shadowBlur = 6; circle(c.x, c.y, rimPx); g.strokeStyle = '#ff7a3d'; g.lineWidth = 2.2; g.stroke(); g.restore();
+      }
+      // empat busur Scar: tanda batas melintang pita; dipotong di tepi area yang digambar tiap cakram (rim + margin)
+      if (on('arcs')) {
+        var aLo = SCAR.r - SCAR.half - 1.5, aHi = SCAR.r + SCAR.half + 1.5;
+        if (which === 'R') aHi = Math.min(aHi, M.RIM_R + M.MARGIN); else aLo = Math.max(aLo, 180 - (M.RIM_A + M.MARGIN));
+        g.save(); g.strokeStyle = '#ffc39a'; g.globalAlpha = 0.85; g.lineWidth = 1.4; g.beginPath();
+        ARC_TICKS.forEach(function (a) { var p0 = M.diskXY(which, aLo, a, orient), p1 = M.diskXY(which, aHi, a, orient); g.moveTo(c.x + p0.x * S, c.y + p0.y * S); g.lineTo(c.x + p1.x * S, c.y + p1.y * S); });
+        g.stroke(); g.restore();
       }
       // anotasi azimut Scar di rim (label di DALAM rim supaya tidak bertabrakan dengan cakram lawan di celah): puncak (0), lereng timur (+90), lereng barat (−90), palung (±180)
       if (on('d_azi')) {
@@ -903,7 +921,7 @@ DK.init = function (ctx) {
   function hoverMove(e) {
     var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; st.hoverPx = { x: px, y: py };
     var u = pointToLatLon(px, py); st.hover = u ? { lat: u.lat, lon: u.lon, disk: u.disk, theta: u.theta, alpha: u.alpha } : null; if (u) ctx.readout({ lat: u.lat, lng: u.lon });
-    var h = pinAt(px, py); if (h) { tipEl.textContent = h.name; tipEl.hidden = false; tipEl.style.transform = 'translate(' + Math.round(px + 14) + 'px,' + Math.round(py + 14) + 'px)'; root.classList.add('pick'); } else { tipEl.hidden = true; root.classList.remove('pick'); }
+    var h = pinAt(px, py) || arcAt(u); if (h) { tipEl.textContent = h.name; tipEl.hidden = false; tipEl.style.transform = 'translate(' + Math.round(px + 14) + 'px,' + Math.round(py + 14) + 'px)'; root.classList.add('pick'); } else { tipEl.hidden = true; root.classList.remove('pick'); }
     lastRef = 0; updateCompass();
   }
   function openPlace(id) { var p = ctx.placeById[id]; if (!p) return; ctx.card.open(ctx.cards.place(p), 'place:' + id, id); }
@@ -953,6 +971,7 @@ DK.init = function (ctx) {
     if (st.meas) { var mpl = h && ctx.placeById[h.id], mu = pointToLatLon(px, py); if (mpl && !mpl.label_only) ctx.measureAt(mpl.lat, mpl.lon); else if (mu) ctx.measureAt(mu.lat, mu.lon); return; }   // mode ukur: marker = titik tepat, selain itu titik di cakram
     if (h) { openPlace(h.id); return; }
     var u = pointToLatLon(px, py); if (u) { ctx.readout({ lat: u.lat, lng: u.lon }); st.hover = { lat: u.lat, lon: u.lon }; }
+    var ha = arcAt(u); if (ha) { openPlace(ha.id); return; }   // busur Scar (bukan marker): buka kartunya, seperti klik pada busur di peta datar
     closeCard();
   }
 
@@ -2205,7 +2224,7 @@ RH.globe = {
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
-window.RH = { version: "1.6.3" };
+window.RH = { version: "1.6.4" };
 /* Master Map Rhykaris — modul bersama (v1.5): matematika bola, geometri Scar, pembaca datagrid, label epistemik,
    util state dan pemuat three.js. Dipakai tampilan 2D (Leaflet) dan 3D (globe) — satu sumber, tanpa duplikasi.
    Modul ini murni (tanpa akses DOM saat dimuat) supaya bisa diuji di Node; bagian yang menyentuh DOM ada di fungsi tersendiri. */

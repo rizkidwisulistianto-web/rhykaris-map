@@ -217,6 +217,47 @@ await run('light theme, reduced motion, memory', async () => {
   await ctx.close();
 });
 
+await run('Scar arcs layer: ticks, hover tooltip, click card (both disks, both orientations)', async () => {
+  // azimuth α around the C–C′ axis must equal the bearing from the Scar centre (arcs are defined by bearing in 2D/3D, tested by α here)
+  let maxD = 0; for (let i = 0; i < 400; i++) { const th = 60 + rnd() * 25, al = -180 + rnd() * 360, ll = K.fromPolar(th, al), b = C.bearing(C.SC.lat, C.SC.lon, ll[0], ll[1]), pp = K.polar(ll[0], ll[1]); maxD = Math.max(maxD, angDiff(pp.alpha, b)); }
+  t('polar α equals the bearing from the Scar centre (arc hit-test relies on it)', maxD < 1e-6, String(maxD));
+  for (const orient of ['h', 'v']) {
+    const { ctx, page } = await openDisk({ query: '?view=disk', viewport: orient === 'h' ? { width: 1440, height: 900 } : { width: 900, height: 1400 }, init: `try { localStorage.setItem('rh-d-orient', '"${orient}"'); } catch (e) {}` });
+    await page.evaluate(() => { const c = window.__rhDisk._ctx; Object.keys(c.LAYERS).forEach((k) => c.setLayer(k, false)); }); await frame(page, 3);
+    const info = await page.evaluate(() => window.__rhDisk.info()), tag = `[${info.orient}] `;
+    const px = (x, y) => page.evaluate(([a, b]) => { const cv = document.querySelector('#disk canvas'), d = cv.getContext('2d').getImageData(Math.round(a) - 1, Math.round(b) - 1, 3, 3).data; let m = 0; for (let i = 0; i < d.length; i += 4) m = Math.max(m, 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]); return m; }, [x, y]);
+    const at = async (alpha, theta, disk) => { const ll = K.fromPolar(theta, alpha), pr = (await proj(page, ll[0], ll[1])).filter((q) => q.disk === disk)[0]; return pr; };
+    const before = {}; const spots = [];
+    for (const disk of ['R', 'A']) for (const a of [-135, -25, 25, 135]) { const pr = await at(a, disk === 'R' ? 69 : 76, disk); spots.push({ disk, a, pr }); before[disk + a] = await px(pr.x, pr.y); }
+    const off = []; for (const disk of ['R', 'A']) for (const a of [0, 60, -60, 180]) { const pr = await at(a, disk === 'R' ? 69 : 76, disk); off.push({ disk, a, pr, v: await px(pr.x, pr.y) }); }
+    await page.evaluate(() => window.__rhDisk._ctx.setLayer('arcs', true)); await frame(page, 3);
+    for (const s of spots) { const v = await px(s.pr.x, s.pr.y); t(`${tag}tick at α=${s.a}° drawn on disk ${s.disk} (pixel brightens ${before[s.disk + s.a].toFixed(0)} → ${v.toFixed(0)})`, v > before[s.disk + s.a] + 25 && v > 140); }
+    for (const o of off) t(`${tag}no tick at α=${o.a}° on disk ${o.disk} (arcs are four marks, not a ring)`, Math.abs((await px(o.pr.x, o.pr.y)) - o.v) < 6);
+    // hover → tooltip with the arc name; click → card of that arc; pointer cursor class
+    const names = [[0, 'Culmen Cicatricis'], [60, 'Latus Orientale'], [-60, 'Latus Occidentale'], [180, 'Ima Cicatricis'], [-160, 'Ima Cicatricis'], [160, 'Ima Cicatricis']];
+    for (const [a, nm] of names) {
+      for (const disk of ['R', 'A']) {
+        const pr = await at(a, disk === 'R' ? 70.5 : 76, disk); const f = await page.evaluate(() => window.__rhDisk._ctx.insets()); if (pr.x < (f.l || 0) + 5 || pr.x > info.W - 5 || pr.y < 70 || pr.y > info.H - 5) continue;
+        await page.mouse.move(5, 5); await page.mouse.move(pr.x, pr.y); await page.waitForTimeout(120); await frame(page, 2);
+        const tip = await page.evaluate(() => { const e = document.querySelector('#disk .g-tip'); return { hidden: e.hidden, txt: e.textContent, pick: document.getElementById('disk').classList.contains('pick') }; });
+        t(`${tag}hover α=${a}° on disk ${disk}: tooltip "${nm}"`, !tip.hidden && tip.txt === nm && tip.pick, JSON.stringify(tip));
+      }
+    }
+    const pr = await at(60, 70.5, 'R'); await page.mouse.move(5, 5); await page.mouse.click(pr.x, pr.y); await page.waitForTimeout(250);
+    t(`${tag}clicking an arc opens its card`, /Latus Orientale/.test(await page.evaluate(() => document.getElementById('g-card').innerText)));
+    await page.keyboard.press('Escape');
+    // outside the band: nothing; layer off: nothing (tooltip hidden, no card)
+    const far = await at(60, 40, 'R'); await page.mouse.move(5, 5); await page.mouse.move(far.x, far.y); await page.waitForTimeout(120); await frame(page, 2);
+    t(`${tag}no arc tooltip away from the Scar band`, await page.evaluate(() => document.querySelector('#disk .g-tip').hidden));
+    await page.evaluate(() => window.__rhDisk._ctx.setLayer('arcs', false)); await frame(page, 3);
+    const pr2 = await at(0, 70.5, 'R'); await page.mouse.move(5, 5); await page.mouse.move(pr2.x, pr2.y); await page.waitForTimeout(120); await frame(page, 2);
+    t(`${tag}layer off: no tooltip on the band, tick gone`, (await page.evaluate(() => document.querySelector('#disk .g-tip').hidden)) && Math.abs((await px(spots[0].pr.x, spots[0].pr.y)) - before[spots[0].disk + spots[0].a]) < 6);
+    await page.mouse.click(pr2.x, pr2.y); await page.waitForTimeout(200);
+    t(`${tag}layer off: clicking the band opens no card`, await page.evaluate(() => document.getElementById('g-card').hidden));
+    await ctx.close();
+  }
+});
+
 await run('globe ↔ working map switching', async () => {
   const { ctx, page, ev } = await openDisk({ query: '?view=3d', noWait: true, settle: 100 });
   await page.waitForFunction(() => window.__rhGlobe && window.__rhGlobe.isShown(), null, { timeout: 60000 });
