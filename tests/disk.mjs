@@ -154,11 +154,12 @@ await run('layer panel, rings, pan/zoom, orientation, focus', async () => {
   const { ctx, page } = await openDisk();
   await page.locator('#tab-layer').click();
   const st = await page.evaluate(() => window.__rhDisk.layerStatus());
-  const supported = Object.keys(st).filter((k) => st[k].adapterDisk), missing = Object.keys(st).filter((k) => !st[k].adapterDisk && !/^g_/.test(k));
-  t(`layers with a working-map adapter: ${supported.join(', ')}`, ['grat', 'mer', 'band', 'curve', 'arcs', 'markers', 'anom', 'zone', 'd_rings', 'd_azi'].every((k) => supported.includes(k)));
-  t(`every other layer is shown as unavailable WITH a reason (not silently dropped): ${missing.length}`, missing.every((k) => st[k].reason && /minimal/.test(st[k].reason)));
-  const dis = await page.evaluate(() => Array.from(document.querySelectorAll('#sec-layer input[type=checkbox]')).filter((i) => i.disabled).map((i) => i.id.replace('ly-', '') + '|' + i.parentNode.title.length));
-  t('their checkboxes are disabled with a tooltip', dis.length === missing.length && dis.every((x) => +x.split('|')[1] > 20), dis.join());
+  const supported = Object.keys(st).filter((k) => st[k].adapterDisk), missing = Object.keys(st).filter((k) => !st[k].adapterDisk);
+  const FLAT = Object.keys(st).filter((k) => !/^g_/.test(k)), SIDE = ['g_moons', 'g_orbits', 'g_axis', 'g_ecl'];
+  t(`every flat-map layer has a working-map adapter (${supported.length}): ${supported.join(', ')}`, FLAT.every((k) => supported.includes(k)) && ['cland', 'csea', 'labels', 'regions', 'banks', 'mandala', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts', 'd_rings', 'd_azi'].every((k) => supported.includes(k)), missing.join());
+  t('only the four 3D-only layers (moons, orbits, axis, ecliptic) lack a disk adapter', missing.length === 4 && SIDE.every((k) => missing.includes(k)), missing.join());
+  const dis = await page.evaluate(() => Array.from(document.querySelectorAll('#sec-layer input[type=checkbox]')).filter((i) => i.disabled).map((i) => i.id.replace('ly-', '')));
+  t('no layer checkbox is disabled or marked "tak ada di peta kerja" on the working map', dis.length === 0 && (await page.evaluate(() => !/tak ada di peta kerja/i.test(document.getElementById('sec-layer').innerText))), dis.join());
   t('disk-only group visible, 3D-only group hidden', await page.evaluate(() => !document.querySelector('#sec-layer [data-onlydisk]').hidden && document.querySelector('#sec-layer [data-only3d]').hidden));
   // rings toggle changes the picture
   const shot = async () => PNG.sync.read(await page.screenshot());
@@ -254,6 +255,82 @@ await run('Scar arcs layer: ticks, hover tooltip, click card (both disks, both o
     t(`${tag}layer off: no tooltip on the band, tick gone`, (await page.evaluate(() => document.querySelector('#disk .g-tip').hidden)) && Math.abs((await px(spots[0].pr.x, spots[0].pr.y)) - before[spots[0].disk + spots[0].a]) < 6);
     await page.mouse.click(pr2.x, pr2.y); await page.waitForTimeout(200);
     t(`${tag}layer off: clicking the band opens no card`, await page.evaluate(() => document.getElementById('g-card').hidden));
+    await ctx.close();
+  }
+});
+
+await run('all flat-map layers on the working map: drawing, placement, hover, click, labels (both orientations)', async () => {
+  const RD = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/data.json'), 'utf8')), inRing = (lat, lon, ring) => { for (let k = -1; k <= 1; k++) { const x = lon + 360 * k; let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const yi = ring[i][0], xi = ring[i][1], yj = ring[j][0], xj = ring[j][1]; if ((yi > lat) !== (yj > lat) && x < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } if (c) return true; } return false; };
+  // an interior point of a ring: the first grid point (1° steps over its bounding box) that lies inside it
+  const interior = (ring) => { let a = 90, b = -90, c0 = 1e9, d0 = -1e9; ring.forEach(([la, lo]) => { a = Math.min(a, la); b = Math.max(b, la); c0 = Math.min(c0, lo); d0 = Math.max(d0, lo); }); let best = null, bd = -1; for (let la = a; la <= b; la += 0.5) for (let lo = c0; lo <= d0; lo += 0.5) if (inRing(la, lo, ring)) { const m = Math.min(...ring.map(([y, x]) => Math.hypot(y - la, (x - lo) * Math.cos(la * Math.PI / 180)))); if (m > bd) { bd = m; best = [la, lo]; } } return best; };
+  for (const orient of ['h', 'v']) {
+    const { ctx, page, ev } = await openDisk({ query: '?view=disk', viewport: orient === 'h' ? { width: 1440, height: 900 } : { width: 900, height: 1400 }, init: `try { localStorage.setItem('rh-d-orient', '"${orient}"'); } catch (e) {}` });
+    const tag = `[${orient}] `, only = (keys) => page.evaluate((ks) => { const c = window.__rhDisk._ctx; Object.keys(c.LAYERS).forEach((k) => c.setLayer(k, ks.includes(k))); }, keys);
+    const pix = (x, y) => page.evaluate(([a, b]) => Array.from(document.querySelector('#disk canvas').getContext('2d').getImageData(Math.round(a) - 5, Math.round(b) - 5, 11, 11).data), [x, y]);   // 11×11 window: dashed lines can leave a gap exactly on a vertex
+    const dist = (u, v) => { let m = 0; for (let i = 0; i < u.length; i += 4) m = Math.max(m, Math.hypot(u[i] - v[i], u[i + 1] - v[i + 1], u[i + 2] - v[i + 2])); return m; };
+    const canvasHash = async () => { await frame(page, 3); return page.evaluate(() => { const c = document.querySelector('#disk canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0, n = 0; for (let i = 0; i < d.length; i += 4) { h = (h * 31 + d[i] + 3 * d[i + 1] + 7 * d[i + 2]) | 0; } return h; }); };
+    const tip = async (x, y) => { await page.mouse.move(5, 5); await page.mouse.move(x, y); await page.waitForTimeout(110); await frame(page, 2); return page.evaluate(() => { const e = document.querySelector('#disk .g-tip'); return e.hidden ? null : e.textContent; }); };
+    const info = await page.evaluate(() => window.__rhDisk.info()), W = info.W, H = info.H, ins = await page.evaluate(() => window.__rhDisk._ctx.insets());
+    const onScreen = (q) => q && q.x > (ins.l || 0) + 8 && q.x < W - 8 && q.y > 76 && q.y < H - (ins.b || 0) - 8;
+    const where = async (lat, lon) => { const l = (await proj(page, lat, lon)).filter(onScreen); return l[0] || null; };
+
+    // 1. every layer changes the picture
+    await only([]); await frame(page, 3); const base = await canvasHash(); await page.evaluate(() => { const c = document.querySelector('#disk canvas'); window.__base = c.getContext('2d').getImageData(0, 0, c.width, c.height).data.slice(); }); let changed = 0; const names = [];
+    for (const k of ['cland', 'csea', 'regions', 'banks', 'mandala', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts']) { await only([k]); const h = await canvasHash(); if (h !== base) changed++; else names.push(k); }
+    t(`${tag}each of the 16 vector layers repaints the canvas${names.length ? ' (no change: ' + names.join() + ')' : ''}`, changed === 16);
+    // labels are DOM: the visible count rises
+    const nLbl = () => page.evaluate(() => Array.from(document.querySelectorAll('#disk .g-labels .g-pin')).filter((e) => e.style.display !== 'none' && !e.classList.contains('hide')).length);
+    await only([]); const l0 = await nLbl(); await only(['labels']); await frame(page, 3); const l1 = await nLbl();
+    t(`${tag}labels layer shows place and water labels (${l0} → ${l1})`, l0 === 0 && l1 >= 8);
+
+    // 2. placement: a route / front vertex lies on the coloured line (pixel differs from the same pixel with the layer off)
+    for (const r of RD.routes.concat(RD.fronts)) {
+      const key = RD.routes.includes(r) ? 'r_' + r.kind : 'fronts', v = r.pts[Math.floor(r.pts.length / 2)], q = await where(v[0], v[1]); if (!q) continue;
+      await only([]); await frame(page, 2); const p0 = await pix(q.x, q.y); await only([key]); await frame(page, 2); const p1 = await pix(q.x, q.y);
+      t(`${tag}${r.id}: a mid-line vertex projects onto the drawn line (colour shift ${dist(p0, p1).toFixed(0)})`, dist(p0, p1) > 25);
+    }
+    // 3. hover and click: faction territories (topmost wins, like the flat map)
+    const grp = await page.evaluate(() => Object.fromEntries(window.__rhDisk._ctx.DATA.territories.map((t) => [t.id, window.__rhDisk._ctx.styles.tgroupOf(t)])));
+    const terr = RD.territories.filter((x) => x.id !== 'anusarri'), TG = ['t_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain'];
+    await only(TG); let nT = 0, bad = [];
+    for (let i = 0; i < terr.length; i++) {
+      const x = terr[i], pt = interior(x.rings[0]); if (!pt) continue; const q = await where(pt[0], pt[1]); if (!q) continue;
+      let top = null; for (let j = terr.length - 1; j >= 0; j--) if (terr[j].rings.some((rg) => inRing(pt[0], pt[1], rg))) { top = terr[j]; break; }
+      const fac = await page.evaluate((id) => { const f = window.__rhDisk._ctx.FAC[id]; return f ? f.name : null; }, top.id); const got = await tip(q.x, q.y); nT++;
+      if (got !== (fac || top.name)) bad.push(`${x.id}→${got}≠${fac || top.name}`);
+    }
+    t(`${tag}hover over ${nT} territories gives the topmost faction name${bad.length ? ' — ' + bad.join(' | ') : ''}`, nT >= 8 && bad.length === 0);
+    const hes = terr.find((x) => x.id === 'hesperia'), hp = interior(hes.rings[0]), hq = await where(hp[0], hp[1]);
+    if (hq) { await page.mouse.move(5, 5); await page.mouse.click(hq.x, hq.y); await page.waitForTimeout(250); t(`${tag}clicking a territory opens the faction card`, /Hesperia/.test(await page.evaluate(() => document.getElementById('g-card').innerText))); await page.keyboard.press('Escape'); }
+    await only(['t_foe']); const hq2 = await tip(hq.x, hq.y); t(`${tag}a territory in a switched-off group gives no tooltip`, grp.hesperia === 'hes' && hq2 === null, String(hq2));
+    // 4. routes and fronts: tooltip with the name at a vertex, card on click
+    for (const r of RD.routes.concat(RD.fronts)) {
+      const key = RD.routes.includes(r) ? 'r_' + r.kind : 'fronts', v = r.pts[Math.floor(r.pts.length / 2)], q = await where(v[0], v[1]); if (!q) continue; await only([key]); const got = await tip(q.x, q.y);
+      t(`${tag}hover on ${r.id}: tooltip is its name`, got === r.name, String(got));
+    }
+    const rt = RD.routes.find((r) => r.kind === 'sea'), rv = rt.pts[2], rq = await where(rv[0], rv[1]);
+    if (rq) { await only(['r_sea']); await page.mouse.move(5, 5); await page.mouse.click(rq.x, rq.y); await page.waitForTimeout(250); t(`${tag}clicking a route opens its card`, (await page.evaluate(() => document.getElementById('g-card').innerText)).includes(rt.name.split(' ')[0])); await page.keyboard.press('Escape'); }
+    // 5. mandala, banks, regions
+    await only(['mandala']); const mnd = RD.mandala[RD.mandala.length - 1], mp = interior(mnd.rings[0]), mq = mp && await where(mp[0], mp[1]);
+    if (mq) { let top = null; for (let i = RD.mandala.length - 1; i >= 0; i--) if (RD.mandala[i].rings.some((rg) => inRing(mp[0], mp[1], rg))) { top = RD.mandala[i]; break; } t(`${tag}hover on the Mandala names its ring`, (await tip(mq.x, mq.y)) === `Mandala Kemurnian · Ring ${top.ring}`); }
+    await only(['banks']); const bk = RD.banks[0], bq = await where(bk.lat, bk.lon);
+    if (bq) { t(`${tag}hover on a bank gives its tooltip`, /Bank samudra/.test(String(await tip(bq.x, bq.y)))); await page.mouse.click(bq.x, bq.y); await page.waitForTimeout(250); t(`${tag}clicking a bank opens its card`, !(await page.evaluate(() => document.getElementById('g-card').hidden))); await page.keyboard.press('Escape'); }
+    await only(['regions']); const RS = await page.evaluate(() => window.__rhDisk._ctx.styles.REG_STYLE), reg = RD.regions.find((r) => RS[r.id] && RS[r.id].fill !== 'none' && interior(r.rings[0]) && true);
+    if (reg) { const rp = interior(reg.rings[0]), rq2 = await where(rp[0], rp[1]); if (rq2) { const got = await tip(rq2.x, rq2.y); t(`${tag}hover inside a filled physical region (${reg.id}) gives a name`, !!got, String(got)); } }
+    // 6. labels: click opens the place card; no two visible labels overlap
+    await only(['labels']); await frame(page, 3);
+    const lab = await page.evaluate(() => { const out = []; document.querySelectorAll('#disk .g-labels .g-pin').forEach((w) => { if (w.style.display === 'none' || w.classList.contains('hide')) return; const e = w.firstChild && w.firstChild.firstChild; if (!e) return; const r = e.getBoundingClientRect(); if (r.width) out.push({ t: e.textContent.trim(), x0: r.left, y0: r.top, x1: r.right, y1: r.bottom }); }); return out; });
+    let ov = 0; for (let i = 0; i < lab.length; i++) for (let j = i + 1; j < lab.length; j++) if (lab[i].x0 < lab[j].x1 - 1 && lab[i].x1 > lab[j].x0 + 1 && lab[i].y0 < lab[j].y1 - 1 && lab[i].y1 > lab[j].y0 + 1) ov++;
+    t(`${tag}no two visible labels overlap (${lab.length} shown)`, lab.length >= 8 && ov === 0, String(ov));
+    const big = lab.filter((q) => q.x0 > (ins.l || 0) + 10 && q.x1 < W - 10 && q.y0 > 80 && q.y1 < H - (ins.b || 0) - 10).sort((a, b) => (a.x1 - a.x0) * (a.y1 - a.y0) - (b.x1 - b.x0) * (b.y1 - b.y0))[0];
+    if (big) { await page.mouse.move(5, 5); await page.mouse.click((big.x0 + big.x1) / 2, (big.y0 + big.y1) / 2); await page.waitForTimeout(250); const ct = await page.evaluate(() => document.getElementById('g-card').innerText); t(`${tag}clicking the label "${big.t.slice(0, 24)}" opens a place card`, ct.length > 20 && !(await page.evaluate(() => document.getElementById('g-card').hidden)), ct.slice(0, 40)); await page.keyboard.press('Escape'); }
+    // 7. toggling back off removes everything (no ghost drawing), and a layer pair is independent
+    await only([]); await page.waitForTimeout(300); await frame(page, 3);   // let a pending relayout after a closed card settle
+    const resid = await page.evaluate(() => { const c = document.querySelector('#disk canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, b = window.__base; let n = 0, x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1; for (let i = 0; i < d.length; i += 4) if (d[i] !== b[i] || d[i + 1] !== b[i + 1] || d[i + 2] !== b[i + 2] || d[i + 3] !== b[i + 3]) { n++; const x = (i / 4) % c.width, y = Math.floor(i / 4 / c.width); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } return { n, box: [x0, y0, x1, y1], st: window.__rhDisk.info().scale }; });
+    t(`${tag}all layers off returns exactly the plain base, pixel for pixel (no residue)`, resid.n === 0, JSON.stringify(resid));
+    await only(['t_hes']); const hA = await canvasHash(); await only(['t_hes', 'r_land']); const hB = await canvasHash(); t(`${tag}layers are independent (territory group alone ≠ with a route layer)`, hA !== hB && hA !== base);
+    const noise = ev.console.filter((m) => !/willReadFrequently/.test(m));   // the test's own getImageData reads trigger that Chrome hint
+    t(`${tag}no console noise`, ev.errors.length === 0 && noise.length === 0, JSON.stringify([ev.errors, noise]));
     await ctx.close();
   }
 });

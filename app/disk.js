@@ -224,6 +224,13 @@ DK.init = function (ctx) {
     mk.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (st.meas) ctx.measureAt(p.lat, p.lon); else openPlace(p.id); } });
     w.appendChild(el); pinsEl.appendChild(w); pins.push({ p: p, wrap: w, nm: mk.querySelector('.mk-name'), size: sz, shown: false, sx: 0, sy: 0, copies: [] });
   });
+  var lbls = [];   // label tempat dan perairan (layer 'labels'): elemen DOM yang sama dengan peta datar dan globe
+  ctx.DATA.places.forEach(function (p) {
+    if (!p.label_only) return;
+    var w = document.createElement('div'); w.className = 'g-pin'; w.style.display = 'none';
+    var el = document.createElement('div'); el.innerHTML = ctx.labelHTML(p); w.appendChild(el); pinsEl.appendChild(w);
+    lbls.push({ p: p, wrap: w, el: el, shown: false, sx: 0, sy: 0, obstacle: !(p.cat === 'continent' || p.id === 'tamtu') });
+  });
   var anoms = ctx.DATA.anomalies.map(function (a) { var w = document.createElement('div'); w.className = 'g-anom'; w.style.display = 'none'; w.innerHTML = '<b></b><i></i>'; pinsEl.appendChild(w); return { a: a, wrap: w, shown: false, sx: 0, sy: 0 }; });
   function on(k) { return LAY[k] && LAY[k].on; }
   // empat busur Scar (layer 'arcs'): penanda batas di α = ±25° dan ±135°, ditarik melintang pita (rim ± 6,5° ± 1,5°) — sama dengan peta datar dan globe
@@ -237,19 +244,208 @@ DK.init = function (ctx) {
     return null;
   }
 
+  // ---------------------------------------------------------------- lapisan vektor dari data: kontur, region, bank, mandala, wilayah, rute, front
+  // Sama dengan peta datar dan globe (satu data.json, satu tabel gaya dari app.js). Geometri hidup di bidang lintang–bujur — sisi lurus di peta
+  // datar — jadi dipadatkan tiap ≤ 1° sebelum diproyeksikan; hasil proyeksi disimpan per orientasi dan per cakram. Setiap cakram digambar di dalam
+  // klip lingkaran (rim + margin); cincin yang seluruhnya berada di luar jangkauan sebuah cakram dilewati untuk cakram itu.
+  var ST = ctx.styles, DATA = ctx.DATA, FAC = ctx.FAC, GEO = null, DENS = 1, hotFac = null;
+  function densify(pts, closed) {
+    var out = [], n = pts.length, last = closed ? n : n - 1;
+    for (var i = 0; i < last; i++) {
+      var a = pts[i], b = pts[(i + 1) % n], k = Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])) / DENS));
+      for (var j = 0; j < k; j++) out.push([a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]);
+    }
+    if (!closed) out.push([pts[n - 1][0], pts[n - 1][1]]);
+    return out;
+  }
+  function mkRing(pts, closed) {
+    var ll = densify(pts, closed), n = ll.length, th = new Float64Array(n), al = new Float64Array(n), mnR = 180, mnA = 180;
+    for (var i = 0; i < n; i++) { var pp = M.polar(ll[i][0], ll[i][1]); th[i] = pp.theta; al[i] = pp.alpha; if (pp.theta < mnR) mnR = pp.theta; if (180 - pp.theta < mnA) mnA = 180 - pp.theta; }
+    return { n: n, th: th, al: al, closed: closed, cut: { R: mnR > M.RIM_R + M.MARGIN + 2, A: mnA > M.RIM_A + M.MARGIN + 2 }, xy: {} };
+  }
+  function ringXY(r, which) {
+    var key = orient + which, v = r.xy[key]; if (v) return v;
+    v = r.xy[key] = new Float32Array(r.n * 2);
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (var i = 0; i < r.n; i++) { var q = M.diskXY(which, r.th[i], r.al[i], orient); v[2 * i] = q.x; v[2 * i + 1] = q.y; if (q.x < x0) x0 = q.x; if (q.x > x1) x1 = q.x; if (q.y < y0) y0 = q.y; if (q.y > y1) y1 = q.y; }
+    r.bb = r.bb || {}; r.bb[key] = [x0, y0, x1, y1];   // kotak pembatas di bidang cakram (Rs): cincin yang seluruhnya di luar layar dilewati
+    return v;
+  }
+  function geo() {
+    if (GEO) return GEO;
+    GEO = {};
+    var lvs = {}; GEO.contourLevels = [];
+    DATA.contours.forEach(function (c) { var lv = lvs[c.lvl]; if (!lv) { lv = lvs[c.lvl] = { lvl: c.lvl, cs: ST.CST[c.lvl], rings: [] }; GEO.contourLevels.push(lv); } lv.rings.push(mkRing(c.pts, false)); });
+    GEO.regions = DATA.regions.filter(function (r) { return ST.REG_STYLE[r.id]; }).map(function (r) { return { id: r.id, st: ST.REG_STYLE[r.id], rings: r.rings.map(function (q) { return mkRing(q, true); }) }; });
+    GEO.banks = DATA.banks.map(function (b) { var q = []; for (var i = 0; i <= 72; i++) q.push(C.destination(b.lat, b.lon, i * 5, b.r)); return mkRing(q, true); });
+    GEO.mand = DATA.mandala.map(function (m) { return { ring: m.ring, rings: m.rings.map(function (q) { return mkRing(q, true); }) }; });
+    GEO.terr = DATA.territories.filter(function (t) { return t.id !== 'anusarri'; }).map(function (t) { return { t: t, f: FAC[t.id] || { name: t.name, color: '#cccccc' }, grp: ST.tgroupOf(t), rings: t.rings.map(function (q) { return mkRing(q, true); }) }; });
+    GEO.routes = DATA.routes.map(function (r) { return { r: r, parts: [r.pts].concat(r.pts2 ? [r.pts2] : []).map(function (q) { return mkRing(q, false); }) }; });
+    GEO.fronts = DATA.fronts.map(function (f) {
+      var fl = f.id === 'front_florian', last = f.pts[f.pts.length - 1], from = fl ? f.pts[Math.floor(f.pts.length / 2)] : last;
+      return { fl: fl, line: mkRing(f.pts, false), seg: mkRing([from, f.arrow_to], false), col: fl ? '#2aa38a' : '#ff6a2b' };
+    });
+    return GEO;
+  }
+  // pola isian (kanvas, ukuran piksel layar): hutan, tanah kosong, arsir wilayah — sama dengan globe
+  var pats = {};
+  function mkPattern(key, w, h, draw, rot) {
+    var k = key + '@' + DPR; if (pats[k]) return pats[k];
+    var c2 = document.createElement('canvas'); c2.width = Math.ceil(w * DPR); c2.height = Math.ceil(h * DPR);
+    var q = c2.getContext('2d'); q.scale(c2.width / w, c2.height / h); draw(q);
+    var pt = g.createPattern(c2, 'repeat'); if (pt && pt.setTransform) pt.setTransform(new DOMMatrix().rotate(rot || 0).scale(1 / DPR));
+    return pats[k] = pt;
+  }
+  function forest() { return mkPattern('forest', 12, 12, function (q) { q.fillStyle = 'rgba(111,180,106,.10)'; q.fillRect(0, 0, 12, 12); q.fillStyle = 'rgba(191,232,168,.55)'; q.fill(new Path2D('M3 9l2-4 2 4zM8.5 5l1.5-3 1.5 3z')); }); }
+  function blank() { return mkPattern('blank', 14, 14, function (q) { q.fillStyle = 'rgba(242,217,160,.05)'; q.fillRect(0, 0, 14, 14); q.fillStyle = 'rgba(242,217,160,.30)'; q.fillRect(0, 0, 1.2, 14); }, -35); }
+  function hatch(col) { return mkPattern('hatch' + col, 9, 9, function (q) { q.globalAlpha = 0.16; q.fillStyle = col; q.fillRect(0, 0, 9, 9); q.globalAlpha = 0.55; q.fillRect(0, 0, 2.6, 9); }, 40); }
+  function trace(xy, c, S, close) {
+    g.beginPath();
+    var n = xy.length, lx = 0, ly = 0;
+    for (var i = 0; i < n; i += 2) {
+      var x = c.x + xy[i] * S, y = c.y + xy[i + 1] * S;
+      if (i === 0) { g.moveTo(x, y); lx = x; ly = y; continue; }
+      if (i < n - 2 && (x - lx) * (x - lx) + (y - ly) * (y - ly) < 0.64) continue;   // lebih dekat dari ~0,8 px: tidak terlihat, lewati (titik akhir selalu ikut)
+      g.lineTo(x, y); lx = x; ly = y;
+    }
+    if (close) g.closePath();
+  }
+  function dashOf(d) { return d ? String(d).split(/[ ,]+/).map(Number) : []; }
+  /** rings: cincin hasil mkRing. o: {close, fill, fa, stroke, sa, w, dash, under:{stroke, sa, w}} — sama dengan shape() di globe, tebal garis dalam piksel layar. */
+  function paintRings(rings, which, c, o) {
+    var S = st.scale, close = o.close !== false;
+    if (o.batch) {   // semua cincin satu gaya (kontur satu tingkat) dalam satu jalur: satu goresan, bukan ratusan
+      g.beginPath();
+      for (var b = 0; b < rings.length; b++) {
+        var rb = rings[b]; if (rb.n < 2 || rb.cut[which]) continue;
+        var xb = ringXY(rb, which), bx = rb.bb[orient + which]; if (c.x + bx[2] * S < -12 || c.x + bx[0] * S > W + 12 || c.y + bx[3] * S < -12 || c.y + bx[1] * S > H + 12) continue;
+        var lx = 0, ly = 0, m = xb.length;
+        for (var i = 0; i < m; i += 2) { var x = c.x + xb[i] * S, y = c.y + xb[i + 1] * S; if (i === 0) { g.moveTo(x, y); lx = x; ly = y; continue; } if (i < m - 2 && (x - lx) * (x - lx) + (y - ly) * (y - ly) < 0.64) continue; g.lineTo(x, y); lx = x; ly = y; }
+      }
+      g.globalAlpha = o.sa == null ? 1 : o.sa; g.strokeStyle = o.stroke; g.lineWidth = o.w; g.setLineDash([]); g.lineCap = g.lineJoin = 'round'; g.stroke(); g.globalAlpha = 1;
+      return;
+    }
+    for (var k = 0; k < rings.length; k++) {
+      var r = rings[k]; if (r.n < 2 || r.cut[which]) continue;
+      var xy = ringXY(r, which), bb = r.bb[orient + which], cl = close && r.closed;
+      if (c.x + bb[2] * S < -12 || c.x + bb[0] * S > W + 12 || c.y + bb[3] * S < -12 || c.y + bb[1] * S > H + 12) continue;   // seluruhnya di luar layar
+      if (o.under) { trace(xy, c, S, cl); g.globalAlpha = o.under.sa; g.strokeStyle = o.under.stroke; g.lineWidth = o.under.w; g.setLineDash([]); g.lineCap = g.lineJoin = 'round'; g.stroke(); }
+      trace(xy, c, S, cl);
+      if (o.fill) { g.globalAlpha = o.fa == null ? 1 : o.fa; g.fillStyle = o.fill; g.fill(); }
+      if (o.stroke) { g.globalAlpha = o.sa == null ? 1 : o.sa; g.strokeStyle = o.stroke; g.lineWidth = o.w; g.setLineDash(dashOf(o.dash)); g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); }
+    }
+    g.globalAlpha = 1; g.setLineDash([]);
+  }
+  function arrowAt(r, which, c, col) {   // segitiga panah di ujung garis, searah ruas terakhir pada lembar (ikut terdistorsi dan terputar bersama proyeksi)
+    if (r.cut[which] || r.n < 3) return;
+    var xy = ringXY(r, which), S = st.scale, n = r.n, k = Math.min(3, n - 1), x1 = c.x + xy[2 * (n - 1)] * S, y1 = c.y + xy[2 * (n - 1) + 1] * S, x0 = c.x + xy[2 * (n - 1 - k)] * S, y0 = c.y + xy[2 * (n - 1 - k) + 1] * S;
+    g.save(); g.translate(x1, y1); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.beginPath(); g.moveTo(-5, -5); g.lineTo(5, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.closePath();
+    g.fillStyle = col; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 0.8; g.stroke(); g.fill(); g.restore();
+  }
+  var RKEY = { historic: 'r_historic', land: 'r_land', story: 'r_story', sea: 'r_sea' }, GEO_KEYS = ['cland', 'csea', 'regions', 'banks', 'mandala', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
+  function paintGeo() {
+    if (!GEO_KEYS.some(on)) return;
+    var Gm = geo();
+    ['R', 'A'].forEach(function (which) {
+      var d = which === 'R' ? L.R : L.A, c = toScreen(d.cx, d.cy), mx = (which === 'R' ? L.rhoMaxR : L.rhoMaxA) * st.scale;
+      g.save(); circle(c.x, c.y, mx); g.clip();
+      // urutan = z pane Leaflet: kontur 330/331, region 360, bank 361, mandala 385, wilayah 390, rute 450, front 451
+      Gm.contourLevels.forEach(function (lv) { if (on(lv.lvl > 0 ? 'cland' : 'csea')) paintRings(lv.rings, which, c, { close: false, stroke: lv.cs[0], sa: lv.cs[1], w: lv.cs[2], batch: true }); });   // satu goresan per tingkat (bukan per kontur)
+      if (on('regions')) Gm.regions.forEach(function (q) {
+        var sy = q.st, fill = null, fa = 1;
+        if (sy.fill === 'url(#p-forest)') fill = forest(); else if (sy.fill === 'url(#p-blank)') fill = blank(); else if (sy.fill !== 'none') { fill = sy.fill; fa = 0.001; }
+        paintRings(q.rings, which, c, { fill: fill, fa: fa, stroke: sy.nostroke ? null : sy.color, sa: sy.op || 0.85, w: sy.w || 1.3, dash: sy.dash });
+      });
+      if (on('banks')) paintRings(Gm.banks, which, c, { fill: '#8fe3e0', fa: 0.05, stroke: '#8fe3e0', sa: 1, w: 1.2, dash: '2 5' });
+      if (on('mandala')) Gm.mand.forEach(function (m) { paintRings(m.rings, which, c, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
+      Gm.terr.forEach(function (q) {
+        if (!on('t_' + q.grp)) return; var f = q.f;
+        paintRings(q.rings, which, c, { stroke: f.color, sa: 0.22, w: 6 });
+        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.95, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
+      });
+      Gm.routes.forEach(function (q) {
+        if (!on(RKEY[q.r.kind])) return; var rs = ST.RST[q.r.kind];
+        q.parts.forEach(function (pt) { paintRings([pt], which, c, { close: false, stroke: rs.color, sa: 0.95, w: rs.weight, dash: rs.dash, under: { stroke: '#000', sa: 0.28, w: rs.weight + 2.5 } }); arrowAt(pt, which, c, rs.color); });
+      });
+      if (on('fronts')) Gm.fronts.forEach(function (q) {
+        paintRings([q.line], which, c, { close: false, stroke: q.col, sa: 0.95, w: q.fl ? 3 : 2.4, dash: q.fl ? '1 5' : '6 4' });
+        paintRings([q.seg], which, c, { close: false, stroke: q.col, sa: q.fl ? 0.9 : 0.95, w: q.fl ? 2 : 2.4, dash: q.fl ? null : '6 4' }); arrowAt(q.seg, which, c, q.col);
+      });
+      g.restore();
+    });
+  }
+  // hit-test (klik dan tooltip) di bidang lintang–bujur dengan data asli, urutan = z pane Leaflet (atas dulu); sama dengan globe
+  function inRing(lat, lon, ring) {
+    for (var k = -1; k <= 1; k++) {
+      var x = lon + 360 * k, cc = false;
+      for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        var yi = ring[i][0], xi = ring[i][1], yj = ring[j][0], xj = ring[j][1];
+        if ((yi > lat) !== (yj > lat) && x < (xj - xi) * (lat - yi) / (yj - yi) + xi) cc = !cc;
+      }
+      if (cc) return true;
+    }
+    return false;
+  }
+  function distSeg(lat, lon, a, b) {   // jarak (derajat) titik ke ruas pada bidang lintang–bujur ber-skala cos(lintang)
+    var kx = Math.cos(lat * D2R), best = 1e9;
+    for (var sh = -1; sh <= 1; sh++) {
+      var px = (lon + 360 * sh) * kx, py = lat, ax = a[1] * kx, ay = a[0], bx = b[1] * kx, by = b[0], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+      var tt = l2 ? clamp(((px - ax) * dx + (py - ay) * dy) / l2, 0, 1) : 0;
+      best = Math.min(best, Math.hypot(px - (ax + tt * dx), py - (ay + tt * dy)));
+    }
+    return best;
+  }
+  function nearLine(lat, lon, pts, tol) { for (var i = 1; i < pts.length; i++) if (distSeg(lat, lon, pts[i - 1], pts[i]) <= tol) return true; return false; }
+  function nearRing(lat, lon, ring, tol) { return nearLine(lat, lon, ring.concat([ring[0]]), tol); }
+  /** Objek di bawah titik hasil pointToLatLon (u): {type: route | place | faction | mandala | bank, name, ...} atau null. mult memperbesar toleransi (sentuh). */
+  function geoHit(u, mult) {
+    if (!u) return null;
+    var lat = u.lat, lon = u.lon, thd = u.disk === 'A' ? 180 - u.theta : u.theta, tol = Math.max(0.15, R2D / (st.scale * Math.max(0.3, Math.cos(thd * D2R / 2))) * (mult || 1) * 6), i, q, r, h;
+    for (i = 0; i < DATA.routes.length; i++) { r = DATA.routes[i]; if (on(RKEY[r.kind]) && (nearLine(lat, lon, r.pts, tol) || (r.pts2 && nearLine(lat, lon, r.pts2, tol)))) return { type: 'route', route: r, name: r.name }; }
+    if (on('fronts')) for (i = 0; i < DATA.fronts.length; i++) { r = DATA.fronts[i]; if (nearLine(lat, lon, r.pts, tol)) return { type: 'route', route: r, name: r.name }; }
+    if (zonePlace && on('zone') && C.angDist(lat, lon, zonePlace.lat, zonePlace.lon) <= zonePlace.zone_r) return { type: 'place', id: zonePlace.id, name: zonePlace.name };
+    if ((h = arcAt(u))) return { type: 'place', id: h.id, name: h.name };
+    for (i = DATA.territories.length - 1; i >= 0; i--) {
+      var t = DATA.territories[i]; if (t.id === 'anusarri' || !on('t_' + ST.tgroupOf(t))) continue;
+      for (q = 0; q < t.rings.length; q++) if (inRing(lat, lon, t.rings[q])) { var f = FAC[t.id]; return { type: 'faction', id: t.id, name: f ? f.name : t.name }; }
+    }
+    if (on('mandala')) for (i = DATA.mandala.length - 1; i >= 0; i--) { var m = DATA.mandala[i]; for (q = 0; q < m.rings.length; q++) if (inRing(lat, lon, m.rings[q])) return { type: 'mandala', ring: m.ring, name: 'Mandala Kemurnian · Ring ' + m.ring }; }
+    if (on('banks')) for (i = 0; i < DATA.banks.length; i++) if (C.angDist(lat, lon, DATA.banks[i].lat, DATA.banks[i].lon) <= DATA.banks[i].r) return { type: 'bank', name: 'Bank samudra (lapisan fisik v4)' };
+    if (on('regions')) for (i = 0; i < DATA.regions.length; i++) {
+      var rr = DATA.regions[i], sy = ST.REG_STYLE[rr.id]; if (!sy) continue;
+      for (q = 0; q < rr.rings.length; q++) {
+        var inside = sy.fill !== 'none' ? inRing(lat, lon, rr.rings[q]) : (!sy.nostroke && nearRing(lat, lon, rr.rings[q], tol));
+        if (inside) { var pn = ctx.placeById[sy.open]; return { type: 'place', id: sy.open, name: pn ? pn.name : rr.id }; }
+      }
+    }
+    return null;
+  }
+  function openHit(h) {
+    if (h.type === 'place') openPlace(h.id);
+    else if (h.type === 'faction') ctx.card.open(ctx.cards.faction(h.id), 'fac:' + h.id);
+    else if (h.type === 'mandala') ctx.card.open(ctx.cards.mandala(h.ring), 'mandala:' + h.ring);
+    else if (h.type === 'route') ctx.card.open(ctx.cards.route(h.route), 'route:' + h.route.id);
+    else if (h.type === 'bank') ctx.card.open(ctx.cards.bank, 'bank');
+  }
+
   // ---------------------------------------------------------------- gambar
   var raf = 0; function draw() { if (!st.shown) return; if (!raf) raf = requestAnimationFrame(function () { raf = 0; render(); }); }
   var TXT_HALO = 'rgba(8,12,16,.92)', INK = '#f4eee1';
+  var txtRects = [];   // persegi layar tiap teks kanvas pada gambar terakhir: label DOM dan nama marker mengalah pada anotasi (azimut, judul cakram)
   function text(s, x, y, o) {
     o = o || {}; g.font = o.font || '600 12px "IBM Plex Sans", system-ui, sans-serif'; g.textAlign = o.align || 'center'; g.textBaseline = o.base || 'middle';
     g.lineWidth = 4; g.strokeStyle = TXT_HALO; g.lineJoin = 'round'; g.strokeText(s, x, y); g.fillStyle = o.color || INK; g.fillText(s, x, y);
+    var fm = /(\d+(?:\.\d+)?)px/.exec(g.font), w = g.measureText(s).width, h = (fm ? parseFloat(fm[1]) : 12) + 2, al = g.textAlign, bs = g.textBaseline;
+    var x0 = al === 'left' ? x : al === 'right' ? x - w : x - w / 2, y0 = bs === 'top' ? y : bs === 'bottom' ? y - h : y - h / 2;
+    txtRects.push([x0 - 2, y0 - 1, x0 + w + 2, y0 + h + 1]);
   }
   function circle(cx, cy, r) { g.beginPath(); g.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2); }
   function diskScreen(which) { var d = which === 'R' ? L.R : L.A, c = toScreen(d.cx, d.cy); return { x: c.x, y: c.y, k: st.scale }; }
   function render() {
     var sheet = sheets[orient], f = freeBox();
-    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
+    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H); txtRects.length = 0;
     if (sheet) { var tl = toScreen(-L.W / 2, -L.H / 2), k = st.scale / sheet.RsPx; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(sheet.cv, tl.x, tl.y, sheet.w * k, sheet.h * k); }
+    paintGeo();
     var A = diskScreen('A'), R = diskScreen('R'), S = st.scale;
     [['R', R], ['A', A]].forEach(function (q) {
       var which = q[0], c = q[1], rim = which === 'R' ? M.RIM_R : M.RIM_A, rimPx = M.rho(rim) * S, band = M.RIM_R;
@@ -345,7 +541,7 @@ DK.init = function (ctx) {
   }
   var tmpPins = [];
   function placePins() {
-    var vis = function (p) { return ctx.visible(p); }, mk = on('markers'), an = on('anom'), obst = [], items = [];
+    var vis = function (p) { return ctx.visible(p); }, mk = on('markers'), an = on('anom'), obst = txtRects.map(function (q) { return [q[0], q[1], q[2], q[3], null]; }), items = [];
     pins.forEach(function (n) {
       var show = mk && vis(n.p), best = null;
       if (show) { var prs = M.project(n.p.lat, n.p.lon, L); if (prs.length) { best = prs[0]; if (prs.length > 1) best = prs[0].theta <= M.RIM_R ? prs[0] : prs[1]; } }
@@ -362,6 +558,28 @@ DK.init = function (ctx) {
       var best = prs[0].theta <= M.RIM_R ? prs[0] : prs[prs.length - 1], sp = toScreen(best.x, best.y); n.sx = sp.x; n.sy = sp.y;
       n.wrap.style.transform = 'translate(' + sp.x.toFixed(1) + 'px,' + sp.y.toFixed(1) + 'px)'; if (!n.shown) { n.wrap.style.display = ''; n.shown = true; }
     });
+    var lb = on('labels'), fb = freeBox();
+    lbls.forEach(function (n) {
+      var best = null, s2 = null;
+      if (lb && vis(n.p)) { var prs = M.project(n.p.lat, n.p.lon, L); if (prs.length) { best = prs[0]; if (prs.length > 1) best = prs[0].theta <= M.RIM_R ? prs[0] : prs[1]; } }
+      if (best) { s2 = toScreen(best.x, best.y); if (s2.x < fb.l - 60 || s2.x > W + 60 || s2.y < -30 || s2.y > fb.h + 30) best = null; }
+      if (!best) { if (n.shown) { n.wrap.style.display = 'none'; n.shown = false; } return; }
+      n.sx = s2.x; n.sy = s2.y; n.wrap.style.transform = 'translate(' + s2.x.toFixed(1) + 'px,' + s2.y.toFixed(1) + 'px)';
+      if (!n.shown) { n.wrap.style.display = ''; n.shown = true; }
+    });
+    // label saling bertumpuk di layar kecil: yang berprioritas lebih tinggi (benua, perairan, wilayah, lalu label kecil) menang; yang bentrok disembunyikan.
+    // Semua transform sudah ditulis, jadi pembacaan tata letak di bawah hanya memicu satu reflow.
+    var cr = pinsEl.getBoundingClientRect(), vl = lbls.filter(function (n) { return n.shown; }), placed = [];
+    function lp(n) { var c = n.p.cat; return n.el.firstChild && n.el.firstChild.classList.contains('minor') ? 3 : c === 'continent' ? 0 : c === 'water' ? 1 : 2; }
+    vl.forEach(function (n) { n.wrap.classList.remove('hide'); });
+    vl.forEach(function (n) { var e = n.el.firstChild, r = e && e.getBoundingClientRect(); n.rc = r && r.width ? [r.left - cr.left - 2, r.top - cr.top - 1, r.right - cr.left + 2, r.bottom - cr.top + 1] : null; });
+    vl.sort(function (a, b) { return lp(a) - lp(b); }).forEach(function (n) {
+      if (!n.rc) return;
+      var hit = function (q) { return n.rc[0] < q[2] && n.rc[2] > q[0] && n.rc[1] < q[3] && n.rc[3] > q[1]; };
+      // benua dan perairan (prioritas 0–1) tidak mengalah pada anotasi kanvas (nama dunia lebih penting daripada tanda azimut); label lain mengalah
+      var bad = placed.some(hit) || (lp(n) >= 2 && txtRects.some(hit));
+      if (bad) { n.wrap.classList.add('hide'); n.rc = null; } else { placed.push(n.rc); if (n.obstacle) obst.push([n.rc[0], n.rc[1], n.rc[2], n.rc[3], null]); }
+    });
     C.declutterNames(items, obst, ctx.DECL);
   }
 
@@ -374,6 +592,16 @@ DK.init = function (ctx) {
     anoms.forEach(function (n) { if (!n.shown) return; var d = Math.hypot(n.sx - px, n.sy - py); if (d <= 18 * mult && d < bd) { bd = d; best = { id: n.a.id, name: n.a.name }; } });
     return best;
   }
+  /** Label tempat di bawah piksel (persegi terkecil menang), seperti di globe. */
+  function lblAt(px, py, mult) {
+    var cr = pinsEl.getBoundingClientRect(), best = null, area = 1e12, pad = 2 * (mult || 1);
+    lbls.forEach(function (n) {
+      if (!n.shown) return; var e = n.el.firstChild; if (!e) return; var r = e.getBoundingClientRect(); if (!r.width) return;
+      if (px >= r.left - cr.left - pad && px <= r.right - cr.left + pad && py >= r.top - cr.top - pad && py <= r.bottom - cr.top + pad && r.width * r.height < area) { area = r.width * r.height; best = { type: 'place', id: n.p.id, name: n.p.name }; }
+    });
+    return best;
+  }
+  function pickAt(px, py, u, mult) { var pn = pinAt(px, py, mult); if (pn) return { type: 'place', id: pn.id, name: pn.name }; return lblAt(px, py, mult) || geoHit(u, mult); }
   function refPoint() { if (st.hover) return { lat: st.hover.lat, lon: st.hover.lon, src: 'kursor' }; var f = focus(); return { lat: f.lat, lon: f.lon, src: 'pusat' }; }
   function screenAngle(lat, lon, brg) {
     var a = M.project(lat, lon, L), q = C.destination(lat, lon, brg, 0.5), b = M.project(q[0], q[1], L); if (!a.length || !b.length) return 0;
@@ -389,7 +617,8 @@ DK.init = function (ctx) {
   function hoverMove(e) {
     var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; st.hoverPx = { x: px, y: py };
     var u = pointToLatLon(px, py); st.hover = u ? { lat: u.lat, lon: u.lon, disk: u.disk, theta: u.theta, alpha: u.alpha } : null; if (u) ctx.readout({ lat: u.lat, lng: u.lon });
-    var h = pinAt(px, py) || arcAt(u); if (h) { tipEl.textContent = h.name; tipEl.hidden = false; tipEl.style.transform = 'translate(' + Math.round(px + 14) + 'px,' + Math.round(py + 14) + 'px)'; root.classList.add('pick'); } else { tipEl.hidden = true; root.classList.remove('pick'); }
+    var h = pickAt(px, py, u, 1), hot = h && h.type === 'faction' ? h.id : null; if (hot !== hotFac) { hotFac = hot; draw(); }
+    if (h) { tipEl.textContent = h.name; tipEl.hidden = false; tipEl.style.transform = 'translate(' + Math.round(px + 14) + 'px,' + Math.round(py + 14) + 'px)'; root.classList.add('pick'); } else { tipEl.hidden = true; root.classList.remove('pick'); }
     lastRef = 0; updateCompass();
   }
   function openPlace(id) { var p = ctx.placeById[id]; if (!p) return; ctx.card.open(ctx.cards.place(p), 'place:' + id, id); }
@@ -423,7 +652,7 @@ DK.init = function (ctx) {
     if (nPtr === 1) { var k = Object.keys(ptrs)[0], p = ptrs[k]; g0 = { x0: p.x, y0: p.y, lx: p.x, ly: p.y, t0: performance.now(), moved: true }; }
   }
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-  cv.addEventListener('pointerleave', function (e) { if (!ptrs[e.pointerId]) { st.hover = null; st.hoverPx = null; tipEl.hidden = true; root.classList.remove('pick'); lastRef = 0; updateCompass(); } });
+  cv.addEventListener('pointerleave', function (e) { if (!ptrs[e.pointerId]) { if (hotFac) { hotFac = null; draw(); } st.hover = null; st.hoverPx = null; tipEl.hidden = true; root.classList.remove('pick'); lastRef = 0; updateCompass(); } });
   function zoomAt(px, py, f) { var before = toSheet(px, py), fs = fitScale(); st.scale = clamp(st.scale * f, fs * 0.55, fs * 14); var after = toSheet(px, py); st.cx += before.x - after.x; st.cy += before.y - after.y; limitView(); draw(); }
   cv.addEventListener('wheel', function (e) { e.preventDefault(); var r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.04 : 0.0015))); }, { passive: false });
   cv.addEventListener('dblclick', function (e) { var r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, 1.8); });
@@ -435,11 +664,11 @@ DK.init = function (ctx) {
     if (h) { e.preventDefault(); limitView(); draw(); }
   });
   function click(e) {
-    var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, h = pinAt(px, py, e.pointerType === 'touch' ? 1.9 : 1);
+    var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, mult = e.pointerType === 'touch' ? 1.9 : 1, h = pinAt(px, py, mult);
     if (st.meas) { var mpl = h && ctx.placeById[h.id], mu = pointToLatLon(px, py); if (mpl && !mpl.label_only) ctx.measureAt(mpl.lat, mpl.lon); else if (mu) ctx.measureAt(mu.lat, mu.lon); return; }   // mode ukur: marker = titik tepat, selain itu titik di cakram
     if (h) { openPlace(h.id); return; }
     var u = pointToLatLon(px, py); if (u) { ctx.readout({ lat: u.lat, lng: u.lon }); st.hover = { lat: u.lat, lon: u.lon }; }
-    var ha = arcAt(u); if (ha) { openPlace(ha.id); return; }   // busur Scar (bukan marker): buka kartunya, seperti klik pada busur di peta datar
+    var hg = lblAt(px, py, mult) || geoHit(u, mult); if (hg) { openHit(hg); return; }   // label, rute, wilayah, busur Scar, … (bukan marker): buka kartunya seperti di peta datar
     closeCard();
   }
 
@@ -474,9 +703,10 @@ DK.init = function (ctx) {
     _project: function (lat, lon) { return M.project(lat, lon, L).map(function (p) { var s = toScreen(p.x, p.y); return { disk: p.disk, x: s.x, y: s.y }; }); },
     _unproject: function (px, py) { return pointToLatLon(px, py); }, _sheet: function () { return sheets[orient]; }, _state: st, _ctx: ctx
   };
-  // adapterDisk: layer yang punya padanan di peta kerja (sisanya nonaktif dengan alasan)
-  var DISK_OK = { grat: 1, mer: 1, band: 1, curve: 1, arcs: 1, markers: 1, anom: 1, zone: 1, d_rings: 1, d_azi: 1 };
-  Object.keys(LAY).forEach(function (k) { if (DISK_OK[k]) LAY[k].adapterDisk = { draw: true }; else if (!LAY[k].only3D) LAY[k].reasonDisk = 'Peta kerja dual-disk sengaja minimal (Scar, cincin Scar Proximity, graticule, marker); lapisan ini tersedia di peta datar 2D dan globe 3D.'; });
+  // adapterDisk: layer yang punya padanan di peta kerja. Semua layer peta datar kini ada; yang tersisa hanya yang khas 3D (bulan, sumbu, ekliptika).
+  var DISK_OK = { grat: 1, mer: 1, cland: 1, csea: 1, band: 1, curve: 1, arcs: 1, markers: 1, labels: 1, zone: 1, anom: 1, regions: 1, banks: 1, mandala: 1, t_hes: 1, t_foe: 1, t_int: 1, t_ana: 1, t_elv: 1, t_lain: 1,
+    r_historic: 1, r_land: 1, r_story: 1, r_sea: 1, fronts: 1, d_rings: 1, d_azi: 1 };
+  Object.keys(LAY).forEach(function (k) { if (DISK_OK[k]) LAY[k].adapterDisk = { draw: true }; else if (!LAY[k].only3D) LAY[k].reasonDisk = 'Lapisan ini belum punya padanan di peta kerja dual-disk.'; });
   ctx.onEvent(function (type) { if (!st.shown) return; if (type === 'layer' || type === 'filters') draw(); else if (type === 'layout') ctl.relayout(); });
   window.__rhDisk = ctl;
   if (window.ResizeObserver) new ResizeObserver(function () { if (st.shown) resize(); }).observe(root); else window.addEventListener('resize', function () { if (st.shown) resize(); });

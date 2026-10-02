@@ -116,7 +116,7 @@ A second view of the **same data**, behind one button (**Globe 3D**, next to the
 - **Relief (2b).** Heights from a **regenerated 16-bit heightmap** (checked against the canon data grid: 100 % of pixels identical), a slope map for per-pixel lighting, and an albedo texture **without baked-in hillshade**. A slider sets the **vertical exaggeration** (0–60×, default 15×; real relief is ≈ ±10 km on an 8,282 km radius — about 0.1 %, so the exaggeration is for legibility only and is labelled *tidak berskala*). Relief is *Turunan*.
 - **Measure tool in every view (v1.6.1).** **Ukur** works on the flat map, the globe and the working map: tap two points (a marker is taken at its exact position, anywhere else the point under the finger) and the viewer draws the **great-circle line**, the two dots and a result box with the distance and rough travel times — the same wording as on the flat map. "Ukur dari sini" on a place card starts from that place without leaving the view, and a finished measurement follows you when you switch views. On the working map the line is drawn per disk, so it stops at a rim and continues on the other disk.
 - **Honest 3D.** Each moon's label says *Inferensi AI · tidak berskala*, and the Globe panel states the open axial tilt; Castra Birath is still a fading zone, never a point; nothing on the globe predicts or schedules the Great Wave. The axis is drawn upright with a neutral, camera-attached light — there is **no terminator, night side or seasons** because the axial tilt is still *Terbuka*.
-- **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work; it supports graticule, meridians, band, curve, arcs, markers, anomalies and the Castra zone.
+- **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work. Since v1.6.5 it carries **every layer of the flat map** — contours, physical regions, ocean banks, the seven territory groups, routes, fronts, place and water labels — plus the Scar layers, with the same hover tooltips and cards; only the four 3D-only layers (moons, orbits, axis, ecliptic) are absent.
 
 <table>
 <tr>
@@ -304,7 +304,7 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 |---|---|---|
 | Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
 | Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
-| Interactive viewer | ✅ **v1.6.4** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
+| Interactive viewer | ✅ **v1.6.5** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
 | Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer; individual Interregna kingdoms are added when the story needs them |
 | Coordinates | 🟡 8 canon · 11 derived · 24 AI-inferred · 1 open *(of 44)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
 | Proposals | 🟡 11 of 44 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
@@ -322,6 +322,7 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 - [x] Viewer v1.6.2 — pressed toolbar buttons reach WCAG AA contrast in both themes
 - [x] Viewer v1.6.3 — the two moons get working names, *Ferrea* and *Errans* *(AI-inferred)*; the chip strip under the coordinate readout is gone from the globe
 - [x] Viewer v1.6.4 — the *Empat busur* layer now works on the dual-disk working map (it was switched on in the panel but drew nothing and could not be hovered or clicked)
+- [x] Viewer v1.6.5 — all flat-map layers on the dual-disk working map: contours, regions, banks, territories, Mandala, routes, fronts and labels, with hover and cards (they were listed as *tak ada di peta kerja*)
 - [x] 44 map entries · 25 territories · 4 routes · 3 fronts · 3 anomaly pockets
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
 - [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
@@ -371,7 +372,7 @@ Every new parameter — moons, axial tilt, tides, fine detail — stays *AI-infe
 - The 3D views need WebGL and a web origin (`http(s)://`, i.e. GitHub Pages or a local server) — not `file://`. The first entry into 3D downloads ≈ 9 MB of relief textures plus three.js (≈ 0.67 MB); the flat map never does.
 - Moon parameters are **AI-inferred** (not canon); the moons are drawn *not to scale*. Moon phases, orbit orientation and the spin direction of the planet are illustrative.
 - The axial tilt is unfixed (*Terbuka*) and no star type is set, so the 3D view has no terminator, seasons or night side.
-- The dual-disk view supports a subset of layers (graticule, meridians, band, curve, arcs, markers, anomalies, the Castra zone); the others are listed as unavailable there.
+- On the dual-disk view the drawn geometry is projected from the same latitude–longitude data as the flat map, so shapes near a rim are distorted as the projection dictates (areas stay true). Labels that would collide are thinned out (continents and water first); zoom in to see the rest.
 - Interface and lore text are in Bahasa Indonesia; there is no English interface yet.
 - Pipeline scripts other than `terrain.py`, `render.py` and `make_relief.py` still use absolute paths (see above).
 - Coordinates marked *AI inference* are provisional by design.
