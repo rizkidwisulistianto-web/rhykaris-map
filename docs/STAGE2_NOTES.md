@@ -1,6 +1,6 @@
 # Stage 2 notes — 3D globe, relief, rotation, moons, compass
 
-Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) **v1.6.3** (moon names, chip strip removed from the globe, §13) and **v1.6.4** (the *Empat busur* layer works on the dual-disk working map, §14). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
+Viewer **v1.5** (stage 2a), **v1.6** (stage 2b + the optional dual-disk view), **v1.6.1** (measure tool in every view, §11) **v1.6.2** (contrast of pressed buttons, §12) **v1.6.3** (moon names, chip strip removed from the globe, §13) **v1.6.4** (the *Empat busur* layer works on the dual-disk working map, §14) and **v1.6.5** (every flat-map layer on the dual-disk working map, §15). Built on branch `feat/stage-2-globe` and merged to `main` in pull request #1 on 1 Oct 2026.
 
 This file records what was built, **why each judgment call went the way it did**, and what is deliberately *not* here. Epistemic labels follow the project's four levels: **Kanon** (locked), **Turunan** (derived from canon), **Inferensi AI** (proposed, provisional), **Terbuka** (deliberately unlocked).
 
@@ -21,16 +21,16 @@ This file records what was built, **why each judgment call went the way it did**
 
 ### Layer parity
 
-All 25 layers of the v1.4 flat map have a globe adapter. Four layers exist only in 3D, two only on the disk.
+All 25 layers of the v1.4 flat map have a globe adapter, and (since v1.6.5, §15) a working-map adapter. Four layers exist only in 3D, two only on the disk.
 
 | Layer (key) | Flat | Globe | Disk |
 |---|:-:|:-:|:-:|
 | Graticule 15° (`grat`) · Three meridians (`mer`) | ✓ | ✓ | ✓ |
 | The Scar: 13° band (`band`) · small-circle curve (`curve`) · four arcs (`arcs`) | ✓ | ✓ | ✓ |
 | Mass-anomaly pockets (`anom`) · Castra Birath zone (`zone`) · location markers (`markers`) | ✓ | ✓ | ✓ |
-| Elevation contours (`cland`) · bathymetry contours (`csea`) · place and water labels (`labels`) · physical region outlines (`regions`) | ✓ | ✓ | — |
-| Seven territory groups (`t_hes`, `t_foe`, `t_int`, `t_ana`, `t_elv`, `t_lain`, `mandala`) · fronts (`fronts`) | ✓ | ✓ | — |
-| Four route kinds (`r_historic`, `r_land`, `r_story`, `r_sea`) · ocean banks (`banks`) | ✓ | ✓ | — |
+| Elevation contours (`cland`) · bathymetry contours (`csea`) · place and water labels (`labels`) · physical region outlines (`regions`) | ✓ | ✓ | ✓ |
+| Seven territory groups (`t_hes`, `t_foe`, `t_int`, `t_ana`, `t_elv`, `t_lain`, `mandala`) · fronts (`fronts`) | ✓ | ✓ | ✓ |
+| Four route kinds (`r_historic`, `r_land`, `r_story`, `r_sea`) · ocean banks (`banks`) | ✓ | ✓ | ✓ |
 | Two moons · orbit lines · rotation axis · ecliptic plane (`g_moons`, `g_orbits`, `g_axis`, `g_ecl`) | — | ✓ | — |
 | Scar Proximity rings · Scar azimuth annotations (`d_rings`, `d_azi`) | — | — | ✓ |
 
@@ -154,7 +154,7 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 - Needs WebGL and a web origin; `file://` works for 2D only.
 - Moon parameters: Inferensi AI. The e/i oscillation periods were never measured; the orbit orientation, node, periapsis and phase are illustrative.
 - The globe has no terminator, seasons or night side (axial tilt, Terbuka #2); the Great Wave is never predicted or scheduled (Tension #6).
-- Dual-disk supports a subset of layers by design; richer disk layers are a possible follow-up, not a debt of this stage.
+- ~~Dual-disk supports a subset of layers by design~~ — done in v1.6.5 (§15): every flat-map layer is on the working map.
 - The cdnjs path/hash of three.js could not be verified from the build sandbox; the SRI check makes a wrong guess harmless.
 - ~~The pre-existing 2D pressed-button style has 4.01:1 contrast in the light theme.~~ Fixed in v1.6.2 (§12).
 - Tested under SwiftShader (software GL), not on a physical GPU or phone; frame rate on real devices is unmeasured. Two moons plus a 4096 × 2048 height texture and slope map are modest, but a low-end phone may prefer relief off.
@@ -208,3 +208,21 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 - **Status.** Unchanged: the arcs remain *turunan* proposals, and nothing about them is canon.
 
 **Evidence.** `tests/disk.mjs` gained a block of 65 checks (both orientations, both disks): each of the four ticks brightens its pixels when the layer goes on and the four non-tick azimuths do not; hover gives the right name for all four arcs (including both halves of Ima); click opens the card; away from the band, and with the layer off, there is no tooltip and no card. Run against the v1.6.3 build, the tick and hover checks fail (pixels do not change, tooltip stays hidden); they pass now. `disk.mjs`: 62 → 127 checks.
+
+## 15. Follow-up v1.6.5 — every flat-map layer on the dual-disk working map
+
+**Finding.** In v1.6 the working map was built deliberately minimal (Scar, Proximity rings, graticule, markers), and the Layer tab showed everything else — contours, physical regions, banks, the seven territory groups and the Mandala, four route kinds, fronts, place and water labels — as disabled with *tak ada di peta kerja*. For a map made for measuring and layout work that is the wrong default: the political snapshot and the routes are exactly what one wants to measure on an equal-area map. (§14 fixed a different, smaller defect: *Empat busur* was enabled but drew nothing.)
+
+**What was built (`app/disk.js` only; no data, canon file or flat/globe code changed).**
+- **One geometry, three views.** The layers read the same `data.json` and the same style tables (`REG_STYLE`, `CST`, `RST`, `MOP`, `tgroupOf`) that the flat map and the globe use, so a colour, dash or fill pattern changed in one place changes everywhere.
+- **Projection of vectors.** Edges are straight in latitude–longitude (as on the flat map), so every ring and line is densified to ≤ 1° and then projected through the Lambert equations. The projected points are cached per orientation and per disk. Each disk is drawn inside a clip circle (rim + the 4° margin); a ring that lies entirely outside a disk's reach is skipped for that disk, and one that crosses the rim continues, clipped, on the other disk — so a border is visible on both sides of the Scar.
+- **Cost.** Elevation and bathymetry contours are stroked as **one path per level** instead of one stroke per contour (198 → 6 strokes): in the headless software renderer used for the tests a frame with contours dropped from ≈ 520 ms to ≈ 100 ms. Vertices closer than ≈ 0,8 px are skipped when tracing and rings whose box is wholly off screen are not drawn. Real GPU-backed canvases are far faster than the sandbox, but the relative saving holds.
+- **Order** follows the z order of the flat map's panes: contours, regions, banks, Mandala, territories, routes, fronts — all under the Scar layers.
+- **Hover and click** are decided on the original latitude–longitude data (not on pixels), in the same order as the globe: markers, labels, routes and fronts, Castra zone, Scar arcs, territories (last drawn wins), Mandala, banks, regions. The result opens the same card the flat map opens (place, faction, Mandala ring, route, bank). A hovered territory is highlighted. Measure mode still snaps only to markers.
+- **Labels** are the same DOM elements as the flat map. They are thinned by priority (continents, then water, then regions, then small labels) so that two never overlap; continent and water names win over the canvas annotations (azimuth ticks, disk titles), while smaller labels and marker names yield to them.
+- **Layer panel.** All flat-map layers are enabled on the working map; only the four 3D-only layers (moons, orbits, axis, ecliptic) have no disk counterpart, and their group stays hidden there. The old "sengaja minimal" message is gone.
+- **Status unchanged.** Territories, routes and fronts remain the AS 1647 snapshot with the epistemic chips they already carry on their cards; nothing here is new canon.
+
+**Evidence.** `tests/disk.mjs` 127 → 185 checks. A new block (both orientations) verifies that each of the 16 vector layers repaints the canvas; that mid-line vertices of every route and front sit on the drawn line (the placement check that would catch a wrong projection); that hovering ≥ 8 territories returns the topmost faction and that a switched-off group gives no tooltip; tooltips and cards for routes, fronts, the Mandala, a bank, a physical region and a label; that no two visible labels overlap; that switching every layer off returns the canvas to the plain base, pixel for pixel; and that the console stays clean. The old panel assertions ("every other layer is shown as unavailable with a reason") were replaced by "no layer is disabled; only the four 3D-only layers lack an adapter". The block found one defect in this very change (a render error when contours were on) before merge.
+
+**Known limits.** Distortion near the Aëris rim (radial scale 0,59 at 107,5°) bends shapes there, by design of the projection. Rings are drawn from the same unwrapped coordinates the flat map uses and clipped per disk; with every layer on, no fill inverts around the poles or around the disk centres (checked by eye on both disks, at the fit scale and zoomed on Libbāl), but this is a visual check, not an automated one. Doc screenshots (`docs/images/09-dual-disk.jpg`) were not regenerated; `tests/docshots.mjs` rebuilds them.
