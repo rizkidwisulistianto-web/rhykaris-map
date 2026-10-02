@@ -195,6 +195,7 @@ body.panel-closed #readout{left:var(--gut)}
 .leaflet-marker-icon.dim{opacity:.25}
 .scar-core{filter:drop-shadow(0 0 3px rgba(255,110,50,.9)) drop-shadow(0 0 8px rgba(255,90,30,.55))}
 .arrowhead{width:0;height:0}
+.ah{width:14px;height:14px;transform:scale(var(--ak,.85));transform-origin:50% 50%}
 .qzone{font:700 14px/1 var(--f-display);color:#ffd7b8;text-shadow:0 0 4px #3a1004,0 0 8px #3a1004;transform:translate(-50%,-50%);pointer-events:none}
 
 /* ---------- popup ---------- */
@@ -868,16 +869,17 @@ DK.init = function (ctx) {
     }
     g.globalAlpha = 1; g.setLineDash([]);
   }
-  function arrowAt(r, which, c, col) {   // segitiga panah di ujung garis, searah ruas terakhir pada lembar (ikut terdistorsi dan terputar bersama proyeksi)
+  function arrowAt(r, which, c, col, ak) {   // segitiga panah di ujung garis, searah ruas terakhir pada lembar (ikut terdistorsi dan terputar bersama proyeksi)
     if (r.cut[which] || r.n < 3) return;
     var xy = ringXY(r, which), S = st.scale, n = r.n, k = Math.min(3, n - 1), x1 = c.x + xy[2 * (n - 1)] * S, y1 = c.y + xy[2 * (n - 1) + 1] * S, x0 = c.x + xy[2 * (n - 1 - k)] * S, y0 = c.y + xy[2 * (n - 1 - k) + 1] * S;
-    g.save(); g.translate(x1, y1); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.beginPath(); g.moveTo(-5, -5); g.lineTo(5, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.closePath();
+    g.save(); g.translate(x1, y1); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.scale(ak, ak); g.beginPath(); g.moveTo(-5, -5); g.lineTo(5, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.closePath();
     g.fillStyle = col; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 0.8; g.stroke(); g.fill(); g.restore();
   }
   var RKEY = { historic: 'r_historic', land: 'r_land', story: 'r_story', sea: 'r_sea' }, GEO_KEYS = ['cland', 'csea', 'regions', 'banks', 'mandala', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
   function paintGeo() {
     if (!GEO_KEYS.some(on)) return;
-    var Gm = geo();
+    var Gm = geo(), zq = 2 + 1.6 * Math.log(st.scale / fitScale()) / Math.LN2, LN = C.LINE;   // zq: zoom setara peta datar → tebal garis ikut mengecil saat zoom masuk
+    function lw(b) { return C.lineW(b, zq); }
     ['R', 'A'].forEach(function (which) {
       var d = which === 'R' ? L.R : L.A, c = toScreen(d.cx, d.cy), mx = (which === 'R' ? L.rhoMaxR : L.rhoMaxA) * st.scale;
       g.save(); circle(c.x, c.y, mx); g.clip();
@@ -892,15 +894,15 @@ DK.init = function (ctx) {
       if (on('mandala')) Gm.mand.forEach(function (m) { paintRings(m.rings, which, c, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
       Gm.terr.forEach(function (q) {
         if (!on('t_' + q.grp)) return; var f = q.f;
-        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
+        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: lw(q.t.id === hotFac ? LN.terrHot : LN.terr), dash: f.dashed ? '5 4' : null });
       });
       Gm.routes.forEach(function (q) {
         if (!on(RKEY[q.r.kind])) return; var rs = ST.RST[q.r.kind];
-        q.parts.forEach(function (pt) { paintRings([pt], which, c, { close: false, stroke: rs.color, sa: 0.95, w: rs.weight, dash: rs.dash, under: { stroke: '#000', sa: 0.28, w: rs.weight + 2.5 } }); arrowAt(pt, which, c, rs.color); });
+        q.parts.forEach(function (pt) { paintRings([pt], which, c, { close: false, stroke: rs.color, sa: 0.95, w: lw(rs.weight), dash: rs.dash, under: { stroke: '#000', sa: 0.28, w: lw(rs.weight + LN.under) } }); arrowAt(pt, which, c, rs.color, C.arrowK(zq)); });
       });
       if (on('fronts')) Gm.fronts.forEach(function (q) {
-        paintRings([q.line], which, c, { close: false, stroke: q.col, sa: 0.95, w: q.fl ? 3 : 2.4, dash: q.fl ? '1 5' : '6 4' });
-        paintRings([q.seg], which, c, { close: false, stroke: q.col, sa: q.fl ? 0.9 : 0.95, w: q.fl ? 2 : 2.4, dash: q.fl ? null : '6 4' }); arrowAt(q.seg, which, c, q.col);
+        paintRings([q.line], which, c, { close: false, stroke: q.col, sa: 0.95, w: lw(q.fl ? LN.florian : LN.front), dash: q.fl ? '1 5' : '6 4' });
+        paintRings([q.seg], which, c, { close: false, stroke: q.col, sa: q.fl ? 0.9 : 0.95, w: lw(q.fl ? LN.shaftFlorian : LN.shaft), dash: q.fl ? null : '6 4' }); arrowAt(q.seg, which, c, q.col, C.arrowK(zq));
       });
       g.restore();
     });
@@ -1593,7 +1595,13 @@ G.createLayers = function (S, ctx, labelsEl) {
   S.mat.uniforms.uOverlay.value = tex; S.mat.uniforms.uOverlayOn.value = 1; S.overlayTex = tex;
   var X = function (lon) { return (lon + 180) / 360 * OW; }, Y = function (lat) { return (90 - lat) / 180 * OH; };
   var A = {};        // key → adapter {z, paint, dom, hit, reason}
-  var pend = false, needs = true, shown = false;
+  var pend = false, needs = true, shown = false, lastPR = 0;
+  // Tebal garis data konstan di LAYAR (bukan di tekstur): tekstur membesar saat kamera mendekat, jadi lebar tekstur dikompensasi, lalu mengecil mengikuti zoom (C.lineK).
+  // Tekstur digambar ulang bila pembesarannya bergeser > ~15 % sejak gambar terakhir (lihat afterRender di bawah).
+  var LINE_KEYS = ['t_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
+  function texPerScreen() { return OW / (2 * Math.PI * S.pxPerRad()) / LW; }
+  function gw(b) { return Math.max(1 / LW, C.lineW(b, S.zoomOf(S.view.dist)) * texPerScreen()); }   // ≥ 1 piksel tekstur: lebih tipis dari itu jadi bayangan pudar
+  function ga() { return Math.max(0.3 / LW, C.arrowK(S.zoomOf(S.view.dist)) * texPerScreen()); }   // kepala panah ≥ ~3 piksel tekstur, kalau tidak tak terlihat saat zoom dalam
 
   // ------------------------------------------------------------------ primitif gambar
   function path(pts, dx, close) { g.beginPath(); for (var i = 0; i < pts.length; i++) { var x = X(pts[i][1] + dx), y = Y(pts[i][0]); if (i) g.lineTo(x, y); else g.moveTo(x, y); } if (close) g.closePath(); }
@@ -1632,7 +1640,7 @@ G.createLayers = function (S, ctx, labelsEl) {
 
   // ------------------------------------------------------------------ penjadwalan repaint
   function repaint() {
-    pend = false; needs = false;
+    pend = false; needs = false; lastPR = S.pxPerRad();
     g.clearRect(0, 0, OW, OH);
     order.forEach(function (k) { if (LAY[k] && LAY[k].on) { g.save(); A[k].paint(); g.restore(); } });
     if (meas && meas.pts) { g.save(); paintMeas(); g.restore(); }   // hasil ukur selalu paling atas
@@ -1690,7 +1698,10 @@ G.createLayers = function (S, ctx, labelsEl) {
     C.declutterNames(items, obst, DEC);
   }
   function queueDeclutter() { if (declT) return; var wait = Math.max(0, 140 - (performance.now() - lastDecl)); declT = setTimeout(declutter, wait); }
-  S.afterRender(function () { placePins(); queueDeclutter(); });
+  S.afterRender(function () {
+    placePins(); queueDeclutter();
+    if (shown && lastPR && !pend) { var r = S.pxPerRad() / lastPR; if ((r > 1.18 || r < 0.85) && LINE_KEYS.some(function (k) { return LAY[k] && LAY[k].on; })) schedule(); }
+  });
 
   // ================================================================== adapter: graticule & meridian
   add('grat', { z: 320, paint: function () {
@@ -1775,7 +1786,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       DATA.territories.forEach(function (t) {
         if (t.id === 'anusarri' || ST.tgroupOf(t) !== grp) return;
         var f = FAC[t.id] || { name: t.name, color: '#cccccc' };
-        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: 1.4, dash: f.dashed ? '5 4' : null });
+        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: gw(C.LINE.terr), dash: f.dashed ? '5 4' : null });
       });
     } });
   });
@@ -1811,8 +1822,8 @@ G.createLayers = function (S, ctx, labelsEl) {
       DATA.routes.forEach(function (r) {
         if (r.kind !== kind) return;
         [r.pts].concat(r.pts2 ? [r.pts2] : []).forEach(function (pts) {
-          shape([pts], { close: false, stroke: st.color, sa: 0.95, w: st.weight, dash: st.dash, under: { stroke: '#000', sa: 0.28, w: st.weight + 2.5 } });
-          var n = pts.length; arrow(pts[n - 1][0], pts[n - 1][1], bearScr(pts[n - 2], pts[n - 1]), st.color, 1);
+          shape([pts], { close: false, stroke: st.color, sa: 0.95, w: gw(st.weight), dash: st.dash, under: { stroke: '#000', sa: 0.28, w: gw(st.weight + C.LINE.under) } });
+          var n = pts.length; arrow(pts[n - 1][0], pts[n - 1][1], bearScr(pts[n - 2], pts[n - 1]), st.color, ga());
         });
       });
     } });
@@ -1820,10 +1831,10 @@ G.createLayers = function (S, ctx, labelsEl) {
   add('fronts', { z: 451, paint: function () {
     DATA.fronts.forEach(function (f) {
       var fl = f.id === 'front_florian', col = fl ? '#2aa38a' : '#ff6a2b';
-      shape([f.pts], { close: false, stroke: col, sa: 0.95, w: fl ? 3 : 2.4, dash: fl ? '1 5' : '6 4' });
+      shape([f.pts], { close: false, stroke: col, sa: 0.95, w: gw(fl ? C.LINE.florian : C.LINE.front), dash: fl ? '1 5' : '6 4' });
       var last = f.pts[f.pts.length - 1], tgt = f.arrow_to;
-      if (fl) { var mid = f.pts[Math.floor(f.pts.length / 2)]; shape([[mid, tgt]], { close: false, stroke: col, sa: 0.9, w: 2 }); arrow(tgt[0], tgt[1], bearScr(mid, tgt), col, 1); }
-      else { shape([[last, tgt]], { close: false, stroke: col, sa: 0.95, w: 2.4, dash: '6 4' }); arrow(tgt[0], tgt[1], bearScr(last, tgt), col, 1); }
+      if (fl) { var mid = f.pts[Math.floor(f.pts.length / 2)]; shape([[mid, tgt]], { close: false, stroke: col, sa: 0.9, w: gw(C.LINE.shaftFlorian) }); arrow(tgt[0], tgt[1], bearScr(mid, tgt), col, ga()); }
+      else { shape([[last, tgt]], { close: false, stroke: col, sa: 0.95, w: gw(C.LINE.shaft), dash: '6 4' }); arrow(tgt[0], tgt[1], bearScr(last, tgt), col, ga()); }
     });
   } });
 
@@ -2473,6 +2484,15 @@ C.configure = function (stats, th) {
   return C.cfg;
 };
 
+// ------------------------------------------------------------------ tebal garis data (batas teritori, rute, front, panah)
+/* Satu aturan untuk peta datar, globe dan cakram. Garis dibuat tipis dan MENGECIL saat zoom masuk, supaya lebarnya di lapangan
+   tetap kecil dibanding wilayah yang digambarnya (di zoom 3 satu piksel ≈ 18 km; di zoom 6,5 ≈ 1,6 km). `z` = zoom setara peta datar. */
+C.LINE = { terr: 1.1, terrHot: 2.0, under: 1.8, front: 1.7, florian: 2.0, shaft: 1.7, shaftFlorian: 1.4, arrow: 0.85 };
+C.LINE_MIN = 0.7;   // piksel layar: di bawah ini garis putus-putus nyaris tak terlihat
+C.lineK = function (z) { return Math.max(0.45, Math.min(1.15, Math.pow(0.82, z - 3))); };
+C.lineW = function (base, z) { return Math.max(C.LINE_MIN, base * C.lineK(z)); };
+C.arrowK = function (z) { return Math.max(0.6, C.lineK(z)) * C.LINE.arrow; };
+
 // ------------------------------------------------------------------ state (localStorage dengan prefiks rh-, selalu try/catch)
 C.LS = {
   get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -3082,6 +3102,16 @@ function main() {
       gRegions.addLayer(pl); }); }); });
   reg('regions', gRegions, true);
 
+  // Tebal garis data (batas teritori, rute, front): tipis dan mengecil saat zoom masuk (aturan bersama di core: C.LINE, C.lineW).
+  var LN = [], ZREF = 3;
+  function lnAdd(layer, base) { LN.push({ l: layer, b: base }); layer.setStyle({ weight: C.lineW(base, ZREF) }); return layer; }
+  function lnApply() {
+    if (!map._loaded) return; var z = map.getZoom();
+    LN.forEach(function (o) { o.l.setStyle({ weight: C.lineW(o.b, z) }); });
+    map.getContainer().style.setProperty('--ak', C.arrowK(z).toFixed(3));
+  }
+  map.on('zoomend', lnApply);
+
   var FAC = DATA.factions;
   var TGROUP = { hesperia: 'hes', cw_a: 'hes', cw_b: 'hes', cw_c: 'hes', kloaka: 'lain', foedera: 'foe', cassivalla: 'foe', liminara: 'lain', ktonia: 'lain', pylora: 'lain', anabasim: 'ana',
                  emporys: 'lain', perates: 'lain', andura: 'elv', anusarri: 'elv', vasundha: 'lain', nundina: 'int', aventalia: 'int', tarvenna: 'int' };
@@ -3095,9 +3125,9 @@ function main() {
     var fillC = f.color;
     if (f.hatch) { hatchIds[t.id] = f.color; fillC = 'url(#h-' + t.id + ')'; }
     t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
-      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 1.4, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 });
+      var pl = lnAdd(L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: C.LINE.terr, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 }), C.LINE.terr);
       pl.on('click', function (e) { openFaction(t.id, e.latlng); });
-      pl.on('mouseover', function () { this.setStyle({ weight: 2.6 }); }); pl.on('mouseout', function () { this.setStyle({ weight: 1.4 }); });
+      pl.on('mouseover', function () { this.setStyle({ weight: C.lineW(C.LINE.terrHot, map.getZoom()) }); }); pl.on('mouseout', function () { this.setStyle({ weight: C.lineW(C.LINE.terr, map.getZoom()) }); });
       pl.bindTooltip(f.name, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
       TG[gname].addLayer(pl); }); });
   });
@@ -3126,16 +3156,16 @@ function main() {
   map.on('layeradd', injectDefs); injectDefs();
 
   // ================================================================ rute & front
-  var RST = { historic: { color: '#f6e7bd', weight: 2, dash: '8 7' }, land: { color: '#e79a6a', weight: 2.2, dash: '2 6' }, story: { color: '#ffd35c', weight: 2.6, dash: null }, sea: { color: '#7fe0ec', weight: 1.8, dash: '12 5 2 5' } };
+  var RST = { historic: { color: '#f6e7bd', weight: 1.5, dash: '8 7' }, land: { color: '#e79a6a', weight: 1.7, dash: '2 6' }, story: { color: '#ffd35c', weight: 1.9, dash: null }, sea: { color: '#7fe0ec', weight: 1.3, dash: '12 5 2 5' } };
   var gRoutes = {}; ['historic', 'land', 'story', 'sea'].forEach(function (k) { gRoutes[k] = L.layerGroup(); });
-  function arrowIcon(deg, col) { return L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<svg width="14" height="14" viewBox="0 0 14 14" style="transform:rotate(' + deg + 'deg)"><path d="M2 2l10 5-10 5 3-5z" fill="' + col + '" stroke="rgba(0,0,0,.55)" stroke-width=".8"/></svg>' }); }
+  function arrowIcon(deg, col) { return L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<div class="ah"><svg width="14" height="14" viewBox="0 0 14 14" style="transform:rotate(' + deg + 'deg)"><path d="M2 2l10 5-10 5 3-5z" fill="' + col + '" stroke="rgba(0,0,0,.55)" stroke-width=".8"/></svg></div>' }); }
   function bearingScreen(a, b) { return Math.atan2(-(b[0] - a[0]), b[1] - a[1]) * R2D; }
   DATA.routes.forEach(function (r) {
     var st = RST[r.kind]; var lines = [r.pts].concat(r.pts2 ? [r.pts2] : []);
     lines.forEach(function (pts) { OFFS.forEach(function (dx) {
-      var pl = L.polyline(shift(pts, dx), { renderer: svgRoute, color: st.color, weight: st.weight, opacity: 0.95, dashArray: st.dash, lineCap: 'round' });
+      var pl = lnAdd(L.polyline(shift(pts, dx), { renderer: svgRoute, color: st.color, weight: st.weight, opacity: 0.95, dashArray: st.dash, lineCap: 'round' }), st.weight);
       pl.bindTooltip(r.name, { sticky: true, className: 'rt' }); pl.on('click', function (e) { openRoute(r, e.latlng); });
-      gRoutes[r.kind].addLayer(L.polyline(shift(pts, dx), { renderer: svgRoute, color: '#000', weight: st.weight + 2.5, opacity: 0.28, interactive: false }));
+      gRoutes[r.kind].addLayer(lnAdd(L.polyline(shift(pts, dx), { renderer: svgRoute, color: '#000', weight: st.weight + C.LINE.under, opacity: 0.28, interactive: false }), st.weight + C.LINE.under));
       gRoutes[r.kind].addLayer(pl);
       var n = pts.length, a = pts[n - 2], b = pts[n - 1];
       gRoutes[r.kind].addLayer(L.marker([b[0], b[1] + dx], { pane: 'route', interactive: false, icon: arrowIcon(bearingScreen(a, b), st.color) }));
@@ -3146,16 +3176,18 @@ function main() {
   DATA.fronts.forEach(function (f) {
     var col = f.id === 'front_florian' ? '#2aa38a' : '#ff6a2b';
     OFFS.forEach(function (dx) {
-      var pl = L.polyline(shift(f.pts, dx), { renderer: svgRoute, color: col, weight: f.id === 'front_florian' ? 3 : 2.4, opacity: 0.95, dashArray: f.id === 'front_florian' ? '1 5' : '6 4', lineCap: 'round' });
+      var fw = f.id === 'front_florian' ? C.LINE.florian : C.LINE.front;
+      var pl = lnAdd(L.polyline(shift(f.pts, dx), { renderer: svgRoute, color: col, weight: fw, opacity: 0.95, dashArray: f.id === 'front_florian' ? '1 5' : '6 4', lineCap: 'round' }), fw);
       pl.bindTooltip(f.name, { sticky: true, className: 'rt' }); pl.on('click', function (e) { openRoute(f, e.latlng); }); gFront.addLayer(pl);
       var last = f.pts[f.pts.length - 1], tgt = f.arrow_to;
-      if (f.id === 'front_florian') { var mid = f.pts[Math.floor(f.pts.length / 2)]; gFront.addLayer(L.polyline([[mid[0], mid[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: 2, opacity: 0.9, interactive: false }));
+      if (f.id === 'front_florian') { var mid = f.pts[Math.floor(f.pts.length / 2)]; gFront.addLayer(lnAdd(L.polyline([[mid[0], mid[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: C.LINE.shaftFlorian, opacity: 0.9, interactive: false }), C.LINE.shaftFlorian));
         gFront.addLayer(L.marker([tgt[0], tgt[1] + dx], { pane: 'route', interactive: false, icon: arrowIcon(bearingScreen(mid, tgt), col) })); }
-      else { gFront.addLayer(L.polyline([[last[0], last[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: 2.4, opacity: 0.95, dashArray: '6 4', interactive: false }));
+      else { gFront.addLayer(lnAdd(L.polyline([[last[0], last[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: C.LINE.shaft, opacity: 0.95, dashArray: '6 4', interactive: false }), C.LINE.shaft));
         gFront.addLayer(L.marker([tgt[0], tgt[1] + dx], { pane: 'route', interactive: false, icon: arrowIcon(bearingScreen(last, tgt), col) })); }
     });
   });
   reg('fronts', gFront, true);
+  lnApply();
   var BANK_HTML = '<div class="pp"><h2>Bank samudra</h2><p class="aka">plato bawah laut dangkal</p><div class="pos"><div class="ph">Posisi <span class="epi turunan">Turunan</span></div>Bagian batimetri lapisan fisik Master Map v4 (kanon 29 Sep 2026): bentuk dan posisi keenam plato ikut lapisan fisik. Lingkaran putus-putus hanya penanda tepinya. Yang masih <b>Inferensi AI</b>: sebutan "bank samudra Tehari" — kaitannya dengan komunitas Tehari belum dikunci.</div><p class="nt">Relevan untuk slot ledger "Wilayah komunitas Tehari (Pesisir / Sungai Pedalaman / Laut Dalam)" yang masih Open.</p></div>';
   var gBanks = L.layerGroup();
   DATA.banks.forEach(function (b, i) { OFFS.forEach(function (dx) {

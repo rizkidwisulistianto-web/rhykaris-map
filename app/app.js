@@ -293,6 +293,16 @@ function main() {
       gRegions.addLayer(pl); }); }); });
   reg('regions', gRegions, true);
 
+  // Tebal garis data (batas teritori, rute, front): tipis dan mengecil saat zoom masuk (aturan bersama di core: C.LINE, C.lineW).
+  var LN = [], ZREF = 3;
+  function lnAdd(layer, base) { LN.push({ l: layer, b: base }); layer.setStyle({ weight: C.lineW(base, ZREF) }); return layer; }
+  function lnApply() {
+    if (!map._loaded) return; var z = map.getZoom();
+    LN.forEach(function (o) { o.l.setStyle({ weight: C.lineW(o.b, z) }); });
+    map.getContainer().style.setProperty('--ak', C.arrowK(z).toFixed(3));
+  }
+  map.on('zoomend', lnApply);
+
   var FAC = DATA.factions;
   var TGROUP = { hesperia: 'hes', cw_a: 'hes', cw_b: 'hes', cw_c: 'hes', kloaka: 'lain', foedera: 'foe', cassivalla: 'foe', liminara: 'lain', ktonia: 'lain', pylora: 'lain', anabasim: 'ana',
                  emporys: 'lain', perates: 'lain', andura: 'elv', anusarri: 'elv', vasundha: 'lain', nundina: 'int', aventalia: 'int', tarvenna: 'int' };
@@ -306,9 +316,9 @@ function main() {
     var fillC = f.color;
     if (f.hatch) { hatchIds[t.id] = f.color; fillC = 'url(#h-' + t.id + ')'; }
     t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
-      var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: 1.4, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 });
+      var pl = lnAdd(L.polygon(shift(ring, dx), { renderer: svgTerr, color: f.color, weight: C.LINE.terr, opacity: 0.8, dashArray: f.dashed ? '5 4' : null, fillColor: fillC, fillOpacity: f.hatch ? 1 : 0.26, smoothFactor: 1 }), C.LINE.terr);
       pl.on('click', function (e) { openFaction(t.id, e.latlng); });
-      pl.on('mouseover', function () { this.setStyle({ weight: 2.6 }); }); pl.on('mouseout', function () { this.setStyle({ weight: 1.4 }); });
+      pl.on('mouseover', function () { this.setStyle({ weight: C.lineW(C.LINE.terrHot, map.getZoom()) }); }); pl.on('mouseout', function () { this.setStyle({ weight: C.lineW(C.LINE.terr, map.getZoom()) }); });
       pl.bindTooltip(f.name, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
       TG[gname].addLayer(pl); }); });
   });
@@ -337,16 +347,16 @@ function main() {
   map.on('layeradd', injectDefs); injectDefs();
 
   // ================================================================ rute & front
-  var RST = { historic: { color: '#f6e7bd', weight: 2, dash: '8 7' }, land: { color: '#e79a6a', weight: 2.2, dash: '2 6' }, story: { color: '#ffd35c', weight: 2.6, dash: null }, sea: { color: '#7fe0ec', weight: 1.8, dash: '12 5 2 5' } };
+  var RST = { historic: { color: '#f6e7bd', weight: 1.5, dash: '8 7' }, land: { color: '#e79a6a', weight: 1.7, dash: '2 6' }, story: { color: '#ffd35c', weight: 1.9, dash: null }, sea: { color: '#7fe0ec', weight: 1.3, dash: '12 5 2 5' } };
   var gRoutes = {}; ['historic', 'land', 'story', 'sea'].forEach(function (k) { gRoutes[k] = L.layerGroup(); });
-  function arrowIcon(deg, col) { return L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<svg width="14" height="14" viewBox="0 0 14 14" style="transform:rotate(' + deg + 'deg)"><path d="M2 2l10 5-10 5 3-5z" fill="' + col + '" stroke="rgba(0,0,0,.55)" stroke-width=".8"/></svg>' }); }
+  function arrowIcon(deg, col) { return L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<div class="ah"><svg width="14" height="14" viewBox="0 0 14 14" style="transform:rotate(' + deg + 'deg)"><path d="M2 2l10 5-10 5 3-5z" fill="' + col + '" stroke="rgba(0,0,0,.55)" stroke-width=".8"/></svg></div>' }); }
   function bearingScreen(a, b) { return Math.atan2(-(b[0] - a[0]), b[1] - a[1]) * R2D; }
   DATA.routes.forEach(function (r) {
     var st = RST[r.kind]; var lines = [r.pts].concat(r.pts2 ? [r.pts2] : []);
     lines.forEach(function (pts) { OFFS.forEach(function (dx) {
-      var pl = L.polyline(shift(pts, dx), { renderer: svgRoute, color: st.color, weight: st.weight, opacity: 0.95, dashArray: st.dash, lineCap: 'round' });
+      var pl = lnAdd(L.polyline(shift(pts, dx), { renderer: svgRoute, color: st.color, weight: st.weight, opacity: 0.95, dashArray: st.dash, lineCap: 'round' }), st.weight);
       pl.bindTooltip(r.name, { sticky: true, className: 'rt' }); pl.on('click', function (e) { openRoute(r, e.latlng); });
-      gRoutes[r.kind].addLayer(L.polyline(shift(pts, dx), { renderer: svgRoute, color: '#000', weight: st.weight + 2.5, opacity: 0.28, interactive: false }));
+      gRoutes[r.kind].addLayer(lnAdd(L.polyline(shift(pts, dx), { renderer: svgRoute, color: '#000', weight: st.weight + C.LINE.under, opacity: 0.28, interactive: false }), st.weight + C.LINE.under));
       gRoutes[r.kind].addLayer(pl);
       var n = pts.length, a = pts[n - 2], b = pts[n - 1];
       gRoutes[r.kind].addLayer(L.marker([b[0], b[1] + dx], { pane: 'route', interactive: false, icon: arrowIcon(bearingScreen(a, b), st.color) }));
@@ -357,16 +367,18 @@ function main() {
   DATA.fronts.forEach(function (f) {
     var col = f.id === 'front_florian' ? '#2aa38a' : '#ff6a2b';
     OFFS.forEach(function (dx) {
-      var pl = L.polyline(shift(f.pts, dx), { renderer: svgRoute, color: col, weight: f.id === 'front_florian' ? 3 : 2.4, opacity: 0.95, dashArray: f.id === 'front_florian' ? '1 5' : '6 4', lineCap: 'round' });
+      var fw = f.id === 'front_florian' ? C.LINE.florian : C.LINE.front;
+      var pl = lnAdd(L.polyline(shift(f.pts, dx), { renderer: svgRoute, color: col, weight: fw, opacity: 0.95, dashArray: f.id === 'front_florian' ? '1 5' : '6 4', lineCap: 'round' }), fw);
       pl.bindTooltip(f.name, { sticky: true, className: 'rt' }); pl.on('click', function (e) { openRoute(f, e.latlng); }); gFront.addLayer(pl);
       var last = f.pts[f.pts.length - 1], tgt = f.arrow_to;
-      if (f.id === 'front_florian') { var mid = f.pts[Math.floor(f.pts.length / 2)]; gFront.addLayer(L.polyline([[mid[0], mid[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: 2, opacity: 0.9, interactive: false }));
+      if (f.id === 'front_florian') { var mid = f.pts[Math.floor(f.pts.length / 2)]; gFront.addLayer(lnAdd(L.polyline([[mid[0], mid[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: C.LINE.shaftFlorian, opacity: 0.9, interactive: false }), C.LINE.shaftFlorian));
         gFront.addLayer(L.marker([tgt[0], tgt[1] + dx], { pane: 'route', interactive: false, icon: arrowIcon(bearingScreen(mid, tgt), col) })); }
-      else { gFront.addLayer(L.polyline([[last[0], last[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: 2.4, opacity: 0.95, dashArray: '6 4', interactive: false }));
+      else { gFront.addLayer(lnAdd(L.polyline([[last[0], last[1] + dx], [tgt[0], tgt[1] + dx]], { renderer: svgRoute, color: col, weight: C.LINE.shaft, opacity: 0.95, dashArray: '6 4', interactive: false }), C.LINE.shaft));
         gFront.addLayer(L.marker([tgt[0], tgt[1] + dx], { pane: 'route', interactive: false, icon: arrowIcon(bearingScreen(last, tgt), col) })); }
     });
   });
   reg('fronts', gFront, true);
+  lnApply();
   var BANK_HTML = '<div class="pp"><h2>Bank samudra</h2><p class="aka">plato bawah laut dangkal</p><div class="pos"><div class="ph">Posisi <span class="epi turunan">Turunan</span></div>Bagian batimetri lapisan fisik Master Map v4 (kanon 29 Sep 2026): bentuk dan posisi keenam plato ikut lapisan fisik. Lingkaran putus-putus hanya penanda tepinya. Yang masih <b>Inferensi AI</b>: sebutan "bank samudra Tehari" — kaitannya dengan komunitas Tehari belum dikunci.</div><p class="nt">Relevan untuk slot ledger "Wilayah komunitas Tehari (Pesisir / Sungai Pedalaman / Laut Dalam)" yang masih Open.</p></div>';
   var gBanks = L.layerGroup();
   DATA.banks.forEach(function (b, i) { OFFS.forEach(function (dx) {

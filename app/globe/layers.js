@@ -16,7 +16,13 @@ G.createLayers = function (S, ctx, labelsEl) {
   S.mat.uniforms.uOverlay.value = tex; S.mat.uniforms.uOverlayOn.value = 1; S.overlayTex = tex;
   var X = function (lon) { return (lon + 180) / 360 * OW; }, Y = function (lat) { return (90 - lat) / 180 * OH; };
   var A = {};        // key → adapter {z, paint, dom, hit, reason}
-  var pend = false, needs = true, shown = false;
+  var pend = false, needs = true, shown = false, lastPR = 0;
+  // Tebal garis data konstan di LAYAR (bukan di tekstur): tekstur membesar saat kamera mendekat, jadi lebar tekstur dikompensasi, lalu mengecil mengikuti zoom (C.lineK).
+  // Tekstur digambar ulang bila pembesarannya bergeser > ~15 % sejak gambar terakhir (lihat afterRender di bawah).
+  var LINE_KEYS = ['t_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
+  function texPerScreen() { return OW / (2 * Math.PI * S.pxPerRad()) / LW; }
+  function gw(b) { return Math.max(1 / LW, C.lineW(b, S.zoomOf(S.view.dist)) * texPerScreen()); }   // ≥ 1 piksel tekstur: lebih tipis dari itu jadi bayangan pudar
+  function ga() { return Math.max(0.3 / LW, C.arrowK(S.zoomOf(S.view.dist)) * texPerScreen()); }   // kepala panah ≥ ~3 piksel tekstur, kalau tidak tak terlihat saat zoom dalam
 
   // ------------------------------------------------------------------ primitif gambar
   function path(pts, dx, close) { g.beginPath(); for (var i = 0; i < pts.length; i++) { var x = X(pts[i][1] + dx), y = Y(pts[i][0]); if (i) g.lineTo(x, y); else g.moveTo(x, y); } if (close) g.closePath(); }
@@ -55,7 +61,7 @@ G.createLayers = function (S, ctx, labelsEl) {
 
   // ------------------------------------------------------------------ penjadwalan repaint
   function repaint() {
-    pend = false; needs = false;
+    pend = false; needs = false; lastPR = S.pxPerRad();
     g.clearRect(0, 0, OW, OH);
     order.forEach(function (k) { if (LAY[k] && LAY[k].on) { g.save(); A[k].paint(); g.restore(); } });
     if (meas && meas.pts) { g.save(); paintMeas(); g.restore(); }   // hasil ukur selalu paling atas
@@ -113,7 +119,10 @@ G.createLayers = function (S, ctx, labelsEl) {
     C.declutterNames(items, obst, DEC);
   }
   function queueDeclutter() { if (declT) return; var wait = Math.max(0, 140 - (performance.now() - lastDecl)); declT = setTimeout(declutter, wait); }
-  S.afterRender(function () { placePins(); queueDeclutter(); });
+  S.afterRender(function () {
+    placePins(); queueDeclutter();
+    if (shown && lastPR && !pend) { var r = S.pxPerRad() / lastPR; if ((r > 1.18 || r < 0.85) && LINE_KEYS.some(function (k) { return LAY[k] && LAY[k].on; })) schedule(); }
+  });
 
   // ================================================================== adapter: graticule & meridian
   add('grat', { z: 320, paint: function () {
@@ -198,7 +207,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       DATA.territories.forEach(function (t) {
         if (t.id === 'anusarri' || ST.tgroupOf(t) !== grp) return;
         var f = FAC[t.id] || { name: t.name, color: '#cccccc' };
-        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: 1.4, dash: f.dashed ? '5 4' : null });
+        shape(t.rings, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: gw(C.LINE.terr), dash: f.dashed ? '5 4' : null });
       });
     } });
   });
@@ -234,8 +243,8 @@ G.createLayers = function (S, ctx, labelsEl) {
       DATA.routes.forEach(function (r) {
         if (r.kind !== kind) return;
         [r.pts].concat(r.pts2 ? [r.pts2] : []).forEach(function (pts) {
-          shape([pts], { close: false, stroke: st.color, sa: 0.95, w: st.weight, dash: st.dash, under: { stroke: '#000', sa: 0.28, w: st.weight + 2.5 } });
-          var n = pts.length; arrow(pts[n - 1][0], pts[n - 1][1], bearScr(pts[n - 2], pts[n - 1]), st.color, 1);
+          shape([pts], { close: false, stroke: st.color, sa: 0.95, w: gw(st.weight), dash: st.dash, under: { stroke: '#000', sa: 0.28, w: gw(st.weight + C.LINE.under) } });
+          var n = pts.length; arrow(pts[n - 1][0], pts[n - 1][1], bearScr(pts[n - 2], pts[n - 1]), st.color, ga());
         });
       });
     } });
@@ -243,10 +252,10 @@ G.createLayers = function (S, ctx, labelsEl) {
   add('fronts', { z: 451, paint: function () {
     DATA.fronts.forEach(function (f) {
       var fl = f.id === 'front_florian', col = fl ? '#2aa38a' : '#ff6a2b';
-      shape([f.pts], { close: false, stroke: col, sa: 0.95, w: fl ? 3 : 2.4, dash: fl ? '1 5' : '6 4' });
+      shape([f.pts], { close: false, stroke: col, sa: 0.95, w: gw(fl ? C.LINE.florian : C.LINE.front), dash: fl ? '1 5' : '6 4' });
       var last = f.pts[f.pts.length - 1], tgt = f.arrow_to;
-      if (fl) { var mid = f.pts[Math.floor(f.pts.length / 2)]; shape([[mid, tgt]], { close: false, stroke: col, sa: 0.9, w: 2 }); arrow(tgt[0], tgt[1], bearScr(mid, tgt), col, 1); }
-      else { shape([[last, tgt]], { close: false, stroke: col, sa: 0.95, w: 2.4, dash: '6 4' }); arrow(tgt[0], tgt[1], bearScr(last, tgt), col, 1); }
+      if (fl) { var mid = f.pts[Math.floor(f.pts.length / 2)]; shape([[mid, tgt]], { close: false, stroke: col, sa: 0.9, w: gw(C.LINE.shaftFlorian) }); arrow(tgt[0], tgt[1], bearScr(mid, tgt), col, ga()); }
+      else { shape([[last, tgt]], { close: false, stroke: col, sa: 0.95, w: gw(C.LINE.shaft), dash: '6 4' }); arrow(tgt[0], tgt[1], bearScr(last, tgt), col, ga()); }
     });
   } });
 

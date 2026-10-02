@@ -336,16 +336,17 @@ DK.init = function (ctx) {
     }
     g.globalAlpha = 1; g.setLineDash([]);
   }
-  function arrowAt(r, which, c, col) {   // segitiga panah di ujung garis, searah ruas terakhir pada lembar (ikut terdistorsi dan terputar bersama proyeksi)
+  function arrowAt(r, which, c, col, ak) {   // segitiga panah di ujung garis, searah ruas terakhir pada lembar (ikut terdistorsi dan terputar bersama proyeksi)
     if (r.cut[which] || r.n < 3) return;
     var xy = ringXY(r, which), S = st.scale, n = r.n, k = Math.min(3, n - 1), x1 = c.x + xy[2 * (n - 1)] * S, y1 = c.y + xy[2 * (n - 1) + 1] * S, x0 = c.x + xy[2 * (n - 1 - k)] * S, y0 = c.y + xy[2 * (n - 1 - k) + 1] * S;
-    g.save(); g.translate(x1, y1); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.beginPath(); g.moveTo(-5, -5); g.lineTo(5, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.closePath();
+    g.save(); g.translate(x1, y1); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.scale(ak, ak); g.beginPath(); g.moveTo(-5, -5); g.lineTo(5, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.closePath();
     g.fillStyle = col; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 0.8; g.stroke(); g.fill(); g.restore();
   }
   var RKEY = { historic: 'r_historic', land: 'r_land', story: 'r_story', sea: 'r_sea' }, GEO_KEYS = ['cland', 'csea', 'regions', 'banks', 'mandala', 't_hes', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
   function paintGeo() {
     if (!GEO_KEYS.some(on)) return;
-    var Gm = geo();
+    var Gm = geo(), zq = 2 + 1.6 * Math.log(st.scale / fitScale()) / Math.LN2, LN = C.LINE;   // zq: zoom setara peta datar → tebal garis ikut mengecil saat zoom masuk
+    function lw(b) { return C.lineW(b, zq); }
     ['R', 'A'].forEach(function (which) {
       var d = which === 'R' ? L.R : L.A, c = toScreen(d.cx, d.cy), mx = (which === 'R' ? L.rhoMaxR : L.rhoMaxA) * st.scale;
       g.save(); circle(c.x, c.y, mx); g.clip();
@@ -360,15 +361,15 @@ DK.init = function (ctx) {
       if (on('mandala')) Gm.mand.forEach(function (m) { paintRings(m.rings, which, c, { fill: FAC.anusarri.color, fa: ST.MOP[m.ring] }); });
       Gm.terr.forEach(function (q) {
         if (!on('t_' + q.grp)) return; var f = q.f;
-        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: q.t.id === hotFac ? 2.6 : 1.4, dash: f.dashed ? '5 4' : null });
+        paintRings(q.rings, which, c, { fill: f.hatch ? hatch(f.color) : f.color, fa: f.hatch ? 1 : 0.26, stroke: f.color, sa: 0.8, w: lw(q.t.id === hotFac ? LN.terrHot : LN.terr), dash: f.dashed ? '5 4' : null });
       });
       Gm.routes.forEach(function (q) {
         if (!on(RKEY[q.r.kind])) return; var rs = ST.RST[q.r.kind];
-        q.parts.forEach(function (pt) { paintRings([pt], which, c, { close: false, stroke: rs.color, sa: 0.95, w: rs.weight, dash: rs.dash, under: { stroke: '#000', sa: 0.28, w: rs.weight + 2.5 } }); arrowAt(pt, which, c, rs.color); });
+        q.parts.forEach(function (pt) { paintRings([pt], which, c, { close: false, stroke: rs.color, sa: 0.95, w: lw(rs.weight), dash: rs.dash, under: { stroke: '#000', sa: 0.28, w: lw(rs.weight + LN.under) } }); arrowAt(pt, which, c, rs.color, C.arrowK(zq)); });
       });
       if (on('fronts')) Gm.fronts.forEach(function (q) {
-        paintRings([q.line], which, c, { close: false, stroke: q.col, sa: 0.95, w: q.fl ? 3 : 2.4, dash: q.fl ? '1 5' : '6 4' });
-        paintRings([q.seg], which, c, { close: false, stroke: q.col, sa: q.fl ? 0.9 : 0.95, w: q.fl ? 2 : 2.4, dash: q.fl ? null : '6 4' }); arrowAt(q.seg, which, c, q.col);
+        paintRings([q.line], which, c, { close: false, stroke: q.col, sa: 0.95, w: lw(q.fl ? LN.florian : LN.front), dash: q.fl ? '1 5' : '6 4' });
+        paintRings([q.seg], which, c, { close: false, stroke: q.col, sa: q.fl ? 0.9 : 0.95, w: lw(q.fl ? LN.shaftFlorian : LN.shaft), dash: q.fl ? null : '6 4' }); arrowAt(q.seg, which, c, q.col, C.arrowK(zq));
       });
       g.restore();
     });
