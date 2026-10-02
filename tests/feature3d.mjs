@@ -330,6 +330,127 @@ await run('compass', async () => {
   await ctx.close();
 });
 
+// ================================================================== 8b. compass visibility (v1.7.1): on/off (toolbar) and minimize (corner button)
+const cpState = (page) => page.evaluate(() => {
+  const c = document.getElementById('compass'), b = document.getElementById('btn-compass'), m = c.querySelector('.cp-min'), r = c.getBoundingClientRect(), cs = getComputedStyle(c);
+  let on = null, mini = null; try { on = localStorage.getItem('rh-compass-on'); mini = localStorage.getItem('rh-compass-mini'); } catch (e) {}
+  return { shown: !c.hidden && cs.display !== 'none', mini: c.classList.contains('mini'), w: Math.round(r.width), h: Math.round(r.height), txt: getComputedStyle(c.querySelector('.cp-txt')).display,
+    pressed: b.getAttribute('aria-pressed'), btitle: b.title, expanded: m.getAttribute('aria-expanded'), mlabel: m.getAttribute('aria-label'), mtitle: m.title, ls: [on, mini], l1: c.querySelector('.cp-l1').textContent };
+});
+await run('compass on/off and minimize', async () => {
+  const { ctx, page, ev } = await open3D({ settle: 300 });
+  await allLayersOff(page);
+  const hoverAt = async (la, lo) => { await setView(page, 0, 0, 3.2); await page.mouse.move(5, 5); await page.waitForTimeout(100); const p = await proj(page, la, lo); await page.mouse.move(p.x, p.y); await page.waitForTimeout(250); await frame(page, 3); return page.evaluate(() => window.__rhGlobe._state.hover); };
+  // default: shown, full size, toolbar button pressed, nothing stored yet (first-time look unchanged)
+  let s = await cpState(page);
+  t('default: compass shown at full size with text', s.shown && !s.mini && s.txt !== 'none' && s.w >= 150, JSON.stringify(s));
+  t('default: toolbar toggle is pressed, corner button offers "Kecilkan kompas", nothing persisted yet', s.pressed === 'true' && s.expanded === 'true' && s.mlabel === 'Kecilkan kompas' && s.ls[0] === null && s.ls[1] === null, JSON.stringify(s));
+  const full = { w: s.w, h: s.h };
+  // minimize via the corner button
+  await page.locator('#compass .cp-min').click(); await page.waitForTimeout(100); s = await cpState(page);
+  t(`minimize: dial only, no text, much smaller (${full.w}×${full.h} → ${s.w}×${s.h})`, s.shown && s.mini && s.txt === 'none' && s.w < 80 && s.h < 80 && s.w < full.w / 2, JSON.stringify(s));
+  t('minimize: button flips to "Perbesar kompas", aria-expanded=false, persisted, toolbar toggle still pressed (compass is still on)', s.mlabel === 'Perbesar kompas' && s.expanded === 'false' && s.ls[1] === 'true' && s.pressed === 'true', JSON.stringify(s));
+  // the needles and the reading keep tracking while minimized (the reading is also what the tooltip and aria-label carry)
+  let hv = await hoverAt(40, 25); const ex = C.scarCompass(hv.lat, hv.lon); s = await cpState(page);
+  t(`minimized: reading still tracks the hovered point (${s.l1})`, s.l1.includes(C.fint(ex.distKm)), s.l1 + ' vs ' + C.fint(ex.distKm));
+  t('minimized: tooltip carries "Perbesar kompas" and the reading', /^Perbesar kompas · Scar .* km/.test(s.mtitle), s.mtitle);
+  t('minimized: the group keeps its aria-label with the reading', await page.evaluate(() => /^Kompas\. Scar .* km/.test(document.getElementById('compass').getAttribute('aria-label'))));
+  // the whole minimized card is the click target (not just the 12 px glyph): click the middle of the dial
+  { const box = await page.locator('#compass').boundingBox(); await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await page.waitForTimeout(100); s = await cpState(page);
+    t('minimized: clicking the middle of the card restores the full compass', s.shown && !s.mini && s.txt !== 'none' && s.w === full.w && s.ls[1] === 'false', JSON.stringify(s)); }
+  // off via the toolbar button
+  await page.locator('#btn-compass').click(); await page.waitForTimeout(100); s = await cpState(page);
+  t('off: compass is gone (hidden, display none), toolbar toggle un-pressed with "Tampilkan kompas", persisted', !s.shown && s.pressed === 'false' && s.btitle === 'Tampilkan kompas' && s.ls[0] === 'false', JSON.stringify(s));
+  t('off: no layout box and nothing focusable left behind', await page.evaluate(() => { const c = document.getElementById('compass'); return c.getBoundingClientRect().width === 0 && !c.contains(document.activeElement); }));
+  // while off the widget does no drawing, but remembers the latest state and shows it when switched back on
+  // (the click on the toolbar button moved the cursor off the canvas, so the reference is now the view centre: move the centre and watch the DOM)
+  const frozen = (await cpState(page)).l1, ex2 = C.scarCompass(-30, 10);
+  await setView(page, -30, 10, 3.2); await frame(page, 8); await page.waitForTimeout(250);
+  t(`off: the DOM is not repainted while hidden (still "${frozen}", not the new point's ${C.fint(ex2.distKm)} km)`, (await cpState(page)).l1 === frozen && !frozen.includes(C.fint(ex2.distKm)));
+  await page.locator('#btn-compass').click(); await page.waitForTimeout(100); s = await cpState(page);
+  t(`on again: shown, and already repainted from the latest state (${s.l1})`, s.shown && s.pressed === 'true' && s.l1.includes(C.fint(ex2.distKm)) && s.ls[0] === 'true', JSON.stringify(s) + ' vs ' + C.fint(ex2.distKm));
+  // the two states are independent: minimize, switch off, switch on → still minimized
+  await page.locator('#compass .cp-min').click(); await page.locator('#btn-compass').click(); await page.locator('#btn-compass').click(); await page.waitForTimeout(100); s = await cpState(page);
+  t('independent states: minimized → off → on comes back minimized', s.shown && s.mini && s.txt === 'none', JSON.stringify(s));
+  // same widget in the flat map and after going back to 3D
+  await page.locator('#btn-view').click(); await page.waitForTimeout(400); s = await cpState(page);
+  t('flat map: the same minimized compass (state is shared across views)', s.shown && s.mini && s.pressed === 'true' && (await page.evaluate(() => document.body.classList.contains('in-3d'))) === false, JSON.stringify(s));
+  await page.locator('#btn-compass').click(); await page.waitForTimeout(100);
+  t('flat map: the toolbar toggle switches the compass off here too', !(await cpState(page)).shown);
+  await page.locator('#btn-view').click(); await page.waitForFunction(() => window.__rhGlobe.isShown(), null, { timeout: 60000 }); await page.waitForTimeout(300);
+  t('back in 3D: still off', !(await cpState(page)).shown);
+  // keyboard: Space on the toolbar toggle, Enter on the corner button
+  await page.locator('#btn-compass').focus(); await page.keyboard.press('Space'); await page.waitForTimeout(100);
+  t('keyboard: Space on the toolbar toggle switches the compass on', (await cpState(page)).shown);
+  await page.locator('#compass .cp-min').focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(100); s = await cpState(page);
+  t('keyboard: Enter on the corner button restores the full size and keeps focus on it', !s.mini && (await page.evaluate(() => document.activeElement && document.activeElement.classList.contains('cp-min'))), JSON.stringify(s));
+  t('no console errors/warnings and no page errors', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
+  await ctx.close();
+});
+await run('compass visibility: stored state is honoured at boot; blocked storage does not break it', async () => {
+  // boot with off + minimized in storage: compass hidden, toolbar un-pressed; switching on shows it minimized
+  { const { ctx, page, ev } = await open3D({ init: () => { try { localStorage.setItem('rh-compass-on', 'false'); localStorage.setItem('rh-compass-mini', 'true'); } catch (e) {} } });
+    let s = await cpState(page); t('boot with stored off: hidden and the toolbar toggle is un-pressed', !s.shown && s.pressed === 'false' && s.btitle === 'Tampilkan kompas', JSON.stringify(s));
+    await page.locator('#btn-compass').click(); await page.waitForTimeout(100); s = await cpState(page);
+    t('boot with stored mini: switching on shows the minimized compass', s.shown && s.mini && s.txt === 'none', JSON.stringify(s));
+    t('boot with stored state: no errors', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console])); await ctx.close(); }
+  // garbage in storage falls back to the defaults
+  { const { ctx, page } = await open3D({ init: () => { try { localStorage.setItem('rh-compass-on', '{oops'); localStorage.setItem('rh-compass-mini', '"yes"'); } catch (e) {} } });
+    const s = await cpState(page); t('garbage in storage: defaults (shown, full size)', s.shown && !s.mini, JSON.stringify(s)); await ctx.close(); }
+  // storage that throws on every access (private mode, blocked site data): defaults, and the toggles still work for the session
+  { const { ctx, page, ev } = await open3D({ init: () => { Storage.prototype.getItem = () => { throw new Error('blocked'); }; Storage.prototype.setItem = () => { throw new Error('blocked'); }; } });
+    let s = await cpState(page); t('blocked storage: compass shown at full size', s.shown && !s.mini && s.ls[0] === null, JSON.stringify(s));
+    await page.locator('#compass .cp-min').click(); await page.locator('#btn-compass').click(); await page.waitForTimeout(100); s = await cpState(page);
+    t('blocked storage: minimize and off still work in the session', !s.shown && s.mini, JSON.stringify(s));
+    t('blocked storage: no uncaught errors', ev.errors.length === 0, JSON.stringify(ev.errors)); await ctx.close(); }
+});
+await run('compass visibility: the minimize button never moves, and works by tap', async () => {
+  // The card is anchored at the bottom and grows upwards when the reading gets another line, so anything on its top edge jumps between
+  // touchstart and click (found in v1.7.1: a tap on a top-corner button landed on the card). The button sits on the bottom edge instead.
+  const { ctx, page } = await open3D({ settle: 300 });
+  await allLayersOff(page); await page.evaluate(() => { window.__rhGlobe._state.spin = false; });
+  await page.mouse.move(5, 5);
+  const probe = await page.evaluate(() => { const c = window.__rhGlobe._ctx.compass, b = document.querySelector('#compass .cp-min'), out = [];
+    const states = [['idle', null], ['short', { lat: 0, lon: 0, northDeg: 0, scarDeg: 10, source: 'uji' }], ['long', { lat: 55.4, lon: 179, northDeg: 0, scarDeg: 10, source: 'uji' }], ['singular', { lat: -55.5, lon: 0, northDeg: 0, scarDeg: 0, source: 'uji' }],
+      ['behind', { lat: 20, lon: 40, northDeg: 0, scarDeg: 10, behind: true, source: 'uji' }]];
+    for (const [n, st] of states) { c.update(st); const r = b.getBoundingClientRect(), k = document.getElementById('compass').getBoundingClientRect(); out.push({ n, right: r.right, bottom: r.bottom, cardH: Math.round(k.height) }); }
+    return out; });
+  const dev = (k) => Math.max(...probe.map((o) => o[k])) - Math.min(...probe.map((o) => o[k]));
+  t(`the card changes height with the reading (${probe.map((o) => o.n + ' ' + o.cardH).join(', ')}), so the premise holds`, new Set(probe.map((o) => o.cardH)).size >= 2, JSON.stringify(probe));
+  t(`but the minimize button's bottom and right edges do not move (Δ bottom ${dev('bottom').toFixed(2)}, Δ right ${dev('right').toFixed(2)})`, dev('bottom') < 0.5 && dev('right') < 0.5, JSON.stringify(probe));
+  await ctx.close();
+  // taps on a phone, in the flat map right after load (reading not yet there, the card is at its shortest) and in 3D
+  for (const view of ['', '?view=3d']) {
+    const r = await open3D({ query: view, noWait: !view, viewport: { width: 360, height: 640 }, touch: true, settle: view ? 400 : 900, init: () => { try { localStorage.setItem('rh-panel', 'false'); } catch (e) {} } });
+    const b = await r.page.locator('#compass .cp-min').boundingBox(); await r.page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await r.page.waitForTimeout(300);
+    t(`tap on the minimize button works on a phone (${view ? '3D' : 'flat map'})`, (await cpState(r.page)).mini === true, JSON.stringify(await cpState(r.page)));
+    await r.page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await r.page.waitForTimeout(300);
+    const box = await r.page.locator('#compass').boundingBox(); await r.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); await r.page.waitForTimeout(300);
+    await r.ctx.close();
+  }
+});
+await run('compass visibility: phone layout (toolbar not widened, panel header fits)', async () => {
+  for (const [w, h] of [[390, 844], [360, 740], [320, 568]]) {
+    const { ctx, page } = await open3D({ viewport: { width: w, height: h }, touch: true, settle: 400, init: () => { try { localStorage.setItem('rh-panel', 'false'); } catch (e) {} } });
+    const g = await page.evaluate(() => { const R = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height }; }, vis = (e) => getComputedStyle(e).display !== 'none';
+      const head = document.querySelector('#panel .phead'), kids = Array.from(head.children).filter(vis);
+      return { tools: Array.from(document.querySelectorAll('.tools .tbtn')).filter(vis).map((e) => e.id), twin: vis(document.getElementById('btn-compass-m')) ? R(document.getElementById('btn-compass-m')) : null, kids: kids.map((e) => ({ id: e.id || e.className, ...R(e) })),
+        headOverflow: head.scrollWidth - head.clientWidth, vw: innerWidth, title: (() => { const e = head.querySelector('.ptitle'); return { sw: e.scrollWidth, cw: e.clientWidth }; })() }; });
+    const overl = g.kids.flatMap((a, i) => g.kids.slice(i + 1).filter((b) => a.l < b.r - 0.5 && a.r > b.l + 0.5 && a.t < b.b && a.b > b.t).map((b) => a.id + '×' + b.id));
+    t(`[${w}px] the toolbar did not get a fourth button on phones (${g.tools.join(' ')})`, !g.tools.includes('btn-compass') && g.tools.length === 3, JSON.stringify(g.tools));
+    t(`[${w}px] the compass toggle is in the panel header, a ≥ 30 px target, inside the screen`, !!g.twin && g.twin.w >= 30 && g.twin.h >= 30 && g.twin.r <= g.vw, JSON.stringify(g.twin));
+    t(`[${w}px] panel header: nothing overlaps, no horizontal overflow, the title is not clipped (${overl.join(',') || 'clean'})`, overl.length === 0 && g.headOverflow <= 0 && g.title.sw <= g.title.cw + 1, JSON.stringify(g));
+    await page.locator('#btn-compass-m').tap(); await page.waitForTimeout(100); let s = await cpState(page);
+    t(`[${w}px] header toggle switches the compass off and the toolbar twin state follows (aria-pressed on both)`, !s.shown && (await page.evaluate(() => ['btn-compass', 'btn-compass-m'].every((i) => document.getElementById(i).getAttribute('aria-pressed') === 'false'))), JSON.stringify(s));
+    await page.locator('#btn-compass-m').tap(); await page.waitForTimeout(100); s = await cpState(page);
+    t(`[${w}px] header toggle switches it back on`, s.shown, JSON.stringify(s));
+    await ctx.close();
+  }
+  const { ctx, page } = await open3D({ settle: 300 });
+  t('desktop: the header twin is hidden, the toolbar button is the one shown', await page.evaluate(() => getComputedStyle(document.getElementById('btn-compass-m')).display === 'none' && getComputedStyle(document.getElementById('btn-compass')).display !== 'none'));
+  await ctx.close();
+});
+
 // ================================================================== 9. filters sync, search, epistemic labels, wording
 await run('filters, search, epistemic labels, wording', async () => {
   const { ctx, page } = await open3D({ settle: 300 });

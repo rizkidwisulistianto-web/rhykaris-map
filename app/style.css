@@ -289,6 +289,31 @@ body.in-3d .grp.only2d{display:none}
   #compass .cp-dial{width:70px;height:70px} #compass .cp-txt{font-size:10px} #compass .cp-key{display:none}
 }
 @media (prefers-reduced-motion: reduce){ #compass .cp-needle{transition:none} }
+/* v1.7.1 — kompas bisa dimatikan (atribut hidden, diatur lewat tombol .tbtn[data-cp]) dan dikecilkan (.mini: piringan saja, tanpa teks).
+   Kartu menempel di BAWAH dan tumbuh ke ATAS saat teks bacaan bertambah baris, jadi tepi atasnya (dan apa pun yang menempel di sana) bergeser tiap bacaan
+   berubah. Tombol kecilkan karena itu dipasang di tepi BAWAH, yang tak pernah bergerak: chip yang menjuntai setengah di bawah kartu (tidak menimpa teks).
+   Saat .mini kartu berukuran tetap (tanpa teks) dan tombol itu membentang menutupi seluruh kartu supaya targetnya besar. */
+#compass[hidden]{display:none}
+#compass .cp-min{position:absolute;bottom:-12px;right:8px;z-index:1;width:24px;height:24px;padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);color:var(--ink-2);cursor:pointer;touch-action:manipulation}
+#compass .cp-min:hover{background:var(--panel-2);border-color:var(--line-2);color:var(--ink)}
+#compass .cp-min:focus-visible{outline:2px solid var(--sea);outline-offset:1px}
+#compass .cp-min svg{width:12px;height:12px;display:block}
+#compass.mini{width:auto;padding:6px}
+#compass.mini .cp-dial{width:52px;height:52px}
+#compass.mini .cp-txt{display:none}
+#compass.mini .cp-min{top:0;left:0;right:auto;bottom:auto;width:100%;height:100%;border-radius:12px;border-color:transparent;background:transparent;box-shadow:none;place-items:end end;padding:5px}
+#compass.mini .cp-min:hover{background:var(--hover)}
+@media (max-width:760px){ #compass.mini{width:auto;padding:5px} #compass.mini .cp-dial{width:44px;height:44px} }
+/* tombol on/off: di toolbar pada layar lebar; di ponsel toolbar sudah penuh (menabrak judul), jadi pindah ke header panel (pola yang sama dengan #btn-view-m / #btn-disk-m) */
+/* tombol kompas: kondisi bawaannya HIDUP, jadi saat hidup ia memakai gaya tombol biasa (bukan biru "ditekan"); saat mati ia diberi garis miring dan dipudarkan */
+.tbtn[data-cp][aria-pressed="true"]{background:var(--panel);border-color:var(--line);color:var(--ink)}
+.tbtn[data-cp][aria-pressed="true"]:hover{background:var(--panel-2);border-color:var(--line-2);color:var(--ink)}
+.tbtn[data-cp][aria-pressed="false"]{color:var(--ink-2)}
+.tbtn[data-cp] .slash{display:none}
+.tbtn[data-cp][aria-pressed="false"] .slash{display:block}
+#btn-compass-m{display:none}
+@media (max-width:760px){ .tools #btn-compass{display:none} #btn-compass-m{display:inline-flex;height:30px;min-width:30px;padding:0 8px;box-shadow:none} }
+@media (max-width:359px){ #btn-view-m .lbl{display:none} #btn-view-m{padding:0 8px} }   /* header panel terlalu sempit untuk label "Globe 3D" bersama tombol kompas */
 
 /* ---------- globe ---------- */
 #globe{position:absolute;inset:0;z-index:500;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;

@@ -27,12 +27,12 @@ for (const scheme of ['dark', 'light']) {
   await page.waitForFunction(() => window.__rhGlobe && window.__rhGlobe.isShown() && window.__rhGlobe.info().frames >= 5, null, { timeout: 60000 });
   await page.locator('#tab-globe').click();
   // a. accessible names
-  const unnamed = await page.evaluate(() => Array.from(document.querySelectorAll('#btn-view, #btn-disk, #btn-view-m, #btn-disk-m, #g-dock button, #sec-globe input, #sec-globe button, canvas.g-canvas, #compass, #v2-toast, #g-card')).filter((e) => !e.hidden && getComputedStyle(e).display !== 'none' && !window.__ax.name(e) && e.id !== 'g-card' && e.id !== 'v2-toast').map((e) => e.id || e.className));
+  const unnamed = await page.evaluate(() => Array.from(document.querySelectorAll('#btn-view, #btn-disk, #btn-view-m, #btn-disk-m, #btn-compass, #btn-compass-m, #compass .cp-min, #g-dock button, #sec-globe input, #sec-globe button, canvas.g-canvas, #compass, #v2-toast, #g-card')).filter((e) => !e.hidden && getComputedStyle(e).display !== 'none' && !window.__ax.name(e) && e.id !== 'g-card' && e.id !== 'v2-toast').map((e) => e.id || e.className));
   t(`[${scheme}] every new control has an accessible name`, unnamed.length === 0, unnamed.join());
   t(`[${scheme}] toast is a polite live region, compass and canvas have roles/labels`, await page.evaluate(() => document.getElementById('v2-toast').getAttribute('role') === 'status' && document.getElementById('v2-toast').getAttribute('aria-live') === 'polite' && /Kompas/.test(document.getElementById('compass').getAttribute('aria-label')) && document.querySelector('canvas.g-canvas').getAttribute('role') === 'application'));
   t(`[${scheme}] sliders and the relief checkbox are labelled`, await page.evaluate(() => ['g-period', 'g-mspeed', 'g-exag'].every((id) => !!document.getElementById(id).getAttribute('aria-label')) && !!window.__ax.name(document.getElementById('g-relief'))));
   // b. contrast of panel text (map labels carry their own halo and are theme-independent, like the 2D labels)
-  const sels = ['#sec-globe .gctl .note', '#sec-globe label.row span', '#sec-globe .btn', '#compass .cp-l1', '#compass .cp-l2', '#compass .cp-l3', '#compass .cp-key', '#g-dock .tbtn', '#btn-view', '#sec-globe h3'];
+  const sels = ['#sec-globe .gctl .note', '#sec-globe label.row span', '#sec-globe .btn', '#compass .cp-l1', '#compass .cp-l2', '#compass .cp-l3', '#compass .cp-key', '#g-dock .tbtn', '#btn-view', '#btn-compass', '#sec-globe h3'];
   const bad = await page.evaluate((ss) => ss.flatMap((s) => Array.from(document.querySelectorAll(s)).filter((e) => !e.hidden && e.offsetParent !== null).slice(0, 3).map((e) => [s, +window.__ax.ratio(e).toFixed(2)])).filter((x) => x[1] < 4.5), sels);
   t(`[${scheme}] panel text contrast ≥ 4.5 : 1 (${bad.map((b) => b.join('=')).join(', ') || 'all pass'})`, bad.length === 0, JSON.stringify(bad));
   // c. keyboard: markers reachable and operable, focus ring visible on the dock
@@ -45,6 +45,12 @@ for (const scheme of ['dark', 'light']) {
   await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
   const ring2 = await page.evaluate(() => { const s = getComputedStyle(document.activeElement); return { w: parseFloat(s.outlineWidth), st: s.outlineStyle }; });
   t(`[${scheme}] keyboard focus on a dock button shows an outline (${ring2.w}px ${ring2.st})`, ring2.w >= 2 && ring2.st !== 'none');
+  // compass minimize button (v1.7.1): focus ring, state exposed to assistive tech, a ≥ 24 px target
+  await page.locator('#compass .cp-min').focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+  const ring3 = await page.evaluate(() => { const e = document.activeElement, s = getComputedStyle(e), r = e.getBoundingClientRect(); return { w: parseFloat(s.outlineWidth), st: s.outlineStyle, cls: e.className, bw: r.width, bh: r.height }; });
+  t(`[${scheme}] keyboard focus on the compass minimize button shows an outline (${ring3.w}px ${ring3.st}, on ${ring3.cls})`, ring3.cls === 'cp-min' && ring3.w >= 2 && ring3.st !== 'none');
+  t(`[${scheme}] compass minimize button: aria-expanded, a name that says what it will do, target ≥ 24 px (${Math.round(ring3.bw)}×${Math.round(ring3.bh)})`, await page.evaluate(() => { const b = document.querySelector('#compass .cp-min'); return b.getAttribute('aria-expanded') === 'true' && b.getAttribute('aria-label') === 'Kecilkan kompas'; }) && ring3.bw >= 24 && ring3.bh >= 24);
+  t(`[${scheme}] compass toolbar toggle exposes its state (aria-pressed) and has a name`, await page.evaluate(() => { const b = document.getElementById('btn-compass'); return b.getAttribute('aria-pressed') === 'true' && /Kompas/.test(b.getAttribute('aria-label')); }));
   t(`[${scheme}] no console errors`, ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
   await ctx.close();
 }
