@@ -3,7 +3,9 @@
 
 SATU sumber kebenaran untuk mozaik kedaulatan koridor tengah:
   * src/interregna.py  membaca `POLITIES` (benih, ukuran sasaran, bentuk) dan menggambar ulang batasnya;
-  * src/build_data.py  membaca `ir_factions()` (nama, jenis, warna, blurb) untuk data.json.
+  * src/build_data.py  membaca `ir_factions()` (nama, jenis, warna, blurb, baris fakta) untuk data.json.
+Nama dan teks lore tiap polity (usulan, 3 Okt 2026) ditulis di src/interregna_lore.py; tabel ini hanya mengimpornya, jadi
+`name_of`, `label_of`, `blurb_of`, dan `ir_factions` tetap satu pintu.
 
 Dasar kanon (Atlas — Interregna, Notion; Powers — Interregna):
   * "Mozaik: kerajaan vassal yang keluar saat Era Serpihan, kota merdeka, wilayah adat, mikro-polity." [Turunan]
@@ -16,7 +18,9 @@ Dasar kanon (Atlas — Interregna, Notion; Powers — Interregna):
     (knob) dan TIDAK menunjuk enklaf Satvan Perbatasan (knob #3) — keduanya tetap Terbuka.
 
 Semua entri kecuali dua jangkar kanon (aventalia, tarvenna; cassivalla & nundina dibekukan di interregna.py) berstatus
-[Inferensi AI] dan "tak bernama": nama, tipe, batas, dan luas = knob terbuka.
+[Inferensi AI]: tipe, batas, dan luas = knob terbuka. Sejak 3 Okt 2026 tiap polity juga punya NAMA USULAN (entri Atlas —
+Interregna, Draft; Inferensi AI yang disetujui pengarang, belum dikunci) dan ringkasan lore di `interregna_lore.py`. Nama tidak
+menyentuh geometri; jumlah polity dan batasnya tetap ilustratif.
 
 Penempatan (derivation-first): kota merdeka di simpul hidrologi terrain kanon (pertemuan sungai, tepi danau); wilayah
 adat di bukit tertinggi dataran tinggi dan di pita kaki pegunungan selatan; kerajaan besar di stepa kering tempat penduduk
@@ -38,14 +42,20 @@ mengikuti urutan itu. Kolom:
   exclaves  potongan terpisah milik polity ini, dipotong dari induk lain (host)
 """
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))     # interregna_lore.py duduk di samping berkas ini
+from interregna_lore import NAMES, LORE                              # noqa: E402
+
 ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII',
          'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV']
-TYPE_NAME = {'K': 'Kerajaan', 'C': 'Kota merdeka', 'A': 'Wilayah adat', 'M': 'Mikro-polity'}
+TYPE_NAME = {'K': 'Kerajaan', 'C': 'Kota merdeka', 'A': 'Wilayah adat', 'M': 'Mikro-polity'}    # cadangan bila polity belum bernama
 KIND = {
-    'K': 'Interregna · kerajaan bekas vassal · ilustratif',
-    'C': 'Interregna · kota merdeka · ilustratif',
-    'A': 'Interregna · wilayah adat · ilustratif',
-    'M': 'Interregna · mikro-polity · ilustratif',
+    'K': 'Interregna · kerajaan bekas vassal · nama usulan (Draft) · batas ilustratif',
+    'C': 'Interregna · kota merdeka · nama usulan (Draft) · batas ilustratif',
+    'A': 'Interregna · wilayah adat Satvan · nama usulan (Draft) · batas ilustratif',
+    'M': 'Interregna · mikro-polity · nama usulan (Draft) · batas ilustratif',
 }
 
 POLITIES = [
@@ -98,6 +108,10 @@ COLORS = {
 
 
 def name_of(p):
+    """Nama polity di peta: usulan Atlas (NAMES). Polity yang belum diberi nama jatuh ke penanda lama "(tak bernama) N"."""
+    nm = NAMES.get(p['id'])
+    if nm:
+        return nm
     return f"{TYPE_NAME[p['type']]} Interregna (tak bernama) {ROMAN[p['n'] - 1]}"
 
 
@@ -130,8 +144,11 @@ BLURB = {
 
 
 def blurb_of(p):
+    """Paragraf kartu: ringkasan lore (LORE) + kalimat struktural dari geometri (enklaf, eksklaf, apa yang dikelilingi).
+    Polity tanpa entri LORE jatuh ke teks generik per tipe (BLURB)."""
     pid = p['id']
-    out = BLURB[p['type']]
+    lore = LORE.get(pid)
+    out = lore['blurb'] if lore else BLURB[p['type']]
     host = p.get('host')
     if host:
         hh = by_id().get(host, {}).get('host') if host in by_id() else None
@@ -147,6 +164,10 @@ def blurb_of(p):
     holds += [label_of(q['id']) + ' (eksklaf)' for q in POLITIES for e in q.get('exclaves', []) if e['host'] == pid]
     if holds:
         out += ' Mengelilingi: ' + '; '.join(holds) + '.'
+    if lore:
+        if p['type'] == 'A':
+            out += ' Garis putus-putus = klaim yang memang kabur [Turunan: tipologi mozaik].'
+        out += ' Nama usulan; batas dan luas = knob terbuka [Inferensi AI].'
     return out
 
 
@@ -157,6 +178,8 @@ def ir_factions():
         if p['id'] in CANON_ANCHORS:
             continue
         f = dict(name=name_of(p), kind=KIND[p['type']], color=COLORS[p['id']], epi='inferensi', blurb=blurb_of(p))
+        if p['id'] in LORE:
+            f['facts'] = [list(r) for r in LORE[p['id']]['facts']]
         if p['type'] == 'A':
             f['dashed'] = True
         out[p['id']] = f

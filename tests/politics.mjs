@@ -20,7 +20,17 @@ async function run(name, fn) { if (filter && !name.includes(filter)) return; con
 
 const FAC = DATA.factions, TERR = DATA.territories, byId = Object.fromEntries(TERR.map((x) => [x.id, x]));
 const sha = (x) => crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
-const IR = TERR.filter((x) => /^ir_\d+$/.test(x.id)).map((x) => x.id);
+// This file is public, so the terms the author keeps closed (story hooks, names held back from the public cards) are NOT spelled out here:
+// each one is stored only as the SHA-256 of its normalised form (lower case, no diacritics, single spaces). `closedHits` hashes every run of
+// 1–4 consecutive words of a text and counts how many listed hashes it finds. Ask the author before opening a term; never paste it in here.
+const CLOSED = ['c9ea2dd58fb7e3c5bb70429d5a63da03b2ccc2489e6ab159922ea96cba2f6fa2', 'f19a129d336079922df20ed85bc7048bf76871154a902e0f546448f0cf86dffd', '8878effe501c423ad1e024f6792bbb2db6bb75dae564bbdfc52d6b39108e15ce'];
+const CLOSED_ON_IR23 = ['196274fa57af22a636adc200e434842581ad630b92c9f31c4e0afd610c0e64b2'];   // a common word, closed on that one card only
+const closedHits = (s, list = CLOSED) => {
+  const w = String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean), seen = new Set();
+  for (let n = 1; n <= 4; n++) for (let i = 0; i + n <= w.length; i++) seen.add(sha(w.slice(i, i + n).join(' ')));
+  return list.filter((h) => seen.has(h)).length;
+};
+const IR =TERR.filter((x) => /^ir_\d+$/.test(x.id)).map((x) => x.id);
 
 // ---------------------------------------------------------------- geometry helpers (lat/lon plane, with the ±360° world copies the viewers draw)
 function inRing(lat, lon, ring) {
@@ -134,10 +144,10 @@ await run('vocabulary and epistemic labels in the data', async () => {
   const walkS = (o, p) => { if (typeof o === 'string') strings.push([p.join('/'), o]); else if (Array.isArray(o)) o.forEach((v, i) => walkS(v, [...p, i])); else if (o && typeof o === 'object') Object.entries(o).forEach(([k, v]) => { if (!['rings', 'pts', 'pts2', 'b', 'contours', 'mandala', 'regions', 'banks'].includes(k)) walkS(v, [...p, k]); }); };
   walkS({ places: DATA.places, factions: FAC, audit: DATA.audit, ledger: DATA.ledger, unmapped: DATA.unmapped, routes: DATA.routes, fronts: DATA.fronts }, []);
   const prov = strings.filter(([, s]) => /provins/i.test(s));
-  const okPath = (p, s) => /^factions\/(imperial_commonwealth|hesperia|hes_pesisir|hes_transisi|hes_pedalaman)\//.test(p) || (/^factions\/(hes_marka|cassivalla)\//.test(p) && /bukan provinsi/.test(s)) ||
+  const okPath = (p, s) => /^factions\/(imperial_commonwealth|hesperia|hes_pesisir|hes_transisi|hes_pedalaman)\//.test(p) || (/^factions\/(hes_marka|cassivalla|ir_\d+)\//.test(p) && /bukan provinsi/.test(s)) ||
     (/^audit\//.test(p) && /provinsi|#21[24]/.test(s + ' ' + DATA.audit[+p.split('/')[1]].refs + ' ' + DATA.audit[+p.split('/')[1]].title));
   const stray = prov.filter(([p, s]) => !okPath(p, s));
-  t('"provinsi" appears only for Hesperia direct rule (Hesperia and its belts), in explicit negations (marka, Cassivalla) and in the vocabulary / pattern cards of the audit', stray.length === 0, stray.map(([p, s]) => p + ': ' + s.slice(0, 60)).join(' | '));
+  t('"provinsi" appears only for Hesperia direct rule (Hesperia and its belts), in explicit negations (marka, Cassivalla, Interregna charter cards: "bukan provinsi") and in the vocabulary / pattern cards of the audit', stray.length === 0, stray.map(([p, s]) => p + ': ' + s.slice(0, 60)).join(' | '));
   const fed = strings.filter(([, s]) => /\bfederasi\b/i.test(s) && !/bukan "federasi"/.test(s));
   t('"federasi" is never used for the Commonwealth (only inside the explicit negation)', fed.length === 0, fed.map(([p]) => p).join());
   const pc = strings.filter(([, s]) => /Provincia/.test(s));
@@ -154,6 +164,47 @@ await run('vocabulary and epistemic labels in the data', async () => {
   t('placeholders are labelled "PLACEHOLDER, bukan kanon": marka, Satvan zone, Kloaka zone, Foedera core', ['hes_marka', 'satvan_pedalaman', 'kloaka_zona', 'foedera_inti'].every((i) => FAC[i].tag === 'PLACEHOLDER, bukan kanon'));
   t('the belts carry the working-label tag and every number on them is Inferensi', ['hes_pesisir', 'hes_transisi', 'hes_pedalaman'].every((i) => /Label kerja/.test(FAC[i].tag) && FAC[i].epi === 'inferensi'));
   t('Satvan card: legal status of "tidak terhitung" is Terbuka and the zone is not equated with "Satvan Perbatasan" or Vasundha', epiOf('satvan_pedalaman', 'Status hukum') === 'terbuka' && /Bukan "Satvan Perbatasan"/.test(FAC.satvan_pedalaman.facts.find((r) => r[0] === 'Bukan')[2]) && /Vasundha/.test(FAC.satvan_pedalaman.facts.find((r) => r[0] === 'Bukan')[2]));
+});
+
+// ================================================================== 5b. Interregna names (3 Oct 2026): proposed Atlas names + public-safe cards, no geometry change
+await run('Interregna names: 23 proposed names, cards with epistemic rows, borders untouched', async () => {
+  const NAMES = { ir_1: 'Vergentia', ir_2: 'Latifonda', ir_3: 'Secura', ir_4: 'Veteria', ir_5: 'Ussana', ir_6: 'Novalia', ir_7: 'Vicinia', ir_8: 'Postera', ir_9: 'Perfugia', ir_10: 'Terminia',
+    ir_11: 'Ultima', ir_12: 'Sthiragiri', ir_13: 'Sandhigiri', ir_14: 'Akṣata', ir_15: 'Lustra', ir_16: 'Favilla', ir_17: 'Conventa', ir_18: 'Tabularia', ir_19: 'Trevia', ir_20: 'Compascua',
+    ir_21: 'Peregrina', ir_22: 'Stipendia', ir_23: 'Tāladvāra' };
+  const rows = (i) => FAC[i].facts || [], txt = (i) => rows(i).map((r) => r[2]).join(' ');
+  t('the 23 mosaic polities carry the Atlas names on both the territory and the card; no "(tak bernama)" placeholder is left', IR.length === 23 && IR.every((i) => byId[i].name === NAMES[i] && FAC[i].name === NAMES[i]) &&
+    IR.every((i) => !/tak bernama/.test(byId[i].name + FAC[i].name + FAC[i].blurb + FAC[i].kind)), IR.filter((i) => byId[i].name !== NAMES[i]).join());
+  const others = [...Object.entries(FAC).filter(([i]) => !IR.includes(i)).map(([, f]) => f.name), ...DATA.places.map((p) => p.name)].map((n) => n.toLowerCase());
+  t('names are unique: none repeats another polity, faction or map entry', new Set(Object.values(NAMES)).size === 23 && Object.values(NAMES).every((n) => !others.includes(n.toLowerCase())));
+  t('names are stored precomposed (NFC), so search and display agree on Akṣata and Tāladvāra', Object.values(NAMES).every((n) => n === n.normalize('NFC')));
+  t('Aventalia, Tarvenna, Cassivalla and Nundina were not touched: same names, same hand-written one-liners, no lore rows added to Aventalia / Tarvenna / Nundina',
+    FAC.aventalia.name === 'Aventalia' && FAC.aventalia.blurb === 'Front terjauh kampanye Florian; "masih merasa punya waktu".' && !FAC.aventalia.facts &&
+    FAC.tarvenna.name === 'Tarvenna' && FAC.tarvenna.blurb === 'Simpul perlintasan koridor tengah; bekas motor liga defensif yang gagal.' && !FAC.tarvenna.facts &&
+    FAC.cassivalla.name === 'Cassivalla' && FAC.cassivalla.facts.length === 1 && FAC.nundina.name === 'Nundina' && FAC.nundina.blurb === 'Pasar spot terbesar koridor; Omneris berkuasa de facto tanpa kursi formal.' && !FAC.nundina.facts);
+  t('every card says the name is a proposal (Draft) and the border illustrative; the border stays Inferensi AI', IR.every((i) => /nama usulan \(Draft\)/.test(FAC[i].kind) && /batas ilustratif/.test(FAC[i].kind) && FAC[i].epi === 'inferensi' && /\[Inferensi AI\]\.$/.test(FAC[i].blurb)));
+  t('every card opens with a Nama row, closes with a Terbuka row, and uses only the four epistemic levels; Inferensi rows carry a confidence', IR.every((i) => rows(i).length >= 4 && rows(i)[0][0] === 'Nama' && rows(i)[0][1] === 'inferensi' &&
+    rows(i).at(-1)[0] === 'Terbuka' && rows(i).at(-1)[1] === 'terbuka' && rows(i).every((r) => ['kanon', 'turunan', 'inferensi', 'terbuka'].includes(r[1]) && (r[1] !== 'inferensi' || ['Tinggi', 'Sedang', 'Rendah'].includes(r[3])))));
+  t('no row claims Kanon for a proposal: Draft names and lore are Inferensi AI, borrowed canon is quoted inside the text as [Kanon — …]', IR.every((i) => rows(i).every((r) => r[1] !== 'kanon')) && IR.some((i) => /\[Kanon — /.test(txt(i))));
+  t('type A cards (wilayah adat) are dashed with the dashed-claim note; the other Interregna cards are not dashed', ['ir_12', 'ir_13', 'ir_14'].every((i) => FAC[i].dashed === true && /putus-putus/.test(FAC[i].blurb)) &&
+    IR.filter((i) => !['ir_12', 'ir_13', 'ir_14'].includes(i)).every((i) => !FAC[i].dashed));
+  t('structural sentences still follow the geometry through the new names (enclave, nested enclave, exclave, holder, free pocket)', /dikelilingi Ussana/.test(FAC.ir_12.blurb) && /dikelilingi Sandhigiri, yang sendiri dikelilingi Latifonda/.test(FAC.ir_23.blurb) &&
+    /eksklaf.*di dalam Novalia/.test(FAC.ir_14.blurb) && /Mengelilingi: Sthiragiri; Compascua/.test(FAC.ir_5.blurb) && /dikelilingi Tarvenna/.test(FAC.ir_17.blurb) && /Berdiri bebas/.test(FAC.ir_15.blurb));
+  // geometry: a name must not move a border. Pinned over ids + rings of the 23 polities; the same value before and after the names change.
+  t('names changed no border: ids + rings of the 23 polities are byte-identical to the 2 Oct 2026 drawing', sha(IR.map((i) => [i, byId[i].rings])) === '48b630f658dac211e16c5b7d568137673bc03eff5efc32d7d0a0f38e0c72afc3');
+  // public-repo disclosure: no story hook, no closed vault detail, no author name, no treaty with the Satvan, nobody named next on Florian's list
+  const pub = JSON.stringify(IR.map((i) => FAC[i]));
+  t('the cards leave out story hooks and closed vault details, and never name the author', !/Arc 1|\bhook\b|Dies Ignis|Prasasti|Debt Ledger|Rizki/i.test(pub) && closedHits(pub) === 0);
+  t('Compascua says outright that no agreement was ever written with the Satvan (Contradiction #52, fauna category)', /Tidak ada perjanjian yang pernah ditulis dengan Satvan/.test(txt('ir_20')) && /Contradiction #52/.test(txt('ir_20')) && /hak minum ternak/.test(txt('ir_20')));
+  t('no card implies a treaty, alliance or pact with the Satvan', !/bersekutu dengan Satvan|sekutu Satvan|pakta dengan Satvan|perjanjian dengan Satvan|aliansi dengan Satvan/i.test(pub));
+  t('Sthiragiri and Sandhigiri are not equated with the courier enclave of knob #3 (Satvan Perbatasan), which stays Terbuka', ['ir_12', 'ir_13'].every((i) => rows(i).some((r) => r[0] === 'Bukan' && r[1] === 'terbuka' && /Satvan Perbatasan \(knob #3 Interregna, Terbuka\)/.test(r[2]))));
+  t('Vicinia–Favilla: the form of the relation stays a Terbuka knob on both cards', ['ir_7', 'ir_16'].every((i) => /bentuk hubungan Vicinia–Favilla/.test(rows(i).at(-1)[2])));
+  t('nobody is named next on Florian\'s list: Postera lists that order as Terbuka and speaks conditionally ("kalau Tarvenna jatuh")', /urutan sasaran Florian setelah Tarvenna/.test(rows('ir_8').at(-1)[2]) && /kalau Tarvenna jatuh/.test(txt('ir_8')) && !/berikutnya di daftar Florian/.test(pub));
+  t('Tāladvāra and Conventa keep only their public part: gate and metal market; neutral seat and charter', closedHits(JSON.stringify(FAC.ir_23), CLOSED_ON_IR23) === 0 && /pasar logam/.test(FAC.ir_23.blurb) && /piagam netral/.test(FAC.ir_17.blurb));
+  t('Litus Primum (said to fall inside the Foedera claim on the Vicinia and Peregrina cards) really lies inside the Foedera polygon', (() => { const lp = DATA.places.find((p) => p.name === 'Litus Primum'); return !!lp && inTerr(T('foedera'), lp.lat, lp.lon) &&
+    /jatuh di dalam klaim Foedera/.test(txt('ir_7')) && /jatuh di dalam klaim Foedera/.test(txt('ir_21')); })());
+  const au = DATA.audit.find((a) => /Jumlah dan nama polity Interregna/.test(a.title));
+  t('the audit card says the names are proposals while the count stays Terbuka (title keeps the key phrase); the ledger line says the same', !!au && /nama sudah diusulkan, jumlah tetap knob Terbuka/.test(au.title) && /Draft/.test(au.body) && /Terbuka/.test(au.body) &&
+    DATA.ledger.some(([n, , d]) => /Interregna individual/.test(n) && /Nama = usulan/.test(d) && /jumlah dan batas = knob terbuka/.test(d)));
 });
 
 // ================================================================== 6. in-map audit: blank spots, patterns, and the "Catok" card against the final geometry
@@ -268,6 +319,10 @@ await run('flat map: cards, legend and audit tab', async () => {
   t('Cassivalla card: title "Cassivalla"; "Provincia Cassivallae" only as a labelled Foedera exonym', /^Cassivalla/.test(ca) && /eksonim Foedera/i.test(ca) && (ca.match(/Provincia Cassivallae/g) || []).length === 1, ca.slice(0, 160));
   const beltCard = await card('hes_pesisir', 'Sabuk Pesisir');
   t('Belt card: working label tag (#212) and "batas provinsi tidak digambar"', /Label kerja \(#212\)/.test(beltCard) && /batas provinsi tidak digambar/i.test(beltCard));
+  const sh = await card('ir_12', 'Sthiragiri');
+  t('Interregna card (Sthiragiri): title, "nama usulan (Draft)", dashed-claim note, the "Bukan" knob row and a Terbuka chip render in the popup', /^Sthiragiri/.test(sh) && /nama usulan \(Draft\)/i.test(sh) && /putus-putus/.test(sh) && /Bukan enklaf kurir Satvan Perbatasan/.test(sh) && /TERBUKA/.test(sh), sh.slice(0, 240));
+  const ta = await card('ir_23', 'Tāladvāra');
+  t('Interregna card (Tāladvāra): found by its diacritic name; shows the nested-enclave sentence and none of the closed detail', /^Tāladvāra/.test(ta) && /dikelilingi Sandhigiri/.test(ta) && closedHits(ta) === 0 && !/Dies Ignis/.test(ta), ta.slice(0, 240));
   await page.keyboard.press('Escape');
   // legend follows the layer state
   await page.locator('#btn-legend').click();
