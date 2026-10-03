@@ -21,7 +21,7 @@ This file records what was built, **why each judgment call went the way it did**
 
 ### Layer parity
 
-All 27 layers of the flat map (the 25 of v1.4, plus `t_hesb` and `t_sat` of v1.7, §16) have a globe adapter, and (since v1.6.5, §15) a working-map adapter. Four layers exist only in 3D, two only on the disk.
+All 29 layers of the flat map (the 25 of v1.4, plus `t_hesb` and `t_sat` of v1.7, §16, and `t_ic` and `t_cw` of v1.8, see `POLITICS_V3_NOTES.md` §10) have a globe adapter, and (since v1.6.5, §15) a working-map adapter. Four layers exist only in 3D, two only on the disk.
 
 | Layer (key) | Flat | Globe | Disk |
 |---|:-:|:-:|:-:|
@@ -29,7 +29,7 @@ All 27 layers of the flat map (the 25 of v1.4, plus `t_hesb` and `t_sat` of v1.7
 | The Scar: 13° band (`band`) · small-circle curve (`curve`) · four arcs (`arcs`) | ✓ | ✓ | ✓ |
 | Mass-anomaly pockets (`anom`) · Castra Birath zone (`zone`) · location markers (`markers`) | ✓ | ✓ | ✓ |
 | Elevation contours (`cland`) · bathymetry contours (`csea`) · place and water labels (`labels`) · physical region outlines (`regions`) | ✓ | ✓ | ✓ |
-| Eight territory groups (`t_sat`, `t_hes`, `t_hesb`, `t_foe`, `t_int`, `t_ana`, `t_elv`, `t_lain`; the last two of v1.7 are `t_sat` and `t_hesb`) · the Mandala (`mandala`) · fronts (`fronts`) | ✓ | ✓ | ✓ |
+| Ten territory groups (`t_sat`, `t_ic`, `t_hes`, `t_cw`, `t_hesb`, `t_foe`, `t_int`, `t_ana`, `t_elv`, `t_lain`; `t_sat` and `t_hesb` are of v1.7, `t_ic` and `t_cw` of v1.8) · the Mandala (`mandala`) · fronts (`fronts`) | ✓ | ✓ | ✓ |
 | Four route kinds (`r_historic`, `r_land`, `r_story`, `r_sea`) · ocean banks (`banks`) | ✓ | ✓ | ✓ |
 | Two moons · orbit lines · rotation axis · ecliptic plane (`g_moons`, `g_orbits`, `g_axis`, `g_ecl`) | — | ✓ | — |
 | Scar Proximity rings · Scar azimuth annotations (`d_rings`, `d_azi`) | — | — | ✓ |
@@ -232,7 +232,7 @@ Run `cd tests && npm install && node run-all.mjs` (Playwright + headless Chromiu
 **Finding.** The flat map stacked its territory layers in the order in which the layers were switched on (the DOM order of the SVG), while the globe and the working map used the order of the data. With the old uniform fills the difference was hard to see; the political layer v3 adds layers that look very different from each other (dot zones with no outline, hatching, optional tints), and a layer drawn over another on one view and under it on another would be a defect of the map, not of the lore.
 
 **What was built.**
-- **One table** in `app/core.js`: `C.TGROUPS` (the groups, bottom → top: Satvan zone, Hesperia + *marka*, Hesperia belts, Foedera, Interregna, Anabasim, Andurā + Anušarri, the rest), `C.TDEFAULT` (the one group that starts off: the Hesperia belts), `C.tgroupOf`, `C.terrOrder`, `C.terrStyle` (fill kind — flat, hatch or dots — colour, outline) and `C.patKey` / `patSVG` / `patTile` (the same pattern as an SVG `<pattern>` for the flat map and the legend, and as a canvas tile for the globe and the disk). The flat map, `app/globe/layers.js` and `app/disk.js` read it; no view has a style table of its own.
+- **One table** in `app/core.js`: `C.TGROUPS` (the groups, bottom → top: Satvan zone, Imperial Commonwealth umbrella (v1.8), Hesperia, Commonwealth kingdoms = *marka* (v1.8), Hesperia belts, Foedera, Interregna, Anabasim, Andurā + Anušarri, the rest), `C.TDEFAULT` (the one group that starts off: the Hesperia belts), `C.tgroupOf`, `C.terrOrder`, `C.terrStyle` (fill kind — flat, hatch or dots — colour, outline) and `C.patKey` / `patSVG` / `patTile` (the same pattern as an SVG `<pattern>` for the flat map and the legend, and as a canvas tile for the globe and the disk). The flat map, `app/globe/layers.js` and `app/disk.js` read it; no view has a style table of its own.
 - **Flat map**: a `restack()` after every layer toggle (`LAYERS[key].after`) puts the SVG paths back in the canonical order, so the stacking no longer depends on the toggling history. Long popups scroll (`maxHeight`).
 - **Hit-test**: the same rule on all three views — the topmost visible polygon in the canonical order answers; a *tier* record (a denser step inside a dot zone) answers as its parent faction.
 - **Layers 25 → 27**: `t_hesb` (the Hesperia province belts; default off) and `t_sat` (the Satvan dispersal zone). `LAYER_UI` labels say *usulan*.

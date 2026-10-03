@@ -55,15 +55,15 @@ await run('retired Vasal Commonwealth: no id, polygon, card, group or legend lef
   const ui = fs.readFileSync(path.join(ROOT, 'app/app.js'), 'utf8') + fs.readFileSync(path.join(ROOT, 'app/body.html'), 'utf8');
   t('layer panel and legend never call anything "vasal Commonwealth" or "Hesperia / vasal"', !/vasal Commonwealth|Hesperia \/ vasal/i.test(ui));
   t('no UI string calls Cassivalla a province ("Provincia" is data-only, as a labelled exonym)', !/Provincia/.test(ui));
-  t('the three numbered polygons of the old Commonwealth are gone from the territories (49 records: 26 base + 23 Interregna)', TERR.length === 49 && !TERR.some((x) => /^cw/.test(x.id)), String(TERR.length));
+  t('the three numbered polygons of the old Commonwealth are gone from the territories (50 records: 27 base + 23 Interregna)', TERR.length === 50 && !TERR.some((x) => /^cw/.test(x.id)), String(TERR.length));
 });
 
 // ================================================================== 2. contract of the new layers
 await run('political data contract', async () => {
-  const want = ['aventalia', 'tarvenna', 'cassivalla', 'nundina', 'hesperia', 'hes_marka', 'hes_pesisir', 'hes_transisi', 'hes_pedalaman', 'satvan_pedalaman', 'satvan_pedalaman__t1', 'satvan_pedalaman__t2',
+  const want = ['imperial_commonwealth', 'aventalia', 'tarvenna', 'cassivalla', 'nundina', 'hesperia', 'hes_marka', 'hes_pesisir', 'hes_transisi', 'hes_pedalaman', 'satvan_pedalaman', 'satvan_pedalaman__t1', 'satvan_pedalaman__t2',
     'kloaka', 'kloaka_zona', 'kloaka_zona__t1', 'kloaka_zona__t2', 'foedera', 'foedera_inti', 'liminara', 'ktonia', 'pylora', 'anabasim', 'emporys', 'perates', 'andura', 'anusarri'];
   const got = TERR.map((x) => x.id).filter((i) => !IR.includes(i));
-  t('territory ids = 26 non-Interregna records + ir_1..ir_23', want.length === got.length && want.every((i) => got.includes(i)) && IR.length === 23, got.join());
+  t('territory ids = 27 non-Interregna records + ir_1..ir_23', want.length === got.length && want.every((i) => got.includes(i)) && IR.length === 23, got.join());
   const tiers = TERR.filter((x) => x.of);
   t('tier records name an existing parent and a tier number (draw-only: no faction card of their own)', tiers.length === 4 && tiers.every((x) => byId[x.of] && Number.isInteger(x.tier) && x.tier >= 1 && !FAC[x.id]), tiers.map((x) => x.id).join());
   t('every other territory has a faction card (Interregna included)', TERR.filter((x) => !x.of && x.id !== 'anusarri').every((x) => FAC[x.id]), TERR.filter((x) => !x.of && !FAC[x.id]).map((x) => x.id).join());
@@ -86,21 +86,21 @@ await run('political data contract', async () => {
 
 // ================================================================== 3. one group table, one stacking order
 await run('shared group table and canonical stacking order', async () => {
-  t('eight groups, bottom → top: sat, hes, hesb, foe, int, ana, elv, lain', C.TGROUPS.join() === 'sat,hes,hesb,foe,int,ana,elv,lain');
+  t('ten groups, bottom → top: sat, ic, hes, cw, hesb, foe, int, ana, elv, lain', C.TGROUPS.join() === 'sat,ic,hes,cw,hesb,foe,int,ana,elv,lain');
   t('the Hesperia belt group is the only one that starts switched off', Object.keys(C.TDEFAULT).join() === 'hesb' && C.TDEFAULT.hesb === false);
   const grp = Object.fromEntries(TERR.map((x) => [x.id, C.tgroupOf(x)]));
   t('every territory belongs to a known group; tiers follow their parent', Object.values(grp).every((g) => C.TGROUPS.includes(g)) && TERR.filter((x) => x.of).every((x) => grp[x.id] === grp[x.of]));
-  t('group assignments: Hesperia + marka → hes; belts → hesb; Satvan → sat; Foedera + core + Cassivalla → foe; Kloaka + zone → lain', grp.hesperia === 'hes' && grp.hes_marka === 'hes' && grp.hes_pesisir === 'hesb' && grp.satvan_pedalaman === 'sat' && grp.foedera === 'foe' && grp.foedera_inti === 'foe' && grp.cassivalla === 'foe' && grp.kloaka === 'lain' && grp.kloaka_zona === 'lain' && IR.every((i) => grp[i] === 'int'));
+  t('group assignments: umbrella → ic; Hesperia → hes; marka → cw; belts → hesb; Satvan → sat; Foedera + core + Cassivalla → foe; Kloaka + zone → lain', grp.imperial_commonwealth === 'ic' && grp.hesperia === 'hes' && grp.hes_marka === 'cw' && grp.hes_pesisir === 'hesb' && grp.satvan_pedalaman === 'sat' && grp.foedera === 'foe' && grp.foedera_inti === 'foe' && grp.cassivalla === 'foe' && grp.kloaka === 'lain' && grp.kloaka_zona === 'lain' && IR.every((i) => grp[i] === 'int'));
   const ord = C.terrOrder(TERR).map((x) => x.id), ix = (i) => ord.indexOf(i);
   t('terrOrder is a permutation of all territories', ord.length === TERR.length && new Set(ord).size === TERR.length);
   const gi = ord.map((i) => C.TGROUPS.indexOf(grp[i]));
   t('terrOrder sorts by group, then keeps data order inside a group', gi.every((g, k) => k === 0 || g >= gi[k - 1]) && C.TGROUPS.every((g) => { const mine = ord.filter((i) => grp[i] === g), data = TERR.map((x) => x.id).filter((i) => grp[i] === g); return mine.join() === data.join(); }));
-  t('overlays sit above their base: belts above Hesperia; Foedera core above the claim; Kloaka zone and its tiers above the claim and in tier order; Satvan tiers in tier order',
-    ix('hes_pesisir') > ix('hesperia') && ix('hes_transisi') > ix('hesperia') && ix('hes_pedalaman') > ix('hesperia') && ix('foedera_inti') > ix('foedera') && ix('kloaka_zona') > ix('kloaka') &&
+  t('overlays sit above their base: the umbrella lies under Hesperia and marka; belts above Hesperia; Foedera core above the claim; Kloaka zone and its tiers above the claim and in tier order; Satvan tiers in tier order',
+    ix('imperial_commonwealth') < ix('hesperia') && ix('imperial_commonwealth') < ix('hes_marka') && ix('hes_pesisir') > ix('hesperia') && ix('hes_transisi') > ix('hesperia') && ix('hes_pedalaman') > ix('hesperia') && ix('foedera_inti') > ix('foedera') && ix('kloaka_zona') > ix('kloaka') &&
     ix('kloaka_zona__t1') > ix('kloaka_zona') && ix('kloaka_zona__t2') > ix('kloaka_zona__t1') && ix('satvan_pedalaman__t1') > ix('satvan_pedalaman') && ix('satvan_pedalaman__t2') > ix('satvan_pedalaman__t1'));
   // the three views must not carry their own copies of the group list or the style table
   const src = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-  t('globe and dual-disk take groups, order and styles from the shared core (no hard-coded group list, no private hatch)', ['app/globe/layers.js', 'app/disk.js'].every((f) => !/'t_(hes|hesb|sat|foe|int|ana|elv|lain)'/.test(src(f)) && /C\.TGROUPS/.test(src(f)) && /C\.terrStyle/.test(src(f)) && /C\.terrOrder/.test(src(f)) && /C\.tgroupOf/.test(src(f))) && /C\.terrStyle/.test(src('app/app.js')) && /C\.TGROUPS/.test(src('app/app.js')));
+  t('globe and dual-disk take groups, order and styles from the shared core (no hard-coded group list, no private hatch)', ['app/globe/layers.js', 'app/disk.js'].every((f) => !/'t_(ic|hes|cw|hesb|sat|foe|int|ana|elv|lain)'/.test(src(f)) && /C\.TGROUPS/.test(src(f)) && /C\.terrStyle/.test(src(f)) && /C\.terrOrder/.test(src(f)) && /C\.tgroupOf/.test(src(f))) && /C\.terrStyle/.test(src('app/app.js')) && /C\.TGROUPS/.test(src('app/app.js')));
 });
 
 // ================================================================== 4. geometry: no overlap where the task forbids it, nesting where it requires it
@@ -116,6 +116,10 @@ await run('geometry rules (sampled)', async () => {
   t('Satvan tiers are nested (tier 2 ⊂ tier 1 ⊂ zone)', share(T('satvan_pedalaman__t2'), [T('satvan_pedalaman__t1')]) >= 0.99 && share(T('satvan_pedalaman__t1'), [sat]) >= 0.99);
   t('Kloaka claim does not overlap Hesperia, Foedera or an Interregna polity (the small overlap is fixed)', share(T('kloaka'), [hes, T('foedera'), ...interregnaIds.map(T)], 600) === 0);
   t('Kloaka control zone is one diffuse zone inside the nominal claim, tiers nested', share(T('kloaka_zona'), [T('kloaka')]) >= 0.99 && share(T('kloaka_zona__t1'), [T('kloaka_zona')]) >= 0.99 && share(T('kloaka_zona__t2'), [T('kloaka_zona__t1')]) >= 0.99);
+  const ic = T('imperial_commonwealth');
+  t('umbrella (Imperial Commonwealth) covers Hesperia and the marka belt (≥ 99 % of samples) and adds no land beyond them (≤ 1 % of its own samples)', share(hes, [ic], 800) >= 0.99 && share(marka, [ic], 800) >= 0.99 && share(ic, [hes, marka], 800) >= 0.99);
+  t('umbrella overlaps no other polity (Foedera, Kloaka claim and zone, Interregna, Anabasim, …) beyond what Hesperia itself does (< 0.6 %; the belts are overlays inside Hesperia and are left out)', share(ic, allBase.filter((x) => !['imperial_commonwealth', 'hesperia', 'hes_marka', 'hes_pesisir', 'hes_transisi', 'hes_pedalaman'].includes(x.id)), 800) < 0.006);
+  t('v3 metadata: umbrella area = Hesperia + marka (±0.05 M km²), nothing else added', Math.abs(POL.v3.ic.area_mkm2 - (POL.v3.ic.hesperia_mkm2 + POL.v3.ic.marka_mkm2)) <= 0.05 && POL.v3.ic.hesperia_mkm2 === POL.v3.belts.hesperia_mkm2 && POL.v3.ic.marka_mkm2 === POL.v3.marka.area_mkm2);
   t('Foedera core lies inside the (unclipped) claim', share(T('foedera_inti'), [T('foedera')], 800) >= 0.98);
   const m = POL.v3;
   t('v3 metadata: belts 24+19+7 = 50 provinces; shares sum to 100 %; areas sum to Hesperia', m.belts.prov.reduce((a, b) => a + b) === 50 && Math.abs(m.belts.share_pct.reduce((a, b) => a + b) - 100) < 0.2 && Math.abs(m.belts.area_mkm2.reduce((a, b) => a + b) - m.belts.hesperia_mkm2) < 0.03);
@@ -130,7 +134,7 @@ await run('vocabulary and epistemic labels in the data', async () => {
   const walkS = (o, p) => { if (typeof o === 'string') strings.push([p.join('/'), o]); else if (Array.isArray(o)) o.forEach((v, i) => walkS(v, [...p, i])); else if (o && typeof o === 'object') Object.entries(o).forEach(([k, v]) => { if (!['rings', 'pts', 'pts2', 'b', 'contours', 'mandala', 'regions', 'banks'].includes(k)) walkS(v, [...p, k]); }); };
   walkS({ places: DATA.places, factions: FAC, audit: DATA.audit, ledger: DATA.ledger, unmapped: DATA.unmapped, routes: DATA.routes, fronts: DATA.fronts }, []);
   const prov = strings.filter(([, s]) => /provins/i.test(s));
-  const okPath = (p, s) => /^factions\/(hesperia|hes_pesisir|hes_transisi|hes_pedalaman)\//.test(p) || (/^factions\/(hes_marka|cassivalla)\//.test(p) && /bukan provinsi/.test(s)) ||
+  const okPath = (p, s) => /^factions\/(imperial_commonwealth|hesperia|hes_pesisir|hes_transisi|hes_pedalaman)\//.test(p) || (/^factions\/(hes_marka|cassivalla)\//.test(p) && /bukan provinsi/.test(s)) ||
     (/^audit\//.test(p) && /provinsi|#21[24]/.test(s + ' ' + DATA.audit[+p.split('/')[1]].refs + ' ' + DATA.audit[+p.split('/')[1]].title));
   const stray = prov.filter(([p, s]) => !okPath(p, s));
   t('"provinsi" appears only for Hesperia direct rule (Hesperia and its belts), in explicit negations (marka, Cassivalla) and in the vocabulary / pattern cards of the audit', stray.length === 0, stray.map(([p, s]) => p + ': ' + s.slice(0, 60)).join(' | '));
@@ -146,6 +150,7 @@ await run('vocabulary and epistemic labels in the data', async () => {
   const open3 = FAC.kloaka.facts.find((r) => r[0] === 'Tidak dijawab peta')[2];
   t('the map does not answer the three open Kloaka knobs (it lists them as unanswered)', /apakah ada zona yang cukup terkonsolidasi/.test(open3) && /apakah raja tahu/.test(open3) && /sumber daya tersembunyi/.test(open3) && !/Terdapat sumber daya|raja tahu bahwa/.test(JSON.stringify(FAC.kloaka)));
   t('Foedera three bonds = working labels (Inferensi), "batas antar lapis" = Turunan (Powers), no subdivision drawn', epiOf('foedera', 'Tiga lapis ikatan') === 'inferensi' && epiOf('foedera', 'Batas antar lapis') === 'turunan' && TERR.filter((x) => /^foedera/.test(x.id)).map((x) => x.id).join() === 'foedera,foedera_inti');
+  t('the umbrella card says Imperial Commonwealth, names Hesperia as paramount (Kanon rows), keeps "kerajaan" off Hesperia and flags the placeholder marka edge', FAC.imperial_commonwealth.name === 'Imperial Commonwealth' && epiOf('imperial_commonwealth', 'Paramount') === 'kanon' && epiOf('imperial_commonwealth', 'Nama') === 'kanon' && epiOf('imperial_commonwealth', 'Tidak dijawab peta') === 'terbuka' && /PLACEHOLDER, bukan kanon/.test(FAC.imperial_commonwealth.tag) && /Paramount/.test(FAC.hesperia.kind) && epiOf('hesperia', 'Paramount') === 'kanon' && !/Kerajaan Hesperia/i.test(JSON.stringify(FAC)) && !/Kerajaan Hesperia/i.test(JSON.stringify(DATA.places)));
   t('placeholders are labelled "PLACEHOLDER, bukan kanon": marka, Satvan zone, Kloaka zone, Foedera core', ['hes_marka', 'satvan_pedalaman', 'kloaka_zona', 'foedera_inti'].every((i) => FAC[i].tag === 'PLACEHOLDER, bukan kanon'));
   t('the belts carry the working-label tag and every number on them is Inferensi', ['hes_pesisir', 'hes_transisi', 'hes_pedalaman'].every((i) => /Label kerja/.test(FAC[i].tag) && FAC[i].epi === 'inferensi'));
   t('Satvan card: legal status of "tidak terhitung" is Terbuka and the zone is not equated with "Satvan Perbatasan" or Vasundha', epiOf('satvan_pedalaman', 'Status hukum') === 'terbuka' && /Bukan "Satvan Perbatasan"/.test(FAC.satvan_pedalaman.facts.find((r) => r[0] === 'Bukan')[2]) && /Vasundha/.test(FAC.satvan_pedalaman.facts.find((r) => r[0] === 'Bukan')[2]));
@@ -155,7 +160,7 @@ await run('vocabulary and epistemic labels in the data', async () => {
 await run('in-map audit cards and the "Catok tiga rahang" card', async () => {
   const A = DATA.audit, find = (kind, re) => A.filter((a) => a.kind === kind && re.test(a.title));
   t('blank-spot cards: Satvan legal status, Interregna count and names, Hesperia coastline, Kloaka position', find('blank', /Satvan.*tidak terhitung/).length === 1 && find('blank', /Jumlah dan nama polity Interregna/).length === 1 && find('blank', /Garis pantai Hesperia berhenti/).length === 1 && find('blank', /Posisi Kloaka/).length === 1);
-  t('pattern cards for the decisions: nominal jurisdiction, no-line rule, one word one rule', find('pola', /yurisdiksi nominal/).length === 1 && find('pola', /Tanpa garis bila kanon tidak menarik garis/).length === 1 && find('pola', /Satu kata, satu aturan/).length === 1);
+  t('pattern cards for the decisions: nominal jurisdiction, no-line rule, one word one rule, the umbrella', find('pola', /Payung Imperial Commonwealth/).length === 1 && find('pola', /yurisdiksi nominal/).length === 1 && find('pola', /Tanpa garis bila kanon tidak menarik garis/).length === 1 && find('pola', /Satu kata, satu aturan/).length === 1);
   t('friction card: Powers Foedera still says "provinsi" (pending sweep, #214)', find('friksi', /provinsi.*Powers Foedera/).length === 1);
   t('closed card records the retirement of the numbered vassal polygons (no ids quoted)', find('tutup', /Vasal Commonwealth.*dicabut/).length === 1);
   const cat = A.find((a) => /Catok tiga rahang/.test(a.title));
@@ -185,10 +190,10 @@ const ALL = new Set(C.TGROUPS), DEFAULT_ON = new Set(C.TGROUPS.filter((g) => g !
 await run('flat map: optional belts, stacking order, patterns, persistence', async () => {
   const { ctx, page, ev } = await open2D();
   await page.locator('#tab-layer').click();
-  const st = await page.evaluate(() => ['t_hes', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain'].map((k) => [k, document.getElementById('ly-' + k) && document.getElementById('ly-' + k).checked]));
-  t('layer panel has the two new layers; belts (t_hesb) start OFF, Satvan zone (t_sat) and the rest start ON', st.every(([, v]) => v !== null) && st.filter(([, v]) => !v).map(([k]) => k).join() === 't_hesb', JSON.stringify(st));
+  const st = await page.evaluate(() => ['t_ic', 't_hes', 't_cw', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain'].map((k) => [k, document.getElementById('ly-' + k) && document.getElementById('ly-' + k).checked]));
+  t('layer panel has the new layers (umbrella t_ic, marka t_cw, belts, Satvan); belts (t_hesb) start OFF, Satvan zone (t_sat) and the rest start ON', st.every(([, v]) => v !== null) && st.filter(([, v]) => !v).map(([k]) => k).join() === 't_hesb', JSON.stringify(st));
   const lbl = await page.evaluate(() => document.getElementById('sec-layer').innerText);
-  t('layer labels: "Sabuk provinsi Hesperia", "Zona persebaran Satvan Pedalaman", "kerajaan marka Commonwealth"; no "vasal Commonwealth"; no "Provincia"', /Sabuk provinsi Hesperia/.test(lbl) && /Zona persebaran Satvan Pedalaman/.test(lbl) && /kerajaan marka Commonwealth/.test(lbl) && !/vasal Commonwealth/i.test(lbl) && !/Provincia/.test(lbl), lbl.slice(lbl.indexOf('Wilayah kuasa'), lbl.indexOf('Wilayah kuasa') + 400));
+  t('layer labels: "Imperial Commonwealth", "Hesperia · Paramount", "Kerajaan-kerajaan Commonwealth", "Sabuk provinsi Hesperia", "Zona persebaran Satvan Pedalaman"; no "vasal Commonwealth"; no "Provincia"', /Sabuk provinsi Hesperia/.test(lbl) && /Zona persebaran Satvan Pedalaman/.test(lbl) && /Kerajaan-kerajaan Commonwealth/.test(lbl) && /Imperial Commonwealth/.test(lbl) && /Hesperia · Paramount/.test(lbl) && !/vasal Commonwealth/i.test(lbl) && !/Provincia/.test(lbl), lbl.slice(lbl.indexOf('Wilayah kuasa'), lbl.indexOf('Wilayah kuasa') + 400));
   const s0 = await domSeq(page), e0 = expectSeq(DEFAULT_ON);
   t(`default stack = canonical order, belts absent (${s0.length} paths: fill|stroke sequence equals C.terrOrder × style)`, s0.length === e0.length && s0.every((s, i) => s === e0[i]), `${s0.length} vs ${e0.length}`);
   await page.locator('#ly-t_hesb').check();
@@ -268,15 +273,15 @@ await run('flat map: cards, legend and audit tab', async () => {
   await page.locator('#btn-legend').click();
   const lg0 = await page.evaluate(() => document.getElementById('legend').innerText);
   const sw = await page.evaluate(() => document.getElementById('legend').querySelectorAll('svg pattern').length);
-  t('legend: Hesperia (yurisdiksi nominal), kerajaan marka, Satvan zone, Foedera claim + core, Cassivalla, Kloaka claim + control zone; belts absent while the layer is off',
-    ['Hesperia (yurisdiksi nominal)', 'Kerajaan marka Commonwealth', 'Satvan Pedalaman', 'Foedera: klaim luas', 'Foedera: inti berpenduduk tipis', 'Cassivalla', 'Kloaka: klaim nominal', 'Kloaka: zona kontrol bergeser'].every((s) => lg0.includes(s)) && !/Sabuk Pesisir/.test(lg0) && !/vasal/i.test(lg0.replace('contested / dianeksasi / vasal', '')) && !/Provincia/.test(lg0), lg0);
+  t('legend: Imperial Commonwealth (payung nominal), Hesperia · Paramount (yurisdiksi nominal), Kerajaan-kerajaan Commonwealth (marka), Satvan zone, Foedera claim + core, Cassivalla, Kloaka claim + control zone; belts absent while the layer is off',
+    ['Imperial Commonwealth: payung nominal', 'Hesperia: Paramount (yurisdiksi nominal)', 'Kerajaan-kerajaan Commonwealth: sabuk marka', 'Satvan Pedalaman', 'Foedera: klaim luas', 'Foedera: inti berpenduduk tipis', 'Cassivalla', 'Kloaka: klaim nominal', 'Kloaka: zona kontrol bergeser'].every((s) => lg0.includes(s)) && !/Sabuk Pesisir/.test(lg0) && !/vasal/i.test(lg0.replace('contested / dianeksasi / vasal', '')) && !/Provincia/.test(lg0), lg0);
   await page.locator('#tab-layer').click(); await page.locator('#ly-t_hesb').check();
   const lg1 = await page.evaluate(() => document.getElementById('legend').innerText);
   t('legend shows the three belts once the belt layer is on', /Sabuk Pesisir · 24/.test(lg1) && /Sabuk Transisi · 19/.test(lg1) && /Sabuk Pedalaman · 7/.test(lg1));
   await page.locator('#ly-t_sat').uncheck(); await page.locator('#ly-t_foe').uncheck();
   const lg2 = await page.evaluate(() => document.getElementById('legend').innerText);
-  t('legend drops entries of layers that are off', !/Satvan Pedalaman/.test(lg2) && !/Foedera: klaim luas/.test(lg2) && /Hesperia \(yurisdiksi nominal\)/.test(lg2));
-  t('legend swatches reuse the map patterns (hatch for marka, Foedera claim and Cassivalla; dots for the Satvan and Kloaka zones)', sw === 5, String(sw));
+  t('legend drops entries of layers that are off', !/Satvan Pedalaman/.test(lg2) && !/Foedera: klaim luas/.test(lg2) && /Hesperia: Paramount \(yurisdiksi nominal\)/.test(lg2));
+  t('legend swatches reuse the map patterns (hatch for the marka belt, Foedera claim and Cassivalla; dots for the Satvan and Kloaka zones)', sw === 5, String(sw));
   // audit tab
   await page.locator('#tab-audit').click();
   const au = await page.evaluate(() => Array.from(document.querySelectorAll('#sec-audit .card')).map((c) => [c.querySelector('.kind').textContent, c.querySelector('h4').textContent]));

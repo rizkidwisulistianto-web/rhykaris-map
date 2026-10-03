@@ -205,7 +205,9 @@ function main() {
   var fCat = LS.get('rh-fcat', CATS.map(function (c) { return c[0]; })), fEpi = LS.get('rh-fepi', ['kanon', 'turunan', 'inferensi', 'terbuka']), fProp = LS.get('rh-fprop', true);
   var gMarkers = L.layerGroup(), gLabels = L.layerGroup(), gZone = L.layerGroup();
   var entries = {};  // id -> {p, layers:[...]}
-  var LBL_BREAK = { silva_nullius: 1, sabuk_pohon: 2 }, LBL_MINOR = { silva_nullius: 1 };
+  var LBL_BREAK = { silva_nullius: 1, sabuk_pohon: 2, imperial_commonwealth: 1 }, LBL_MINOR = { silva_nullius: 1 };
+  // v1.8.0: dua label besar di atas wilayah yang sama (payung dan Paramount) tidak muat berdampingan pada zoom jauh. Zoom 0–2: hanya nama payung, tanpa keterangan; dari zoom 3: label Hesperia (Paramount) dan keterangan payung muncul.
+  var LBL_MINOR2 = { hesperia: 1 }, LBL_SUB3 = { imperial_commonwealth: 1 };
   function breakName(nm, k) { var w = nm.split(' '); return w.slice(0, k).join(' ') + '<br>' + w.slice(k).join(' '); }
   function lblClass(p) {
     var c = p.cat;
@@ -216,9 +218,9 @@ function main() {
     return 'lbl-region';
   }
   function labelHTML(p) {
-    var sub = (p.cat === 'continent' || p.cat === 'blank' || p.id === 'mare_internum') && p.aka ? '<small>' + esc(p.aka) + '</small>' : '';
+    var sub = (p.cat === 'continent' || p.cat === 'blank' || p.id === 'mare_internum') && p.aka ? '<small>' + esc(p.aka) + '</small>' : (p.sub ? '<small>' + esc(p.sub) + '</small>' : '');
     var nm = LBL_BREAK[p.id] ? breakName(esc(p.name), LBL_BREAK[p.id]) : esc(p.name);
-    return '<div class="mlbl ' + lblClass(p) + (p.proposal ? ' lbl-proposal' : '') + (LBL_MINOR[p.id] ? ' minor' : '') + '" title="' + esc(p.name) + '">' + nm + sub + '</div>';
+    return '<div class="mlbl ' + lblClass(p) + (p.proposal ? ' lbl-proposal' : '') + (LBL_MINOR[p.id] ? ' minor' : '') + (LBL_MINOR2[p.id] ? ' minor2' : '') + (LBL_SUB3[p.id] ? ' sub3' : '') + '" title="' + esc(p.name) + '">' + nm + sub + '</div>';
   }
   DATA.places.forEach(function (p) {
     var e = { p: p, layers: [] }; entries[p.id] = e;
@@ -544,7 +546,7 @@ function main() {
     ['Peta kerja dual-disk', [['d_rings', 'Cincin Scar Proximity (≤ 6,5° · ≤ 19,5° · ≤ 32,5°)'], ['d_azi', 'Anotasi azimut Scar (puncak, ±90°, palung)']], 'disk'],
     ['Dasar & kartografi', [['grat', 'Graticule 15°'], ['mer', 'Tiga meridian'], ['cland', 'Kontur elevasi (1.000/2.500/4.500 m)'], ['csea', 'Kontur batimetri (−200/−3.000/−6.000 m)'], ['labels', 'Label wilayah & perairan'], ['regions', 'Garis region fisik']]],
     ['The Scar', [['band', 'Pita 13,0°'], ['curve', 'Kurva small circle'], ['arcs', 'Empat busur (batas usulan)'], ['anom', 'Kantong anomali massa'], ['zone', 'Zona Castra Birath (tak dikunci)']]],
-    ['Wilayah kuasa AS 1647', [['t_hes', 'Hesperia (yurisdiksi nominal) & kerajaan marka Commonwealth', '#c0394b'], ['t_hesb', 'Sabuk provinsi Hesperia · Pesisir / Transisi / Pedalaman (usulan, opsional)', '#ee7d86'], ['t_sat', 'Zona persebaran Satvan Pedalaman (usulan · bukan wilayah berdaulat)', '#e6dcc3'], ['t_foe', 'Foedera (klaim luas + inti berpenduduk tipis) & Cassivalla', '#2aa38a'], ['t_int', 'Mozaik Interregna & Nundina', '#e0a33a'], ['t_ana', 'Anabasim (konsolidasi Birath–Satvan)', '#ff6a2b'], ['t_elv', 'Andurā (Zona Ambang)', '#4cc3a8'], ['mandala', 'Mandala Kemurnian (Anušarri)', '#e6d47a'], ['t_lain', 'Lainnya: Liminara, Ktonia, Kloaka (klaim nominal + zona kontrol bergeser), Emporys, Peratēs, Vasundha', '#9b6fd6'], ['fronts', 'Front Florian & arah ekspansi Anabasim']]],
+    ['Wilayah kuasa AS 1647', [['t_ic', 'Imperial Commonwealth · payung nominal (Hesperia + marka)', '#d9455f'], ['t_hes', 'Hesperia · Paramount (diperintah langsung · yurisdiksi nominal)', '#c0394b'], ['t_cw', 'Kerajaan-kerajaan Commonwealth · sabuk marka (usulan)', '#e08a96'], ['t_hesb', 'Sabuk provinsi Hesperia · Pesisir / Transisi / Pedalaman (usulan, opsional)', '#ee7d86'], ['t_sat', 'Zona persebaran Satvan Pedalaman (usulan · bukan wilayah berdaulat)', '#e6dcc3'], ['t_foe', 'Foedera (klaim luas + inti berpenduduk tipis) & Cassivalla', '#2aa38a'], ['t_int', 'Mozaik Interregna & Nundina', '#e0a33a'], ['t_ana', 'Anabasim (konsolidasi Birath–Satvan)', '#ff6a2b'], ['t_elv', 'Andurā (Zona Ambang)', '#4cc3a8'], ['mandala', 'Mandala Kemurnian (Anušarri)', '#e6d47a'], ['t_lain', 'Lainnya: Liminara, Ktonia, Kloaka (klaim nominal + zona kontrol bergeser), Emporys, Peratēs, Vasundha', '#9b6fd6'], ['fronts', 'Front Florian & arah ekspansi Anabasim']]],
     ['Rute', [['r_historic', 'Rute Penyeberangan The Scar', '#f6e7bd'], ['r_land', 'Jalur darat barat (Sutura)', '#e79a6a'], ['r_story', 'Rute Arc 1 (Sulis)', '#ffd35c'], ['r_sea', 'Usulan koridor angin & jalur laut', '#7fe0ec']]],
     ['Oseanografi', [['banks', 'Bank samudra (lapisan fisik v4)']]],
     ['Marker', [['markers', 'Tampilkan marker lokasi']]]
@@ -608,7 +610,7 @@ function main() {
     h += '<div class="li"><svg width="18" height="18" viewBox="0 0 24 24">' + glyph('city', RING.inferensi[0], RING.inferensi[1]) + '<circle cx="19.6" cy="4.6" r="2.6" fill="#f2b25a"/></svg>Usulan — posisi belum dikunci (entri Atlas Draft)</div>';
     h += '<h3>The Scar</h3><div class="li"><svg width="30" height="12"><rect y="1" width="30" height="10" fill="#ff5a24" fill-opacity=".25"/><path d="M0 6h30" stroke="#ff7a3d" stroke-width="2.2"/></svg>Pita 13,0° & kurva</div>';
     var act = [
-      ['t_hes', legSw('hesperia'), 'Hesperia (yurisdiksi nominal)'], ['t_hes', legSw('hes_marka'), 'Kerajaan marka Commonwealth (usulan)'],
+      ['t_ic', legSw('imperial_commonwealth'), 'Imperial Commonwealth: payung nominal'], ['t_hes', legSw('hesperia'), 'Hesperia: Paramount (yurisdiksi nominal)'], ['t_cw', legSw('hes_marka'), 'Kerajaan-kerajaan Commonwealth: sabuk marka (usulan)'],
       ['t_hesb', legSw('hes_pesisir'), 'Sabuk Pesisir · 24 provinsi (usulan)'], ['t_hesb', legSw('hes_transisi'), 'Sabuk Transisi · 19 (usulan)'], ['t_hesb', legSw('hes_pedalaman'), 'Sabuk Pedalaman · 7 (usulan)'],
       ['t_sat', legSw('satvan_pedalaman', 2), 'Satvan Pedalaman: zona persebaran (usulan)'],
       ['t_foe', legSw('foedera'), 'Foedera: klaim luas'], ['t_foe', legSw('foedera_inti'), 'Foedera: inti berpenduduk tipis (usulan)'], ['t_foe', legSw('cassivalla'), 'Cassivalla'],
