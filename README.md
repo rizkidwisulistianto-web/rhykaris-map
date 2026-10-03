@@ -26,7 +26,7 @@
 
 <br>
 
-[Overview](#overview) · [Features](#interactive-features) · [3D globe](#3d-globe-viewer-v15--v16) · [Quick start](#quick-start) · [How it's built](#how-its-built) · [Roadmap](#worldbuilding-progress--roadmap) · [Tech stack](#tech-stack--credits) · [License](#license)
+[Overview](#overview) · [Features](#interactive-features) · [3D globe](#3d-globe-and-working-map-viewer-v15--v20) · [Quick start](#quick-start) · [How it's built](#how-its-built) · [Roadmap](#worldbuilding-progress--roadmap) · [Tech stack](#tech-stack--credits) · [License](#license)
 
 </div>
 
@@ -79,6 +79,8 @@ Each pin carries an *epistemic status* — the map separates what is locked from
 
 Marker rings encode the same thing at a glance: solid gold (canon), solid teal (derived), dashed amber (AI inference), dotted orange-red (open).
 
+In the political layer a shape or number that the map chose for itself, because the vault has not decided it, carries an extra tag — *PLACEHOLDER, bukan kanon* or *usulan*. Those are never canon; they are drawn so that a feature can exist.
+
 ---
 
 ## Interactive Features
@@ -94,7 +96,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 
 ### Faction Boundary / Territorial Layers
 
-- **45 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Cassivalla, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below); a narrow belt of **kerajaan marka**, the Commonwealth's vassals on the edge of Hesperia's direct land; the **Satvan Pedalaman dispersal zone**; Hesperia's three optional province belts, Foedera's inhabited core and Kloaka's control zone (see below); and a mosaic of 23 illustrative, unnamed **Interregna** polities — eleven kingdoms, six free cities, three tribal lands and three micro-polities, some of them enclaves (one nested two deep) and one with an exclave — toggled in groups from the **Layer** tab. *(The three numbered "Vasal Commonwealth" polygons of earlier versions were retired in v1.7: they rested on a reading of Hesperia that is not canon.)*
+- **46 territories for AS 1647** — fifteen named powers (Hesperia, Foedera, Cassivalla, Aventalia, Tarvenna, Kloaka, the free city of Nundina, Liminara, Ktonia, Pylora, Anabasim, Emporys, Peratēs, Andurā, and Anušarri — drawn as the Mandala, below); the **Imperial Commonwealth** umbrella (Hesperia plus the *marka* belt, nominal jurisdiction, drawn beneath both; v1.8); a narrow belt of **kerajaan marka**, the Commonwealth's vassals on the edge of Hesperia's direct land; the **Satvan Pedalaman dispersal zone**; Hesperia's three optional province belts, Foedera's inhabited core and Kloaka's control zone (see below); and a mosaic of 23 illustrative, unnamed **Interregna** polities — eleven kingdoms, six free cities, three tribal lands and three micro-polities, some of them enclaves (one nested two deep) and one with an exclave — toggled in groups from the **Layer** tab. *(The three numbered "Vasal Commonwealth" polygons of earlier versions were retired in v1.7: they rested on a reading of Hesperia that is not canon.)*
 - **A polygon says what is *claimed*, not what is *settled* (v1.7).** **Hesperia** is one polygon of nominal jurisdiction, not clipped; its about 50 provinces, in three belts by distance to the sea (Pesisir 24 · Transisi 19 · Pedalaman 7), are an **optional layer, off by default** — and no single province border is drawn. **Foedera** keeps its big polygon (control there is cheap: garrisons on the line) as light hatching, with a thin-populated core along the waterways on top. **Kloaka** has a thin dashed polygon for its nominal claim and a dotted zone with no hard edge for the control that shifts — its popup says *kerajaan nominal, tanpa penegakan*. The **Satvan Pedalaman** zone is a band of very low density in the southern interior: dots only, **no border line**, not a sovereign land. Everything in this paragraph that is not canon is labelled *usulan* / *Inferensi AI* in the viewer; details in [`docs/POLITICS_V3_NOTES.md`](docs/POLITICS_V3_NOTES.md).
 - **One word, one rule (#214).** *Provinsi* is used only for land ruled directly by Hesperia; Commonwealth members are *kerajaan*; Cassivalla is named *Cassivalla* (*Provincia Cassivallae* appears only as a labelled Foedera exonym in its popup).
 - **Terrain-aware borders:** frontiers are computed by a Dijkstra partition whose movement cost rises in mountains and along great rivers, grown from canon anchors — not hand-drawn polygons. The Interregna mosaic is redrawn by `src/interregna.py` from one table of seeds and sizes (`src/interregna_table.py`); see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md).
@@ -107,7 +109,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 - **Instant, accent-insensitive search** across places, regions, factions and anomaly pockets — press <kbd>/</kbd> anywhere to jump in, <kbd>Enter</kbd> to fly to the first hit.
 - **Filter by place type** (seven groups) and by **epistemic status**, including "proposals without an atlas entry". Filters and layer choices are remembered in your browser.
 
-### 3D globe (viewer v1.5 – v1.6.1)
+### 3D globe and working map (viewer v1.5 – v2.0)
 
 A second view of the **same data**, behind one button (**Globe 3D**, next to the Ukur button; or open `index.html?view=3d`, optionally with a place such as `index.html?view=3d#litus_primum`). The flat map is the default for new visitors (the viewer remembers the last view you used) and is untouched: it never downloads three.js, and its pixels are identical to v1.4.
 
@@ -118,7 +120,7 @@ A second view of the **same data**, behind one button (**Globe 3D**, next to the
 - **Relief (2b).** Heights from a **regenerated 16-bit heightmap** (checked against the canon data grid: 100 % of pixels identical), a slope map for per-pixel lighting, and an albedo texture **without baked-in hillshade**. A slider sets the **vertical exaggeration** (0–60×, default 15×; real relief is ≈ ±10 km on an 8,282 km radius — about 0.1 %, so the exaggeration is for legibility only and is labelled *tidak berskala*). Relief is *Turunan*.
 - **Measure tool in every view (v1.6.1).** **Ukur** works on the flat map, the globe and the working map: tap two points (a marker is taken at its exact position, anywhere else the point under the finger) and the viewer draws the **great-circle line**, the two dots and a result box with the distance and rough travel times — the same wording as on the flat map. "Ukur dari sini" on a place card starts from that place without leaving the view, and a finished measurement follows you when you switch views. On the working map the line is drawn per disk, so it stops at a rim and continues on the other disk.
 - **Honest 3D.** Each moon's label says *Inferensi AI · tidak berskala*, and the Globe panel states the open axial tilt; Castra Birath is still a fading zone, never a point; nothing on the globe predicts or schedules the Great Wave. The axis is drawn upright with a neutral, camera-attached light — there is **no terminator, night side or seasons** because the axial tilt is still *Terbuka*.
-- **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work. Since v1.6.5 it carries **every layer of the flat map** — contours, physical regions, ocean banks, the eight territory groups and the Mandala, routes, fronts, place and water labels — plus the Scar layers, with the same hover tooltips and cards; only the four 3D-only layers (moons, orbits, axis, ecliptic) are absent. Since v1.7 all three views read one shared table for territory groups, drawing order and patterns, so a layer stacks and answers a click the same way on the flat map, the globe and the working map.
+- **Dual-disk working map (optional).** A third view: the planet as two **Lambert azimuthal equal-area** disks — Rhykar and Aëris side by side, areas in true proportion (34.96 % : 65.04 %), centred on the Scar's pole of the circle. For measuring and layout work. Since v1.6.5 it carries **every layer of the flat map** — contours, physical regions, ocean banks, the ten territory groups and the Mandala, routes, fronts, place and water labels — plus the Scar layers, with the same hover tooltips and cards; only the four 3D-only layers (moons, orbits, axis, ecliptic) are absent. Since v1.7 all three views read one shared table for territory groups, drawing order and patterns, so a layer stacks and answers a click the same way on the flat map, the globe and the working map.
 
 <table>
 <tr>
@@ -265,7 +267,7 @@ rhykaris-map/
 |---|---|
 | `places` | 45 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
 | `anomalies` | 3 mass-anomaly pockets |
-| `factions` | 46 powers: name, kind, colour, epistemic status, blurb, and — for the political layer — method, limits and canon facts with their chips |
+| `factions` | 47 powers: name, kind, colour, epistemic status, blurb, and — for the political layer — method, limits and canon facts with their chips |
 | `territories` · `mandala` | Polygon rings for the 46 territories (50 records: four are draw-only density tiers of a dot zone) and the four Mandala rings |
 | `regions` · `contours` · `banks` | Physical region outlines · 198 contour lines · six ocean banks |
 | `routes` · `fronts` | 4 routes (historic, land, story, sea) · 3 fronts |
@@ -302,19 +304,19 @@ The Python pipeline in [`src/`](src/) needs Python 3.11 with `numpy`, `scipy`, `
 
 ## Worldbuilding Progress / Roadmap
 
-Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **29 Sep 2026**, mirrored from the world's own development backlog; the interactive-map roadmap below was refreshed on **2 Oct 2026**.
+Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **29 Sep 2026**, mirrored from the world's own development backlog; the interactive-map roadmap below was refreshed on **3 Oct 2026**.
 
 | Area | Status | Notes |
 |---|---|---|
 | Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
 | Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
-| Interactive viewer | ✅ **v1.8.0** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
+| Interactive viewer | ✅ **v2.0.0** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. v2.0.0 marks Stage 2 of Interactive Map v2 as complete — a version milestone, no change to code or data. |
 | Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer. Since 2 Oct 2026 a polygon is nominal jurisdiction, not settled land; the Commonwealth's numbered vassals are retired; every non-canon number is a labelled placeholder. Individual Interregna kingdoms are added when the story needs them |
 | Coordinates | 🟡 8 canon · 11 derived · 25 AI-inferred · 1 open *(of 45)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
 | Proposals | 🟡 11 of 45 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
 | Atlas ↔ map v4 reconciliation | 🟠 In progress | Scar rings and the Zona Ambang Ellumāt settled on 29 Sep 2026; coordinates and the sea corridor are the next gates |
 | Location-debt ledger | 🟠 14 open of 22 slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
-| Audit findings | 🟠 16 awaiting a decision · 4 closed | 3 frictions · 7 blank spots · 6 patterns — see the Audit tab |
+| Audit findings | 🟠 17 awaiting a decision · 4 closed | 3 frictions · 7 blank spots · 7 patterns — see the Audit tab |
 
 **Done**
 
@@ -330,6 +332,7 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 - [x] Viewer v1.7.0 — political layer v3 (2 Oct 2026): the three numbered Vasal Commonwealth polygons retired; a narrow *kerajaan marka* belt; the Satvan Pedalaman dispersal zone (dots, no border); Hesperia's ~50 provinces as three optional belts (24 · 19 · 7), the polygon itself unclipped; Foedera's claim and inhabited core; Kloaka's nominal claim and shifting zone; the vocabulary rule for *provinsi*; nine new audit cards; 27 layers; one shared territory style and order for the flat map, the globe and the working map
 - [x] Viewer v1.7.1 — the compass can be switched off or minimized to a small dial, so it stops covering the map; the choice is remembered. Display control only: no canon parameter involved
 - [x] Viewer v1.8.0 — *Imperial Commonwealth* (3 Oct 2026): the big label that read "Hesperia" now reads **Imperial Commonwealth** and sits on a new umbrella polygon that is exactly Hesperia + the *marka* belt (nominal jurisdiction, drawn beneath both, dashed outline, no new land). **Hesperia** keeps its own polygon, now labelled **Paramount** (the directly ruled land); the *marka* belt moves to its own layer, *Kerajaan-kerajaan Commonwealth* (usulan). 27 → 29 layers; one new audit card. No new canon parameter: the umbrella's name and Hesperia's paramount role are quoted from the vault; the umbrella's *edge* on the vassal side stays a placeholder
+- [x] Viewer v2.0.0 — version milestone (3 Oct 2026): Stage 2 of Interactive Map v2 (3D globe, relief, rotation, two moons, compass, working map) is complete, so the viewer's major version now matches the roadmap. Nothing in the code, the data or the canon files changed; see *Version numbers* below
 - [x] 45 map entries · 46 territories · 4 routes · 3 fronts · 3 anomaly pockets
 - [x] Interregna redrawn as a varied mosaic (2 Oct 2026) — large and small kingdoms, free cities, tribal lands, micro-polities, nested enclaves and an exclave, all unnamed placeholders; the count, names and borders stay open knobs
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
@@ -354,9 +357,17 @@ In the author's order. 🔒 marks a gate: other work waits on it.
 - [ ] **The ocean on the antimeridian side of the Rhykar cap** (≈ 9 %) — flagged by the audit; no sub-entry yet.
 - [ ] **Extend the political layer** — name and settle the Interregna placeholders (count, names, borders, who is next on Florian's list), and add more as the story calls for them. The map deliberately leaves open: how many kingdoms the *marka* belt holds, whether the Satvan living inside a jurisdiction count in law, and the three open questions on Kloaka.
 
-**Later — Interactive Map v2** *(parked wishlist — no commitment yet)*
+**Interactive Map v2** *(in progress — Stage 2 done, Stage 3 next)*
 
-The flat viewer stays the baseline; stages are numbered as in the author's backlog. v2 stays on the current stack (three.js r160 and Leaflet) and is for exploring features and writing lore in bulk; shader and tile work that a renderer rewrite would throw away is deliberately left to v3.
+The flat viewer stays the baseline; stages are numbered as in the author's backlog. v2 stays on the current stack (three.js r160 and Leaflet, i.e. WebGL) and is for exploring features and writing lore in bulk; shader and tile work that a renderer rewrite would throw away is deliberately left to v3. Stage 3 is therefore built on the current stack, as viewer v2.x.
+
+**Version numbers.** Three different things carry a number here, and they move independently — always read the prefix:
+
+| Written as | What it is | Changes when |
+|---|---|---|
+| **Master Map v4** | The map of Rhykaris itself: the physical layer, canon-stable | The vault ratifies a new physical map (v5 …), with a change-log entry |
+| **Viewer v2.x · v3.x** | This interactive viewer. Major = the Interactive Map generation of the roadmap (v2 = globe and layers, v3 = WebGPU and tiles); minor and patch = shipped changes | The viewer ships a feature or a fix |
+| **Political layer v3** | The AS 1647 territory snapshot (data) | The snapshot is redrawn; it may shift without a new physical map |
 
 - [x] **Stage 2 — 3D globe:** 2D/3D toggle, rotation, two moons, compass, and the existing v1.4 layer toggles (2a); relief from a regenerated 16-bit heightmap (2b); an optional dual-disk Lambert working map. Built on `feat/stage-2-globe` and merged to `main` in pull request #1 (1 Oct 2026). Moon parameters stay *AI-inferred* until ratified. Layer presets moved to Stage 3.
 - [ ] **Stage 3 — layer presets and new layers:** presets (Physical, Biomes, Ecology & Zones, Scar Proximity, Politics, Culture, Audit), hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2, an open consistency question about monster habitats and, for the terminator, night side and seasons, the astronomy decision below.
