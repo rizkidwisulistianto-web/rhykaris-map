@@ -24,6 +24,9 @@ Keputusan yang diwujudkan (Canon Index #211-#216 + Powers/Atlas; semua yang buka
      kecil dengan Hesperia (dan 1 px dengan Foedera / ir_7) dibereskan dengan memotong Kloaka, bukan tetangganya. Peta tidak
      menjawab tiga knob Terbuka Powers Kloaka (zona mini-kerajaan? sumber daya tersembunyi? raja tahu?).
   7. Nama "Cassivalla" di peta; "Provincia Cassivallae" hanya eksonim Foedera di popup (#214).
+  8. (3 Okt 2026) Payung "Imperial Commonwealth" = SATU poligon gabungan wilayah langsung Hesperia + sabuk kerajaan marka,
+     digambar di BAWAH keduanya (yurisdiksi nominal, #215). Hesperia tetap poligon sendiri (Paramount) dan marka pindah ke layer
+     "kerajaan-kerajaan Commonwealth". Tidak ada luas baru: payung hanya gabungan dua poligon yang sudah ada.
 
 Pakai:
     python src/politics_v3.py                     # hitung + validasi + laporan (tidak menulis apa pun)
@@ -53,6 +56,12 @@ SEED = 1647
 BELT_SHARE = (0.262, 0.449, 0.288)               # pesisir, transisi, pedalaman  (26,2 / 44,9 / 28,8 %)
 BELT_IDS = ('hes_pesisir', 'hes_transisi', 'hes_pedalaman')
 BELT_PROV = (24, 19, 7)
+# Payung Imperial Commonwealth (3 Okt 2026) = Hesperia + marka. Penutup celah-rambut antara dua poligon itu; tidak boleh menambah lahan.
+IC_ID = 'imperial_commonwealth'
+IC_CLOSE_R = 2             # px radius penutup celah-rambut (hanya di tanah bebas, bukan di poligon lain)
+IC_MIN_PX = 30             # ambang luas ring (px): rendah supaya danau kecil di dalam Hesperia ikut menjadi lubang payung
+IC_OVERLAP_TOL_PX = 25      # toleransi tumpang-tindih kontur dengan tetangga (di atas yang sudah ditimpa Hesperia sendiri)
+IC_MAX_ADD_FRAC = 0.004    # penambahan piksel di luar Hesperia+marka tidak boleh > 0,4 % luas gabungan
 # Sabuk kerajaan marka — PLACEHOLDER, bukan kanon: lebar nominal + variasi (selebihnya Terbuka)
 MARKA_KM, MARKA_VAR, MARKA_MIN_PX = 250.0, 0.35, 600
 # Satvan Pedalaman — PLACEHOLDER, bukan kanon (Geographic Range = USULAN, Draft)
@@ -184,7 +193,7 @@ POL_PATH = os.path.join(ROOT, 'data', 'politics.json')
 POL = json.load(open(POL_PATH))
 TERR = {t['id']: t for t in POL['territories']}
 REG = {r['id']: r for r in POL['regions']}
-NEW_IDS = ['hes_marka', 'hes_pesisir', 'hes_transisi', 'hes_pedalaman', 'foedera_inti', 'kloaka_zona', 'satvan_pedalaman']
+NEW_IDS = [IC_ID, 'hes_marka', 'hes_pesisir', 'hes_transisi', 'hes_pedalaman', 'foedera_inti', 'kloaka_zona', 'satvan_pedalaman']
 # id lama dirangkai dari potongan supaya awalan itu tidak muncul lagi di pencarian teks atas repositori (berkas data lama masih bisa memuatnya)
 RETIRED = ['cw' + '_' + k for k in 'abc']
 INT_IDS = ['aventalia', 'tarvenna', 'nundina'] + [t for t in TERR if t.startswith('ir_')]
@@ -301,6 +310,22 @@ def build_marka(res, occ):
     res['marka_rings'] = rings
 
 
+def build_ic(res, occ):
+    """Payung Imperial Commonwealth: gabungan wilayah langsung Hesperia dan sabuk marka. Hanya menutup celah-rambut di tanah bebas."""
+    core = res['hes'] | res['marka']
+    free = ~occ & ~core
+    m = core | (ndi.binary_closing(core, structure=disk(IC_CLOSE_R)) & free)
+    rings = mask_to_rings(m, sigma=1.2, tol=0.5, min_px=IC_MIN_PX)
+    for _ in range(3):                     # bersihkan piksel di tetangga akibat kontur (seperti marka)
+        bad = rings_mask(rings) & occ & ~res['hes']
+        if not bad.any():
+            break
+        m = m & ~ndi.binary_dilation(bad, structure=disk(1)) | core
+        rings = mask_to_rings(m, sigma=1.2, tol=0.5, min_px=IC_MIN_PX)
+    res['ic'] = m
+    res['ic_rings'] = rings
+
+
 def build_foedera_core(res, occ_other):
     """Inti berpenduduk tipis: jaringan jalur air (sungai besar, tebal ~ log aliran) + jalur pantai/danau, di dalam poligon
     Foedera, hanya komponen yang tersambung ke pantai. Poligon klaim Foedera TIDAK dipotong."""
@@ -401,6 +426,7 @@ def build(verbose=False):
             occ |= tmask(i)
     build_belts(res)
     build_marka(res, occ)
+    build_ic(res, occ)
     occ_f = res['klo_claim'].copy()              # inti Foedera tidak boleh menimpa poligon lain (termasuk yang terletak di dalam Foedera)
     for i in base_ids:
         if i not in ('foedera', 'kloaka'):
@@ -438,6 +464,7 @@ def preview(res, path, box=(-88.0, 52.0, 14.0, -62.0), scale=1.0, rings_only=Fal
         draw(TERR[i]['rings'] if i != 'kloaka' else res['klo_rings'], col, 28)
     for rings, col in zip(res['belt_rings'], ((60, 130, 255), (255, 200, 40), (220, 40, 40))):
         draw(rings, col, 60)
+    draw(res['ic_rings'], (255, 215, 90), 40, 2)
     draw(res['marka_rings'], (240, 130, 160), 110, 2)
     draw(res['fcore_rings'], (255, 240, 60), 120, 1)
     for rings, a in zip(res['sat_rings'], (50, 70, 90)):
@@ -453,6 +480,7 @@ def preview(res, path, box=(-88.0, 52.0, 14.0, -62.0), scale=1.0, rings_only=Fal
 
 # ------------------------------------------------------------------------------------------------ record + meta
 NAMES = {
+    IC_ID: 'Imperial Commonwealth',
     'hes_marka': 'Kerajaan marka Commonwealth (sabuk usulan)',
     'hes_pesisir': 'Hesperia · Sabuk Pesisir (usulan)',
     'hes_transisi': 'Hesperia · Sabuk Transisi (usulan)',
@@ -485,6 +513,7 @@ def records(res):
     """Territory baru, dikelompokkan menurut titik sisip (urutan = urutan gambar & hit-test)."""
     rec = {}
     rec['satvan'] = tiers_records('satvan_pedalaman', res['sat_rings'], res['sat'])
+    rec['ic'] = [_rec(IC_ID, NAMES[IC_ID], res['ic_rings'], res['ic'])]
     rec['marka'] = [_rec('hes_marka', NAMES['hes_marka'], res['marka_rings'], res['marka'])]
     rec['belts'] = [_rec(i, NAMES[i], rs, m) for i, rs, m in zip(BELT_IDS, res['belt_rings'], res['belts'])]
     rec['kloaka_zone'] = tiers_records('kloaka_zona', res['klz_rings'], res['klz'])
@@ -553,7 +582,7 @@ def make_meta(res, recs):
     prov_avg = [round(area_km2(b) / n / 1e3) for b, n in zip(res['belts'], BELT_PROV)]
     sat0 = rasterize(recs['satvan'][0]['rings'])
     meta = dict(
-        versi='politics-v3 · AS 1647 snapshot · 2026-10-02',
+        versi='politics-v3.1 · AS 1647 snapshot · 2026-10-03',
         status='Inferensi AI (bukan kanon) kecuali dinyatakan lain; semua angka = PLACEHOLDER/derivasi, lihat Kontrak Data bagian D',
         params=dict(MARKA_KM=MARKA_KM, MARKA_VAR=MARKA_VAR, SAT_BUF_HES_PED=SAT_BUF_HES_PED, SAT_BUF_INTERREGNA=SAT_BUF_INTERREGNA,
                     SAT_BUF_FOEDERA=SAT_BUF_FOEDERA, SAT_BUF_VASUNDHA=SAT_BUF_VASUNDHA, SAT_WIDTH_KM=SAT_WIDTH_KM,
@@ -561,6 +590,8 @@ def make_meta(res, recs):
         belts=dict(thr_km=[round(res['thr'][0], 1), round(res['thr'][1], 1)], median_sea_km=round(res['median_sea_km']),
                    share_pct=[round(100 * area_km2(b) / hes_a, 1) for b in res['belts']], area_mkm2=[A(b) for b in res['belts']],
                    prov=list(BELT_PROV), prov_avg_kkm2=prov_avg, hesperia_mkm2=A(res['hes'])),
+        ic=dict(area_mkm2=A(res['ic']), hesperia_mkm2=A(res['hes']), marka_mkm2=A(res['marka']),
+                added_px=int((res['ic'] & ~(res['hes'] | res['marka'])).sum()), close_r=IC_CLOSE_R),
         marka=dict(area_mkm2=A(res['marka']), width_km=MARKA_KM, share_of_hesperia_pct=round(100 * area_km2(res['marka']) / hes_a, 1)),
         satvan=dict(area_mkm2=A(sat0), scar=sat_scar(sat0), lat_cut=round(res['sat_cut'][0], 2), lon_west=round(res['sat_cut'][1], 2)),
         foedera=dict(area_mkm2=A(tmask('foedera')), inti_mkm2=A(res['fcore']),
@@ -605,7 +636,7 @@ def validate(res, recs, meta):
             E(all(-90 <= p[0] <= 90 and -180 <= p[1] <= 180 for p in ring), f"{r['id']}: koordinat di luar jangkauan")
     ras = {r['id']: rasterize(r['rings']) for r in all_recs}
     # kesetiaan ring terhadap topeng sumber
-    srcs = {'hes_marka': res['marka'], 'foedera_inti': res['fcore']}
+    srcs = {'hes_marka': res['marka'], 'foedera_inti': res['fcore'], IC_ID: res['ic']}
     for i, m in zip(BELT_IDS, res['belts']):
         srcs[i] = m
     for k, m in enumerate(res['sat']):
@@ -615,7 +646,7 @@ def validate(res, recs, meta):
     for i, m in srcs.items():
         if i in ras:
             v = iou(ras[i], m)
-            thr = 0.985 if i in BELT_IDS else 0.95 if '__t' in i or i.startswith('kloaka_zona') else 0.97
+            thr = 0.985 if (i in BELT_IDS or i == IC_ID) else 0.95 if '__t' in i or i.startswith('kloaka_zona') else 0.97
             E(v >= thr, f'{i}: IoU ring vs topeng {v:.3f} < {thr}')
             info.append(f'IoU {i:22s} {v:.4f}')
     # --- sabuk marka: tidak menimpa apa pun
@@ -626,6 +657,22 @@ def validate(res, recs, meta):
     E(mk_hes_contact > 400, 'hes_marka tidak menempel di tepi Hesperia')
     cc, n = ndi.label(ras['hes_marka'], structure=np.ones((3, 3)))
     E(n == 1, f'hes_marka terputus ({n} komponen)')
+    # --- payung Imperial Commonwealth: gabungan Hesperia + marka, tanpa lahan baru, tanpa menimpa tetangga di luar yang sudah ditimpa Hesperia
+    ic = ras[IC_ID]; hes_r = base_masks['hesperia']; mk_r = ras['hes_marka']
+    core = hes_r | mk_r
+    E((ic & hes_r).sum() / hes_r.sum() >= 0.995, f'payung tidak menutupi Hesperia ({(ic & hes_r).sum() / hes_r.sum():.4f})')
+    E((ic & mk_r).sum() / mk_r.sum() >= 0.995, f'payung tidak menutupi sabuk marka ({(ic & mk_r).sum() / mk_r.sum():.4f})')
+    add = int((ic & ~core).sum())
+    E(add <= IC_MAX_ADD_FRAC * core.sum(), f'payung menambah {add} px di luar Hesperia + marka (> {100 * IC_MAX_ADD_FRAC:.1f} %)')
+    for i, m in base_masks.items():
+        if i == 'hesperia':
+            continue
+        oi, oh = int((ic & m).sum()), int((hes_r & m).sum())
+        E(oi <= oh + IC_OVERLAP_TOL_PX, f'payung menimpa {i}: {oi} px (Hesperia sendiri {oh} px)')
+    cc, n = ndi.label(ic, structure=np.ones((3, 3)))
+    E(n == 1, f'payung terputus ({n} komponen)')
+    E(len(res['ic_rings']) == len(TERR['hesperia']['rings']), f"payung punya {len(res['ic_rings'])} ring, Hesperia {len(TERR['hesperia']['rings'])} (lubang di dalam Hesperia harus ikut)")
+    info.append(f'payung: {int(ic.sum())} px, tambahan di luar Hesperia+marka {add} px')
     # --- Kloaka: klaim bersih dari tetangga; IoU dengan versi lama
     for i, m in base_masks.items():
         if i != 'kloaka':
@@ -738,7 +785,7 @@ def write_politics(res, recs, meta):
             t = dict(t); t['name'] = 'Cassivalla'
             out.append(t)
         elif t['id'] == 'hesperia':
-            out.append(t); out.extend(recs['marka']); out.extend(recs['belts'])
+            out.extend(recs['ic']); out.append(t); out.extend(recs['marka']); out.extend(recs['belts'])
         elif t['id'] == 'foedera':
             out.append(t); out.extend(recs['foedera_inti'])
         else:

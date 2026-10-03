@@ -61,7 +61,7 @@ The map is **derived, not drawn.** The locked canon constraints — land/water p
 | **Planet** | radius 8,282 km (≈ 1.3 × Earth) · circumference 52,039 km |
 | **Land / water** | 38 % land (Rhykar 23.0 % + Aëris 15.0 %) · 62 % water |
 | **Seed** | `1647` — same seed and constraints, same planet |
-| **Content** | 44 map entries · 3 anomaly pockets · 45 territories · 13 physical regions · 4 routes · 3 fronts |
+| **Content** | 45 map entries · 3 anomaly pockets · 46 territories · 13 physical regions · 4 routes · 3 fronts |
 | **Viewer** | Leaflet 1.9.4 · vanilla JavaScript · one self-contained ≈ 2 MB HTML file — plus, only when you enter 3D, three.js r160 and ≈ 9 MB of relief textures |
 
 Because the planet is a sphere, the map **wraps seamlessly** across the antimeridian, and every distance is a **great-circle distance on the sphere** — never flat pixels.
@@ -85,7 +85,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 
 ### Dynamic Markers & Popup Lore
 
-- **44 entries** — **22 point markers** (capitals, cities, ports, a market city-state, fortresses, kingdoms, a tribe, a mine, a ruin, an oasis, two gates, a landmark, hidden sites) and **22 engraved labels** (continents, seas, regions, forests, a mountain range, an island group, an ice cap, a blank spot, The Scar and its four arcs) — plus **three mass-anomaly pockets**.
+- **45 entries** — **22 point markers** (capitals, cities, ports, a market city-state, fortresses, kingdoms, a tribe, a mine, a ruin, an oasis, two gates, a landmark, hidden sites) and **23 engraved labels** (the Imperial Commonwealth umbrella, continents, seas, regions, forests, a mountain range, an island group, an ice cap, a blank spot, The Scar and its four arcs) — plus **three mass-anomaly pockets**.
 - **A glyph per place type**, a status ring per coordinate, an amber badge on *proposals* (places on the map that have no atlas entry yet), and a **collision-aware label placer** (capitals outrank cities, canon outranks inference) so the map stays legible at every zoom.
 - **Honest uncertainty:** where a position is genuinely unknown (Castra Birath), the map draws a fading zone of concentric rings instead of a falsely precise dot.
 - **Popups carry the lore:** aliases, type, canon and in-world status, the *reasoning* behind the coordinate, region and parent, hemisphere, strategic value and notes — plus, where the lore defines them, climate, population, hazards and controlling power. Each popup can copy its coordinates or start a measurement from that place.
@@ -112,7 +112,7 @@ Marker rings encode the same thing at a glance: solid gold (canon), solid teal (
 A second view of the **same data**, behind one button (**Globe 3D**, next to the Ukur button; or open `index.html?view=3d`, optionally with a place such as `index.html?view=3d#litus_primum`). The flat map is the default for new visitors (the viewer remembers the last view you used) and is untouched: it never downloads three.js, and its pixels are identical to v1.4.
 
 - **Real sphere, real texture.** The canon v4 raster is wrapped on a sphere. Drag to rotate (with inertia), scroll / pinch to zoom, double-click to fly to a point; arrow keys and <kbd>+</kbd> <kbd>−</kbd> work too. The planet **turns by itself** — slowly, west to east — and **stops the moment you touch it** (the *Putar* button in the dock and the panel's *Putaran planet* group bring it back; with a *reduce motion* system setting it stays off).
-- **Every layer, both views.** All 27 layers of the flat map (the 25 of v1.4, plus the Hesperia belts and the Satvan zone of v1.7) have a 3D counterpart (graticule, meridians, Scar band and curve, arcs, anomaly pockets, territories, routes, fronts, banks, markers…). Toggles are shared: switch a layer in 2D, it is on in 3D. The panel lists, per layer, whether it exists in the current view.
+- **Every layer, both views.** All 29 layers of the flat map (the 25 of v1.4, plus the Hesperia belts and the Satvan zone of v1.7, and the Imperial Commonwealth umbrella and the Commonwealth kingdoms of v1.8) have a 3D counterpart (graticule, meridians, Scar band and curve, arcs, anomaly pockets, territories, routes, fronts, banks, markers…). Toggles are shared: switch a layer in 2D, it is on in 3D. The panel lists, per layer, whether it exists in the current view.
 - **Two moons.** *Ferrea* (the big moon) and *Errans* (the small moon) orbit on Kepler ellipses, drawn **not to scale**: true relative radii (0.2415 : 0.0604), distances compressed monotonically (the label says *jarak tidak berskala*), orbit periods in the real ratio 3.41 : 1. Click a moon for its parameters. **All moon parameters are *Inferensi AI*, not canon** — and so are the names: *Ferrea* ("iron-bearing", from its dark iron-red grey) and *Errans* ("wandering", from its swaying orbit) are working names, the human exonyms, chosen on 1 Oct 2026; the names each race uses are still undecided. The small moon's mean distance stays ≤ 125,000 km (the stability cliff is ≈ 131,000 km); eccentricity and inclination ranges are shown as ranges, never animated.
 - **Working compass.** A north needle and a **second needle that points to The Scar** (bearing and great-circle distance to the curve; it deliberately has no direction at the pole of the circle). Works in 2D, 3D and the disk view, from the point under the cursor or the centre of the view. Since v1.7.1 it can be **switched off** (the *Kompas* toggle in the toolbar; on phones in the panel header) or **minimized** to a small dial with no text (the button on the compass card), so it no longer has to cover the map; both choices are remembered per browser.
 - **Relief (2b).** Heights from a **regenerated 16-bit heightmap** (checked against the canon data grid: 100 % of pixels identical), a slope map for per-pixel lighting, and an albedo texture **without baked-in hillshade**. A slider sets the **vertical exaggeration** (0–60×, default 15×; real relief is ≈ ±10 km on an 8,282 km radius — about 0.1 %, so the exaggeration is for legibility only and is labelled *tidak berskala*). Relief is *Turunan*.
@@ -263,13 +263,13 @@ rhykaris-map/
 
 | Key | Contents |
 |---|---|
-| `places` | 44 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
+| `places` | 45 entries: coordinates + reasoning, epistemic status + confidence, type, canon status, region, hemisphere, Scar class and distance, strategic value, notes — and, where defined, climate, population, hazards, controlling power |
 | `anomalies` | 3 mass-anomaly pockets |
 | `factions` | 46 powers: name, kind, colour, epistemic status, blurb, and — for the political layer — method, limits and canon facts with their chips |
-| `territories` · `mandala` | Polygon rings for the 45 territories (49 records: four are draw-only density tiers of a dot zone) and the four Mandala rings |
+| `territories` · `mandala` | Polygon rings for the 46 territories (50 records: four are draw-only density tiers of a dot zone) and the four Mandala rings |
 | `regions` · `contours` · `banks` | Physical region outlines · 198 contour lines · six ocean banks |
 | `routes` · `fronts` | 4 routes (historic, land, story, sea) · 3 fronts |
-| `audit` · `ledger` · `unmapped` | 20 audit cards · 14 open location-debt slots · 11 entries deliberately left off the map |
+| `audit` · `ledger` · `unmapped` | 21 audit cards · 14 open location-debt slots · 11 entries deliberately left off the map |
 | `stats` · `thresholds` | Measured land/water/hemisphere balance · Scar proximity thresholds |
 
 `data/politics.json` holds the raw geometry of the political layer (territories, regions, mandala, contours). In this public edition, links from popups to the author's private worldbuilding vault were removed: every `url` field is `null`.
@@ -308,10 +308,10 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 |---|---|---|
 | Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
 | Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
-| Interactive viewer | ✅ **v1.7.1** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
+| Interactive viewer | ✅ **v1.8.0** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. |
 | Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer. Since 2 Oct 2026 a polygon is nominal jurisdiction, not settled land; the Commonwealth's numbered vassals are retired; every non-canon number is a labelled placeholder. Individual Interregna kingdoms are added when the story needs them |
-| Coordinates | 🟡 8 canon · 11 derived · 24 AI-inferred · 1 open *(of 44)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
-| Proposals | 🟡 11 of 44 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
+| Coordinates | 🟡 8 canon · 11 derived · 25 AI-inferred · 1 open *(of 45)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
+| Proposals | 🟡 11 of 45 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
 | Atlas ↔ map v4 reconciliation | 🟠 In progress | Scar rings and the Zona Ambang Ellumāt settled on 29 Sep 2026; coordinates and the sea corridor are the next gates |
 | Location-debt ledger | 🟠 14 open of 22 slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
 | Audit findings | 🟠 16 awaiting a decision · 4 closed | 3 frictions · 7 blank spots · 6 patterns — see the Audit tab |
@@ -329,7 +329,8 @@ Rhykaris is **not finished — and the map says so.** This is a living status bo
 - [x] Viewer v1.6.5 — all flat-map layers on the dual-disk working map: contours, regions, banks, territories, Mandala, routes, fronts and labels, with hover and cards (they were listed as *tak ada di peta kerja*)
 - [x] Viewer v1.7.0 — political layer v3 (2 Oct 2026): the three numbered Vasal Commonwealth polygons retired; a narrow *kerajaan marka* belt; the Satvan Pedalaman dispersal zone (dots, no border); Hesperia's ~50 provinces as three optional belts (24 · 19 · 7), the polygon itself unclipped; Foedera's claim and inhabited core; Kloaka's nominal claim and shifting zone; the vocabulary rule for *provinsi*; nine new audit cards; 27 layers; one shared territory style and order for the flat map, the globe and the working map
 - [x] Viewer v1.7.1 — the compass can be switched off or minimized to a small dial, so it stops covering the map; the choice is remembered. Display control only: no canon parameter involved
-- [x] 44 map entries · 45 territories · 4 routes · 3 fronts · 3 anomaly pockets
+- [x] Viewer v1.8.0 — *Imperial Commonwealth* (3 Oct 2026): the big label that read "Hesperia" now reads **Imperial Commonwealth** and sits on a new umbrella polygon that is exactly Hesperia + the *marka* belt (nominal jurisdiction, drawn beneath both, dashed outline, no new land). **Hesperia** keeps its own polygon, now labelled **Paramount** (the directly ruled land); the *marka* belt moves to its own layer, *Kerajaan-kerajaan Commonwealth* (usulan). 27 → 29 layers; one new audit card. No new canon parameter: the umbrella's name and Hesperia's paramount role are quoted from the vault; the umbrella's *edge* on the vassal side stays a placeholder
+- [x] 45 map entries · 46 territories · 4 routes · 3 fronts · 3 anomaly pockets
 - [x] Interregna redrawn as a varied mosaic (2 Oct 2026) — large and small kingdoms, free cities, tribal lands, micro-polities, nested enclaves and an exclave, all unnamed placeholders; the count, names and borders stay open knobs
 - [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
 - [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)

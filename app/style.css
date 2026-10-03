@@ -149,6 +149,10 @@ body.panel-closed #readout{left:var(--gut)}
 .lbl-continent{font:600 21px/1 var(--f-display);letter-spacing:.34em;text-transform:uppercase}
 .lbl-region{font:600 12px/1.1 var(--f-display);letter-spacing:.2em;text-transform:uppercase}
 .lbl-region small,.lbl-continent small{display:block;font:italic 500 12px/1.2 var(--f-water);letter-spacing:.02em;text-transform:none;opacity:.85;margin-top:3px}
+/* v1.8.0: label payung (Imperial Commonwealth) lebih ramping pada zoom jauh supaya muat di HP */
+#map[data-z="0"] .mlbl.sub3, #map[data-z="1"] .mlbl.sub3, #map[data-z="2"] .mlbl.sub3{font-size:10px;letter-spacing:.02em}
+#globe[data-z="0"] .mlbl.sub3, #globe[data-z="1"] .mlbl.sub3, #globe[data-z="2"] .mlbl.sub3{font-size:10px;letter-spacing:.02em}
+#disk[data-z="0"] .mlbl.sub3, #disk[data-z="1"] .mlbl.sub3, #disk[data-z="2"] .mlbl.sub3{font-size:10px;letter-spacing:.02em}
 .lbl-water{font:italic 600 17px/1 var(--f-water);letter-spacing:.08em;color:var(--lbl-sea)}
 .lbl-water.big{font-size:26px;letter-spacing:.3em}
 .lbl-arc{font:600 11px/1 var(--f-display);letter-spacing:.24em;text-transform:uppercase;color:#ffc39a}
@@ -233,6 +237,8 @@ body.panel-closed #readout{left:var(--gut)}
 .mk .mk-name.l{left:auto;right:calc(100% + 3px)}
 .mlbl br{line-height:0}
 #map[data-z="0"] .mlbl.minor, #map[data-z="1"] .mlbl.minor, #map[data-z="2"] .mlbl.minor, #map[data-z="3"] .mlbl.minor{display:none}
+#map[data-z="0"] .mlbl.minor2, #map[data-z="1"] .mlbl.minor2, #map[data-z="2"] .mlbl.minor2{display:none}
+#map[data-z="0"] .mlbl.sub3 small, #map[data-z="1"] .mlbl.sub3 small, #map[data-z="2"] .mlbl.sub3 small{display:none}
 .leaflet-interactive:focus, .leaflet-container path:focus, .leaflet-marker-icon:focus{outline:none}
 .leaflet-marker-icon:focus-visible .mk svg{filter:drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px var(--brass))}
 .mk .mk-name.hide{display:none}
@@ -346,6 +352,8 @@ body.in-3d .grp.only2d{display:none}
 #globe[data-z="0"] .mk .mk-name, #globe[data-z="1"] .mk .mk-name, #globe[data-z="2"] .mk:not(.cap) .mk-name{display:none}
 #globe[data-z="0"] .mk:not(.cap){opacity:0;pointer-events:none}
 #globe[data-z="0"] .mlbl.minor, #globe[data-z="1"] .mlbl.minor, #globe[data-z="2"] .mlbl.minor, #globe[data-z="3"] .mlbl.minor{display:none}
+#globe[data-z="0"] .mlbl.minor2, #globe[data-z="1"] .mlbl.minor2, #globe[data-z="2"] .mlbl.minor2{display:none}
+#globe[data-z="0"] .mlbl.sub3 small, #globe[data-z="1"] .mlbl.sub3 small, #globe[data-z="2"] .mlbl.sub3 small{display:none}
 #globe .mk .mk-name{pointer-events:none}
 
 /* ---------- dock (putar/jeda, fokus planet, sistem bulan) ---------- */
@@ -411,6 +419,8 @@ body.panel-closed #disk .g-epi{left:var(--gut)}
 #disk[data-z="0"] .mk .mk-name, #disk[data-z="1"] .mk .mk-name, #disk[data-z="2"] .mk:not(.cap) .mk-name{display:none}
 #disk[data-z="0"] .mk:not(.cap){opacity:0;pointer-events:none}
 #disk[data-z="0"] .mlbl.minor, #disk[data-z="1"] .mlbl.minor, #disk[data-z="2"] .mlbl.minor, #disk[data-z="3"] .mlbl.minor{display:none}
+#disk[data-z="0"] .mlbl.minor2, #disk[data-z="1"] .mlbl.minor2, #disk[data-z="2"] .mlbl.minor2{display:none}
+#disk[data-z="0"] .mlbl.sub3 small, #disk[data-z="1"] .mlbl.sub3 small, #disk[data-z="2"] .mlbl.sub3 small{display:none}
 #disk .mk .mk-name{pointer-events:none}
 #disk .d-busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--sea);box-shadow:var(--shadow);font:500 12.5px var(--f-mono);color:var(--ink);z-index:6}
 #disk .d-note{max-width:min(520px,calc(100vw - 2 * var(--gut)))}

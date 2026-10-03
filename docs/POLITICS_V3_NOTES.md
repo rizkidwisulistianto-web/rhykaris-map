@@ -169,3 +169,31 @@ python <repo>/scripts/build_index.py
 - **Tiny pre-existing overlaps, left alone.** 42 pairs of older polygons overlap by 6,200 px in all, 4,096 px of it Foedera–Anabasim. They predate this change and are not part of it (the validator lists them as information).
 - **Documentation screenshots retaken.** All eleven pictures in `docs/images/` (`01`–`10` and `social-preview.jpg`) were rebuilt with `tests/docshots.mjs`, which now also covers `01`–`05` (the flat map, light theme) and the social card (`sp`), writes JPEG directly, and freezes the moon clock so that a slow software renderer cannot move the phase it picked. The production families (Cinzel, Cormorant Garamond, IBM Plex Sans and Mono) came from the `@fontsource` npm packages, which are packaged from Google Fonts (latin and latin-ext subsets), through the script's local font cache; the recipe for that cache is in the script's header. The pictures therefore show the v1.7.0 interface (Globe 3D and Peta kerja buttons, compass, Ferrea and Errans) together with the new political drawing, and the old caveats about `06`, `07` and `10` no longer apply. The footer of the old `social-preview.jpg` carried a wrong repository name (`rhykaris-master-map`); it now reads `rhykaris-map`.
 - **Not done.** No place, label or name; no change to the physical map or the 3D relief; nothing in the vault's canon pages. Factions without an address are not mapped. Every new coordinate or area above is a **proposal**.
+
+## 10. Addendum, viewer v1.8.0 (3 Oct 2026) — the Imperial Commonwealth umbrella
+
+**Request.** The big label *Hesperia* is replaced by **Imperial Commonwealth**, and Hesperia gets its own polygon described as the **Paramount** of that Commonwealth. (Hesperia + *marka* confirmed with the project owner; the *marka* belt moves to a layer of its own, *Kerajaan-kerajaan Commonwealth*.)
+
+**What the canon says (and what is quoted, not decided).** Atlas — Hesperia: *wilayah asal Imperial Commonwealth, kursi paramount* — [Kanon]. Powers — Hesperia: Faction Type *Empire*, a Senate + an Imperator over a confederation of vassal kingdoms that shrinks when some leave but has not collapsed. So the *name* and the *paramount role* are Kanon rows on the new card. The vocabulary (#214) is kept: *kerajaan* is the word for Commonwealth members, so Hesperia is **never** called *Kerajaan Hesperia*; it is *Hesperia · Paramount*.
+
+| piece | what it is | label |
+|---|---|---|
+| `imperial_commonwealth` (new, group `ic`) | the **union** of Hesperia and the *marka* belt, closed by at most 2 px so that no sliver is left between them, nothing else added. Drawn **beneath** both, dashed outline, light fill. It is nominal jurisdiction (#215), as every polygon on this map | name, paramount = Kanon · composition = Turunan · the *marka* side of the edge = PLACEHOLDER, bukan kanon |
+| `hesperia` (group `hes`) | unchanged geometry (ring by ring identical to v1.7): the directly ruled land. Its card now opens with *Paramount* | Kanon (role) |
+| `hes_marka` (group `cw`, new layer *Kerajaan-kerajaan Commonwealth*) | unchanged geometry; only the layer changed. Still PLACEHOLDER, bukan kanon | PLACEHOLDER |
+| label place `imperial_commonwealth` (−18.0°, −26.0°) | the big label, a little south-west of where *HESPERIA* used to sit (moved so that it clears the Interregna and Mare Internum labels on a phone screen); no marker | the position = Inferensi AI |
+| label place `hesperia` | moved to (−9.0°, −27.0°), caption *Paramount* | the position = Inferensi AI |
+
+**Numbers.** Umbrella 94,726 px, two rings (the outer edge and Hesperia's lake hole) ≈ **14.75 Mkm²** = Hesperia 12.57 + *marka* 2.17 (the validator pins the sum within 0.05 Mkm²). Added by the closing step: ≤ 0.4 % of the umbrella.
+
+**Why Hesperia was not redrawn.** Shrinking Hesperia to a "core" would leave land that belongs to nobody on the map. Who rules what outside the directly ruled land is a Worldbuilding decision, not a map decision, so the polygon stays as it was and the umbrella is built *around* it.
+
+**Labels on a phone.** Two big labels over the same land do not fit side by side on a 390 px screen at the farthest zoom (measured: four label-box collisions, against one tiny one before). So at zoom 0–2 (flat map, globe and working map alike) only the umbrella name shows, a little smaller and without its caption; from zoom 3 the *Hesperia · Paramount* label and the caption *payung nominal* appear (CSS classes `minor2` and `sub3`, set from `LBL_MINOR2` / `LBL_SUB3` in `app/app.js`). The umbrella's label point was moved to −18.0°, −26.0° for the same reason; after that the only remaining overlap at 390 px is 2 px wide, none at zoom ≥ 3 on a phone or desktop.
+
+**Layer order and hit-test.** `C.TGROUPS` is now `sat, ic, hes, cw, hesb, foe, int, ana, elv, lain`. The umbrella lies under Hesperia and the *marka* in all three views, so a click or hover on the land gives the Hesperia or *marka* card (topmost wins); the umbrella's own card opens from its label, the legend and the search. Layers 27 → 29; groups 8 → 10.
+
+**Validator (`src/politics_v3.py`).** New block: IoU ≥ 0.985 against Hesperia ∪ *marka*; ≥ 99.5 % of each of them covered; added pixels ≤ 0.4 %; no overlap with another polygon beyond Hesperia's own (tolerance 25 px); one connected component; the same number of rings as Hesperia (a first version dropped the lake hole through the minimum-ring-size filter; the check now catches it). `--write` stays idempotent and every other record in `data/politics.json` is byte-identical to v1.7.
+
+**Open (not decided here; questions for the Worldbuilding space).** How many vassal kingdoms there are and who they are; whether any vassal land lies beyond the *marka* belt; whether the umbrella has a capital or any other seat than the Paramount. Until then the umbrella's outer edge on the vassal side is the placeholder belt.
+
+**Records after this change.** places 44 → **45**, factions 46 → **47**, territories 49 → **50** records (46 drawn polygons + 4 tier records), audit cards 20 → **21** (*Payung Imperial Commonwealth = Hesperia (paramount) + kerajaan vassal, bukan satu wilayah*). `data/data.json` and `data/politics.json` are re-pinned in `tests/canon-hashes.json`; the six physical-layer hashes are unchanged. As in §9, Ktonia (2940) and Pylora (1140) keep the committed elevations.

@@ -32,7 +32,7 @@ for a in ANOMALIES:
 # supaya teks tidak pernah berbeda dari geometri. Skrip ini hanya merangkai kalimat; tidak ada angka dihitung ulang di sini.
 pol = json.load(open('/home/claude/rhykaris_map/politics.json'))
 assert 'v3' in pol, 'politics.json belum memuat blok v3 — jalankan src/politics_v3.py --write dan salin data/politics.json ke folder cermin'
-V3 = pol['v3']; BL, MK, SV, FO, KL, CO, PR = (V3[k] for k in ('belts', 'marka', 'satvan', 'foedera', 'kloaka', 'coast', 'params'))
+V3 = pol['v3']; BL, MK, SV, FO, KL, CO, PR, IC = (V3[k] for k in ('belts', 'marka', 'satvan', 'foedera', 'kloaka', 'coast', 'params', 'ic'))
 
 
 def idn(x, d=0):
@@ -53,7 +53,7 @@ PLH = 'PLACEHOLDER, bukan kanon'
 KM = lambda x: idn(x) + ' km'  # noqa: E731
 
 C = dict(  # warna faksi (terbaca di atas terrain)
-    hesperia='#c0394b', marka='#e08a96', kloaka='#8a8a8a', foedera='#2aa38a', cassivalla='#7fd1bd', liminara='#9b6fd6', ktonia='#9fb6c6', pylora='#d4a76a',
+    hesperia='#c0394b', ic='#d9455f', marka='#e08a96', kloaka='#8a8a8a', foedera='#2aa38a', cassivalla='#7fd1bd', liminara='#9b6fd6', ktonia='#9fb6c6', pylora='#d4a76a',
     anabasim='#ff6a2b', emporys='#f5c542', perates='#4f86e8', anusarri='#e6d47a', andura='#4cc3a8', vasundha='#b58a52', nundina='#ffd970',
     tarvenna='#e0a33a', aventalia='#86a8e6', ir='#b99ad6', satvan='#e6dcc3')
 # Kartu faksi. Bidang opsional (dibaca viewer, app.js · factionHTML):
@@ -62,16 +62,27 @@ C = dict(  # warna faksi (terbaca di atas terrain)
 #   facts  = [[label, epi, teks(, keyakinan)], ...] baris epistemik tambahan; epi ∈ kanon | turunan | inferensi | terbuka
 #   tag    = lencana kecil di bawah judul (mis. "PLACEHOLDER, bukan kanon")
 FACTIONS = {
- 'hesperia': dict(name='Hesperia', kind='Empire · Active · Continental', color=C['hesperia'], epi='inferensi', url=None,
-     blurb='Payung Commonwealth yang menyusut; militer terbesar Rhykaris; penjaga standar Fides. Rival: Foedera, Interregna, Anabasim.',
-     method='Poligon = wilayah yurisdiksi nominal (#215): satu lapis, tidak dipotong, bukan peta lahan hunian. Batasnya digambar lewat partisi sadar-medan dari jangkar kanon; snapshot AS 1647.',
+ 'imperial_commonwealth': dict(name='Imperial Commonwealth', kind='Payung konfederasi · yurisdiksi nominal · paramount: Hesperia', color=C['ic'], epi='inferensi', style='ic', tag='Gabungan dua poligon · tepi marka = PLACEHOLDER, bukan kanon', url=None,
+     blurb='Konfederasi kerajaan vassal di bawah payung Hesperia, yang menjadi paramount-nya. Poligon ini hanya menunjukkan sejauh mana payung itu masih berlaku di AS 1647: tanah yang diperintah langsung Hesperia ditambah sabuk vassal di tepinya.',
+     method=f'Gabungan dua poligon yang sudah ada, Hesperia (≈{mkm(IC["hesperia_mkm2"])}) dan sabuk kerajaan marka (≈{mkm(IC["marka_mkm2"])}), menjadi ≈{mkm(IC["area_mkm2"])}. Tidak ada lahan baru; hanya celah rambut di antara keduanya yang ditutup. Digambar di bawah keduanya dengan garis putus-putus, sehingga klik pada Hesperia atau pada sabuk marka tetap membuka kartu masing-masing.',
      facts=[
+      ['Nama', 'kanon', 'Imperial Commonwealth: Atlas → Hesperia menyebut Hesperia "wilayah asal Imperial Commonwealth, kursi paramount sejak abad-abad awal AS". Powers → Hesperia: Commonwealth tetap konfederasi kerajaan vassal di bawah payung Hesperia, payung yang menyusut tetapi belum runtuh.'],
+      ['Paramount', 'kanon', 'Hesperia adalah kursi paramount: bukan penerus Commonwealth, melainkan pusat yang masih menahannya (Powers → Hesperia). Karena itu poligon payung ini dan poligon Hesperia digambar terpisah.'],
+      ['Isi payung', 'turunan', 'Hesperia (diperintah langsung, ±50 provinsi) ditambah kerajaan vassal. Yang sudah keluar dari payung, seperti Foedera dan Interregna, bukan bagian. Setelah pembacaan ulang peta (#213), vassal yang tersisa digambar sebagai satu sabuk sempit kerajaan marka.'],
+      ['Luas', 'inferensi', f'≈{mkm(IC["area_mkm2"])} = Hesperia ≈{mkm(IC["hesperia_mkm2"])} + marka ≈{mkm(IC["marka_mkm2"])}. Yurisdiksi nominal (#215), bukan lahan hunian. Lebar sabuk marka = {PLH}, jadi tepi luar payung di sisi marka ikut berstatus itu.'],
+      ['Tidak dijawab peta', 'terbuka', 'Jumlah dan identitas kerajaan vassal di dalam payung, dan apakah masih ada vassal di luar sabuk marka. Peta tidak menggambar garis apa pun di dalam payung selain batas Hesperia dan sabuk marka.'],
+      ['Kosakata', 'turunan', '"Provinsi" hanya untuk tanah yang diperintah langsung Hesperia; anggota payung = "kerajaan", bukan provinsi dan bukan "federasi" (#214).']]),
+ 'hesperia': dict(name='Hesperia', kind='Empire · Paramount · Active · Continental', color=C['hesperia'], epi='inferensi', url=None,
+     blurb='Paramount Imperial Commonwealth: Senat + Imperator, kursi paramount sejak abad-abad awal AS, memerintah langsung ±50 provinsi. Militer terbesar Rhykaris; penjaga standar Fides. Rival: Foedera, Interregna, Anabasim.',
+     method='Poligon = wilayah yurisdiksi nominal (#215): satu lapis, tidak dipotong, bukan peta lahan hunian. Batasnya digambar lewat partisi sadar-medan dari jangkar kanon; snapshot AS 1647. Payung di atasnya digambar terpisah sebagai Imperial Commonwealth (bersama sabuk marka).',
+     facts=[
+      ['Paramount', 'kanon', 'Kursi paramount Imperial Commonwealth: bukan penerus Commonwealth, melainkan pusat yang masih menahannya (Powers → Hesperia; Atlas → Hesperia). Poligon ini hanya tanah yang diperintah langsung; payung di atasnya digambar sebagai Imperial Commonwealth.'],
       ['Luas poligon', 'inferensi', f'≈{mkm(BL["hesperia_mkm2"])} (teks Powers Hesperia ±12,55 juta km²) — luas yurisdiksi, bukan lahan hunian. Kontrol di sini mahal (gubernur, sensus, pajak), jadi luasnya dibatasi jumlah gubernur.'],
       ['Provinsi', 'turunan', f'±50 provinsi diperintah langsung — satu-satunya tempat kata "provinsi" dipakai di peta (#214). Tiga sabuk menurut jarak ke laut: Pesisir {BL["prov"][0]} · Transisi {BL["prov"][1]} · Pedalaman {BL["prov"][2]} (angka = Inferensi AI – Sedang). Sabuk tersedia sebagai layer opsional (default mati); batas tiap provinsi tidak digambar.'],
       ['Tepi pantai', 'inferensi', f'Poligon berhenti ≈{idn(CO["gap_median_km"])} km (satu piksel grid) sebelum pantai fisik; sisi pantainya terukur ≈{idn(round(CO["poly_coast_chord_km"], -2))}–{idn(round(CO["poly_coast_ring_km"], -2))} km, teks Powers Hesperia ±5.300 km. Blank spot di tab Audit.'],
-      ['Commonwealth', 'turunan', 'Payung konfederasi kerajaan vassal. Yang tersisa di tepi wilayah langsung hanya sabuk sempit kerajaan marka (usulan); jumlah dan identitas kerajaannya = Terbuka.']]),
+      ['Commonwealth', 'turunan', 'Payung konfederasi kerajaan vassal, digambar sebagai poligon Imperial Commonwealth (Hesperia + sabuk marka). Yang tersisa di tepi wilayah langsung hanya sabuk sempit kerajaan marka (usulan); jumlah dan identitas kerajaannya = Terbuka.']]),
  'hes_marka': dict(name='Kerajaan marka Commonwealth (sabuk usulan)', kind='Konfederasi kerajaan vassal · tepi wilayah langsung Hesperia', color=C['marka'], epi='inferensi', hatch=True, style='marka', tag=PLH,
-     blurb='Sisa vassal Commonwealth: satu sabuk sempit di tepi wilayah yang diperintah langsung Hesperia. Anggotanya kerajaan, bukan provinsi dan bukan "federasi" (#214).',
+     blurb='Sisa vassal Commonwealth: satu sabuk sempit di tepi wilayah yang diperintah langsung Hesperia, bagian payung Imperial Commonwealth. Anggotanya kerajaan, bukan provinsi dan bukan "federasi" (#214).',
      method=f'Sabuk selebar nominal {KM(MK["width_km"])} (variasi ±{idn(100 * PR["MARKA_VAR"])} %) menyusuri tepi darat wilayah langsung Hesperia di sisi selatan dan barat daya. Tidak menimpa Hesperia, Interregna, Foedera, maupun Kloaka. Lebar = {PLH}.',
      facts=[
       ['Isi sabuk', 'terbuka', 'Jumlah dan identitas kerajaan marka belum diputuskan — karena itu tidak ada garis di dalam sabuk.'],
@@ -193,7 +204,7 @@ def route_split(route_id, step_km=0.5):
     la = np.interp(t, np.arange(len(pts)), la_); lo = np.interp(t, np.arange(len(pts)), lo_)
     mid_la, mid_lo = (la[1:] + la[:-1]) / 2, (lo[1:] + lo[:-1]) / 2
     step = np.radians(np.hypot(np.diff(la), np.diff(lo) * np.cos(np.radians(mid_la)))) * R_KM
-    SUB = {'hes_pesisir', 'hes_transisi', 'hes_pedalaman', 'foedera_inti', 'kloaka_zona', 'satvan_pedalaman', 'anabasim', 'emporys', 'perates', 'andura', 'anusarri'}
+    SUB = {'imperial_commonwealth', 'hes_pesisir', 'hes_transisi', 'hes_pedalaman', 'foedera_inti', 'kloaka_zona', 'satvan_pedalaman', 'anabasim', 'emporys', 'perates', 'andura', 'anusarri'}
     base = [t_ for t_ in pol['territories'] if 'of' not in t_ and t_['id'] not in SUB]
     inF = np.zeros(mid_la.shape, bool); inO = np.zeros(mid_la.shape, bool)
     for t_ in base:
@@ -230,6 +241,8 @@ AUDIT = [
       body=f'Hesperia (barat; di tepi selatan dan barat dayanya, sabuk sempit kerajaan marka vassal) ↔ mozaik Interregna (selatan kepala teluk) ↔ Foedera (timur teluk) ↔ frontier Lereng Timur ↔ Anabasim. Rute Arc 1 (Sharanya → Silva Nullius → Nundina) memotong jahitan Foedera–Interregna: ≈{idn(round(ARC["foedera"], -1))} km di dalam poligon Foedera, ≈{idn(round(ARC["none"], -1))} km di tanah tak berpoligon (Silva Nullius — jahitan di sini berupa celah, bukan garis batas bersama), lalu masuk Nundina. Kloaka duduk di jahitan tiga wilayah di kepala teluk tetapi bukan rahang: kanon menyebutnya katup pelepas tekanan, bukan penyangga.', refs='Atlas — Hesperia, Foedera, Interregna · Powers — Kloaka'),
  dict(kind='pola', title='Poligon = yurisdiksi nominal, bukan lahan hunian — dua ukuran biaya kontrol',
       body=f'Hesperia (≈{mkm(BL["hesperia_mkm2"])}) dan Foedera (≈{mkm(FO["area_mkm2"])}) sama-sama digambar sebagai wilayah yurisdiksi nominal (#215). Hesperia mahal dikontrol — gubernur, sensus, pajak — sehingga luasnya dibatasi jumlah gubernur: ±50 provinsi dalam tiga sabuk menurut jarak ke laut ({BL["prov"][0]} · {BL["prov"][1]} · {BL["prov"][2]}), satu lapis, tidak dipotong, sabuk hanya layer opsional (default mati) dan batas provinsi tidak digambar. Foedera murah dikontrol — garnisun di garis — sehingga klaimnya boleh jauh lebih luas: dua lapis, arsiran klaim ditambah inti berpenduduk tipis (≈{mkm(FO["inti_mkm2"])}, {idn(FO["inti_share_pct"], 0)} %) di sepanjang jalur air. Kloaka mengikuti pola yang sama dengan hukum tanpa penegakan: garis putus-putus untuk klaim nominal, bintik tanpa tepi untuk kendali yang bergeser.', refs='Canon Index #211, #212, #215 · Powers — Hesperia, Foedera, Kloaka'),
+ dict(kind='pola', title='Payung Imperial Commonwealth = Hesperia (paramount) + kerajaan vassal, bukan satu wilayah',
+      body=f'Label besar yang dulu bertuliskan "Hesperia" kini menamai payung: Imperial Commonwealth, ≈{mkm(IC["area_mkm2"])}, gabungan poligon Hesperia (≈{mkm(IC["hesperia_mkm2"])}, diperintah langsung, paramount) dan sabuk kerajaan marka (≈{mkm(IC["marka_mkm2"])}, usulan). Tidak ada lahan baru dan tidak ada keputusan kanon baru: payung hanya menggabungkan dua poligon yang sudah ada, digambar di bawah keduanya, dan sabuk marka kini punya layer sendiri, "Kerajaan-kerajaan Commonwealth". Kata "Kerajaan" tidak dipakai untuk Hesperia: Hesperia = Empire, dan #214 mengunci "kerajaan" untuk anggota Commonwealth. Jumlah dan identitas kerajaan di dalam payung tetap Terbuka.', refs='Atlas — Hesperia · Powers — Hesperia · Canon Index #213, #214, #215'),
  dict(kind='pola', title='Tanpa garis bila kanon tidak menarik garis: zona Satvan, zona Kloaka, lapis Foedera',
       body='Tiga tempat peta sengaja tidak menggambar batas tegas karena kanon pun tidak: zona persebaran Satvan Pedalaman (bukan wilayah berdaulat — hanya bintik berjenjang), zona kontrol Kloaka (batasnya bergerak mengikuti pertarungan terakhir — bintik berjenjang di dalam klaim nominal), dan tiga lapis ikatan Foedera (batas antar lapis soal syarat, bukan garis di peta — tidak ada subdivisi). Kepadatan bintik dan jenjangnya ilustrasi, bukan pengukuran.', refs='Canon Index #211, #213, #216 · Powers — Kloaka, Foedera · Satvan Pedalaman (Draft)'),
  dict(kind='pola', title='Satu kata, satu aturan: "provinsi" hanya untuk wilayah yang diperintah langsung Hesperia',

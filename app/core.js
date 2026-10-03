@@ -29,14 +29,16 @@ C.arrowK = function (z) { return Math.max(0.6, C.lineK(z)) * C.LINE.arrow; };
 
 // ------------------------------------------------------------------ wilayah kuasa: kelompok layer, urutan gambar, gaya (v1.7)
 /* SATU tabel untuk peta datar, globe 3D dan peta kerja dual-disk (satu data.json, tanpa salinan gaya per tampilan).
-   Kelompok = satu layer di panel. C.TGROUPS berurutan dari BAWAH ke ATAS: zona persebaran Satvan, Hesperia + kerajaan marka, sabuk provinsi Hesperia
-   (layer opsional di atas Hesperia), Foedera (klaim luas lalu inti), Interregna, Anabasim, Andurā, lainnya. Di dalam kelompok urutannya mengikuti data.json.
+   Kelompok = satu layer di panel. C.TGROUPS berurutan dari BAWAH ke ATAS: zona persebaran Satvan, payung Imperial Commonwealth (v1.8: gabungan Hesperia + marka,
+   digambar DI BAWAH keduanya supaya klik pada Hesperia atau marka tetap membuka kartu masing-masing), Hesperia (Paramount, wilayah langsung), kerajaan-kerajaan
+   Commonwealth (sabuk marka), sabuk provinsi Hesperia (layer opsional di atas Hesperia), Foedera (klaim luas lalu inti), Interregna, Anabasim, Andurā, lainnya.
+   Di dalam kelompok urutannya mengikuti data.json.
    Tanpa aturan ini tumpukan peta datar (urutan DOM) bergantung pada urutan layer dihidup-matikan dan bisa berbeda dari globe dan cakram. */
-C.TGROUPS = ['sat', 'hes', 'hesb', 'foe', 'int', 'ana', 'elv', 'lain'];
+C.TGROUPS = ['sat', 'ic', 'hes', 'cw', 'hesb', 'foe', 'int', 'ana', 'elv', 'lain'];
 C.TDEFAULT = { hesb: false };   // kelompok yang default mati (sabuk provinsi Hesperia: layer opsional); selebihnya default nyala
 C.TGROUP = {
   satvan_pedalaman: 'sat',
-  hesperia: 'hes', hes_marka: 'hes', hes_pesisir: 'hesb', hes_transisi: 'hesb', hes_pedalaman: 'hesb',
+  imperial_commonwealth: 'ic', hesperia: 'hes', hes_marka: 'cw', hes_pesisir: 'hesb', hes_transisi: 'hesb', hes_pedalaman: 'hesb',
   foedera: 'foe', foedera_inti: 'foe', cassivalla: 'foe',
   nundina: 'int', aventalia: 'int', tarvenna: 'int', anabasim: 'ana', andura: 'elv', anusarri: 'elv',
   kloaka: 'lain', kloaka_zona: 'lain', liminara: 'lain', ktonia: 'lain', pylora: 'lain', emporys: 'lain', perates: 'lain', vasundha: 'lain'
@@ -53,6 +55,7 @@ C.terrOrder = function (list) {
    bintik selang-seling berjarak g piksel layar — kepadatan konstan di layar, tidak ikut zoom. `stroke:null` = tanpa garis tepi (zona difus). */
 var HATCH = { k: 'hatch', a1: 0.16, a2: 0.55, g: 9, b: 2.6, rot: 40 };
 var TSTYLE = {
+  ic:        { fill: { k: 'flat', a: 0.07 }, stroke: { a: 0.9, k: 1.5, dash: '9 5' } },
   marka:     { fill: { k: 'hatch', a1: 0.2, a2: 0.6, g: 8, b: 2.4, rot: 40 }, stroke: { a: 0.85, k: 1 } },
   belt0:     { col: '#ee7d86', fill: { k: 'flat', a: 0.34 }, stroke: null },
   belt1:     { col: '#c0394b', fill: { k: 'flat', a: 0.36 }, stroke: null },

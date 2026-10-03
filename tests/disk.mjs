@@ -181,7 +181,7 @@ await run('layer panel, rings, pan/zoom, orientation, focus', async () => {
   const st = await page.evaluate(() => window.__rhDisk.layerStatus());
   const supported = Object.keys(st).filter((k) => st[k].adapterDisk), missing = Object.keys(st).filter((k) => !st[k].adapterDisk);
   const FLAT = Object.keys(st).filter((k) => !/^g_/.test(k)), SIDE = ['g_moons', 'g_orbits', 'g_axis', 'g_ecl'];
-  t(`every flat-map layer has a working-map adapter (${supported.length}): ${supported.join(', ')}`, FLAT.every((k) => supported.includes(k)) && ['cland', 'csea', 'labels', 'regions', 'banks', 'mandala', 't_hes', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts', 'd_rings', 'd_azi'].every((k) => supported.includes(k)), missing.join());
+  t(`every flat-map layer has a working-map adapter (${supported.length}): ${supported.join(', ')}`, FLAT.every((k) => supported.includes(k)) && ['cland', 'csea', 'labels', 'regions', 'banks', 'mandala', 't_ic', 't_hes', 't_cw', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts', 'd_rings', 'd_azi'].every((k) => supported.includes(k)), missing.join());
   t('only the four 3D-only layers (moons, orbits, axis, ecliptic) lack a disk adapter', missing.length === 4 && SIDE.every((k) => missing.includes(k)), missing.join());
   const dis = await page.evaluate(() => Array.from(document.querySelectorAll('#sec-layer input[type=checkbox]')).filter((i) => i.disabled).map((i) => i.id.replace('ly-', '')));
   t('no layer checkbox is disabled or marked "tak ada di peta kerja" on the working map', dis.length === 0 && (await page.evaluate(() => !/tak ada di peta kerja/i.test(document.getElementById('sec-layer').innerText))), dis.join());
@@ -301,7 +301,7 @@ await run('all flat-map layers on the working map: drawing, placement, hover, cl
 
     // 1. every layer changes the picture
     await only([]); await frame(page, 3); const base = await canvasHash(); await page.evaluate(() => { const c = document.querySelector('#disk canvas'); window.__base = c.getContext('2d').getImageData(0, 0, c.width, c.height).data.slice(); }); let changed = 0; const names = [];
-    const VEC = ['cland', 'csea', 'regions', 'banks', 'mandala', 't_hes', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
+    const VEC = ['cland', 'csea', 'regions', 'banks', 'mandala', 't_ic', 't_hes', 't_cw', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain', 'r_historic', 'r_land', 'r_story', 'r_sea', 'fronts'];
     for (const k of VEC) { await only([k]); const h = await canvasHash(); if (h !== base) changed++; else names.push(k); }
     t(`${tag}each of the ${VEC.length} vector layers repaints the canvas${names.length ? ' (no change: ' + names.join() + ')' : ''}`, changed === VEC.length);
     // labels are DOM: the visible count rises
@@ -319,7 +319,7 @@ await run('all flat-map layers on the working map: drawing, placement, hover, cl
     const grp = await page.evaluate(() => Object.fromEntries(window.__rhDisk._ctx.DATA.territories.map((t) => [t.id, window.__rhDisk._ctx.styles.tgroupOf(t)])));
     // painting order = the shared canonical order (C.terrOrder: group order of C.TGROUPS, then data order); topmost wins; zone tiers answer as their parent faction
     const ord = await page.evaluate(() => window.RH.core.terrOrder(window.__rhDisk._ctx.DATA.territories).map((t) => t.id));
-    const byId = Object.fromEntries(RD.territories.map((x) => [x.id, x])), terr = ord.map((id) => byId[id]).filter((x) => x.id !== 'anusarri'), TG = ['t_hes', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain'];
+    const byId = Object.fromEntries(RD.territories.map((x) => [x.id, x])), terr = ord.map((id) => byId[id]).filter((x) => x.id !== 'anusarri'), TG = ['t_ic', 't_hes', 't_cw', 't_hesb', 't_sat', 't_foe', 't_int', 't_ana', 't_elv', 't_lain'];
     await only(TG); let nT = 0, bad = [];
     for (let i = 0; i < terr.length; i++) {
       const x = terr[i], pt = interior(x.rings[0]); if (!pt) continue; const q = await where(pt[0], pt[1]); if (!q) continue;
