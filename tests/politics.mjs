@@ -375,6 +375,153 @@ await run('globe 3D: new layers, painting and hit-test follow the shared rules',
   await ctx.close();
 });
 
+// ================================================================== 7. Interregna polity names as map labels (viewer v2.0.1): flat map, globe, dual-disk
+// The 23 mosaic polities have no marker, place or capital (Data Contract), so their names used to show only as a hover tooltip. They are now drawn as non-interactive labels
+// derived at run time from the polygons (C.polityLabels): not in DATA.places, not in search, no new canon. See docs/INTERREGNA_V2_NOTES.md §10.
+const NAME_ID = Object.fromEntries(IR.map((i) => [FAC[i].name, i]));
+const topIdAt = (la, lo) => { const ord = C.terrOrder(TERR).filter((x) => x.id !== 'anusarri'); for (let i = ord.length - 1; i >= 0; i--) if (inTerr(ord[i], la, lo)) return ord[i].of || ord[i].id; return null; };
+
+await run('Interregna names, flat map: labels that fit their polygon, follow zoom, filters and layers, and never take a click', async () => {
+  const { ctx, page, ev } = await open2D();
+  // the name filter runs in the next animation frame after the view changes (like the marker names); wait for that frame, not for a fixed time (a slow machine paints the relief first)
+  const at = async (z) => { await page.evaluate((zz) => new Promise((res) => { window.__rhMap.setView([-18, -1.5], zz, { animate: false }); requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 50))); }), z); };
+  const read = () => page.evaluate(() => {
+    const m = window.__rhMap, cr = m.getContainer().getBoundingClientRect(), out = [];
+    document.querySelectorAll('.mlbl.lbl-pol').forEach((e) => {
+      if (e.classList.contains('hide')) return; const r = e.getBoundingClientRect(); if (!r.width || r.left < cr.left + 2 || r.right > cr.right - 2 || r.top < cr.top + 2 || r.bottom > cr.bottom - 2) return;
+      const x = r.left + r.width / 2, y = r.top + r.height / 2, ll = m.containerPointToLatLng([x - cr.left, y - cr.top]), el = document.elementFromPoint(x, y);
+      out.push({ n: e.textContent, x, y, lat: ll.lat, lon: ll.lng, w: r.width, h: r.height, prop: e.classList.contains('lbl-proposal'), title: e.title, pe: getComputedStyle(e).pointerEvents,
+        top: el ? (el.closest('.lbl-pol') ? 'label' : el.closest('.leaflet-terr-pane') ? 'terr' : el.closest('#panel, #legend, .leaflet-control') ? 'ui' : 'other') : null });
+    });
+    return out;
+  });
+  const stable = async () => { let prev = null, cur = [], same = 0; for (let k = 0; k < 24; k++) { cur = await read(); const key = cur.map((q) => q.n).sort().join('|'); if (key === prev) { if (++same >= 2) return cur; } else same = 0; prev = key; await page.waitForTimeout(250); } return cur; };
+  await at(3); const n3 = (await stable()).length;
+  await at(5); const L5 = await stable();
+  t(`names appear only as the polygons grow: ${n3} names fit at zoom 3, ${L5.length} at zoom 5 (at least 8)`, L5.length >= 8 && L5.length > n3, `${n3} → ${L5.length}`);
+  t('every drawn name is a mosaic polity name, shown once, with the dashed "usulan" underline and the name as title', L5.every((q) => NAME_ID[q.n] && q.prop && q.title === q.n) && new Set(L5.map((q) => q.n)).size === L5.length);
+  const off = L5.filter((q) => { const id = NAME_ID[q.n]; return !inTerr(T(id), q.lat, q.lon); }).map((q) => q.n);
+  t(`each name sits on its own polygon (${L5.length - off.length}/${L5.length})${off.length ? ' — off: ' + off.join() : ''}`, off.length === 0);
+  const ov = []; for (let i = 0; i < L5.length; i++) for (let j = i + 1; j < L5.length; j++) if (Math.abs(L5[i].x - L5[j].x) < (L5[i].w + L5[j].w) / 2 - 1 && Math.abs(L5[i].y - L5[j].y) < (L5[i].h + L5[j].h) / 2 - 1) ov.push(L5[i].n + '/' + L5[j].n);
+  t('no two names overlap', ov.length === 0, ov.join());
+  t('labels are pass-through: pointer-events none, and the element under every name is never a label', L5.every((q) => q.pe === 'none' && q.top !== 'label'), JSON.stringify(L5.filter((q) => q.top === 'label' || q.pe !== 'none').map((q) => q.n)));
+  // marker names keep their place: every marker name that was visible without the polity names is still visible with them (they never hide a canon marker's name)
+  const mk = await page.evaluate(() => Array.from(document.querySelectorAll('.mk .mk-name')).filter((e) => !e.classList.contains('hide') && e.getBoundingClientRect().width > 0).map((e) => e.textContent));
+  t('marker names (Aventalia, Tarvenna, Cassivalla, Nundina) are still shown beside the polity names', ['Aventalia', 'Tarvenna', 'Cassivalla', 'Nundina'].every((n) => mk.includes(n)), JSON.stringify(mk));
+  // the click goes to the polygon below: its card opens, and the card is the polity's own (topmost faction at that pixel)
+  const clickable = L5.filter((q) => q.top === 'terr' && topIdAt(q.lat, q.lon) === NAME_ID[q.n]).slice(0, 3);
+  let opened = 0; const wrong = [];
+  for (const c0 of clickable) {
+    await at(5); const q = (await read()).find((r) => r.n === c0.n) || c0;   // a popup pans the map: put the view back and read the name's position again before each click
+    await page.mouse.click(q.x, q.y); await page.waitForSelector('.leaflet-popup .pp h2', { timeout: 5000 }).catch(() => {});
+    const h2 = await page.evaluate(() => { const e = document.querySelector('.leaflet-popup .pp h2'); return e ? e.textContent : null; });
+    if (h2 && h2.includes(q.n)) opened++; else wrong.push(`${q.n} → ${h2}`);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+  }
+  t(`clicking on a name opens the card of the polygon under it (${opened}/${clickable.length})${wrong.length ? ' — ' + wrong.join(' | ') : ''}`, clickable.length >= 1 && opened === clickable.length);
+  // names are not places: the entry count, the search and the place cards are as before
+  const count0 = await page.evaluate(() => document.getElementById('n-res').textContent);
+  t(`the "Hasil" count is still the places and anomalies only (${count0})`, count0 === `${DATA.places.length + DATA.anomalies.length} entri`);
+  // the "Usulan" chip, the label category, the epistemic chip and the territory layer each switch the names
+  const nDom = () => page.evaluate(() => document.querySelectorAll('.mlbl.lbl-pol').length);
+  const full = await nDom();
+  const chip = async (txt) => page.evaluate((x) => { const b = Array.from(document.querySelectorAll('#fepi .chip, .chips .chip, .chip')).find((e) => e.textContent.trim().startsWith(x)); if (b) b.click(); return !!b; }, txt);
+  t('all three world copies of each of the 23 names exist in the label layer by default', full === IR.length * 3, String(full));
+  await chip('Usulan'); await page.waitForTimeout(300); const noProp = await nDom(); await chip('Usulan'); await page.waitForTimeout(300);
+  t('the "Usulan (belum dikunci)" chip hides the names (all are proposals) and brings them back', noProp === 0 && (await nDom()) === full, `${noProp} / ${await nDom()}`);
+  await chip('Inferensi AI'); await page.waitForTimeout(300); const noInf = await nDom(); await chip('Inferensi AI'); await page.waitForTimeout(300);
+  t('the epistemic chip "Inferensi AI" switches the names with their status', noInf === 0 && (await nDom()) === full, `${noInf}`);
+  await page.evaluate(() => document.getElementById('ly-t_int').click()); await page.waitForTimeout(400); const noInt = await nDom();
+  const bare = await stable();
+  await page.evaluate(() => document.getElementById('ly-t_int').click()); await page.waitForTimeout(400);
+  t('switching the "Mozaik Interregna" territory layer off removes the names too (none floats over bare terrain) and on brings them back', noInt === 0 && bare.length === 0 && (await nDom()) === full, `${noInt}/${bare.length}`);
+  await page.evaluate(() => document.getElementById('ly-labels').click()); await page.waitForTimeout(400); const noLbl = await page.evaluate(() => Array.from(document.querySelectorAll('.mlbl.lbl-pol')).length);
+  await page.evaluate(() => document.getElementById('ly-labels').click()); await page.waitForTimeout(400);
+  t('the "labels" layer switches the names with the other map labels', noLbl === 0 && (await nDom()) === full, String(noLbl));
+  // the territory layer saved as OFF stays off after a reload, and the names do not come back alone
+  await page.evaluate(() => document.getElementById('ly-t_int').click()); await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'load' }); await waitForMap(page);
+  t('with the territory layer saved as off, a fresh load draws no names (no labels without their polygons)', (await nDom()) === 0 && (await page.evaluate(() => document.getElementById('ly-t_int').checked)) === false, String(await nDom()));
+  t('no console errors or failed requests', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
+  await ctx.close();
+});
+
+await run('Interregna names, globe 3D: names sit on their polygons, fit before they show, and pass clicks through', async () => {
+  const { ctx, page, ev } = await newPage(browser, { viewport: { width: 1440, height: 900 } });
+  await page.goto(srv.url + '?view=3d', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__rhGlobe && window.__rhGlobe.isShown(), null, { timeout: 90000 });
+  await page.waitForFunction(() => window.__rhGlobe.info().frames >= 6, null, { timeout: 90000 });
+  const frame = (n = 3) => page.evaluate((k) => new Promise((res) => { let i = 0; const f = () => (++i >= k ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+  const look = async (z) => { await page.evaluate((zz) => { const g = window.__rhGlobe, S = g._S; g._state.spin = false; S.cancelFly(); S.inertia = null; S.view.lat = -18; S.view.lon = -1.5; S.view.dist = S.distOf(zz); S.dirty(); }, z); await frame(4); await page.waitForTimeout(450); await frame(3); };
+  const read = () => page.evaluate(() => {
+    const g = window.__rhGlobe, S = g._S, out = [];
+    document.querySelectorAll('#globe .g-pin .mlbl.lbl-pol').forEach((e) => {
+      const w = e.closest('.g-pin'); if (w.style.display === 'none' || w.classList.contains('hide')) return; const r = e.getBoundingClientRect(); if (!r.width) return;
+      const x = r.left + r.width / 2, y = r.top + r.height / 2, ll = S.pick(x, y), pn = g._layers.pinAt(x, y);
+      out.push({ n: e.textContent, x, y, w: r.width, h: r.height, lat: ll && ll.lat, lon: ll && ll.lon, pin: pn ? pn.id : null, pe: getComputedStyle(e).pointerEvents, prop: e.classList.contains('lbl-proposal') });
+    });
+    return out;
+  });
+  const stable = async () => { let prev = null, cur = [], same = 0; for (let k = 0; k < 24; k++) { cur = await read(); const key = cur.map((q) => q.n).sort().join('|'); if (key === prev) { if (++same >= 2) return cur; } else same = 0; prev = key; await page.waitForTimeout(250); } return cur; };
+  await look(3); const n3 = (await stable()).length;
+  await look(5); const L5 = await stable();
+  t(`globe: names appear as the polygons grow (${n3} at zoom 3, ${L5.length} at zoom 5, at least 8)`, L5.length >= 8 && L5.length > n3, `${n3} → ${L5.length}`);
+  t('globe: every drawn name is a mosaic polity name with the "usulan" underline', L5.every((q) => NAME_ID[q.n] && q.prop));
+  const off = L5.filter((q) => q.lat == null || !inTerr(T(NAME_ID[q.n]), q.lat, q.lon)).map((q) => q.n);
+  t(`globe: each name sits on its own polygon (${L5.length - off.length}/${L5.length})${off.length ? ' — off: ' + off.join() : ''}`, off.length === 0);
+  t('globe: the label hit-test never returns a polity name (pass-through; hover and click reach the polygon)', L5.every((q) => q.pe === 'none' && !(q.pin && NAME_ID[q.pin])), JSON.stringify(L5.filter((q) => q.pin).map((q) => q.n + '→' + q.pin)));
+  const ov = []; for (let i = 0; i < L5.length; i++) for (let j = i + 1; j < L5.length; j++) if (Math.abs(L5[i].x - L5[j].x) < (L5[i].w + L5[j].w) / 2 - 1 && Math.abs(L5[i].y - L5[j].y) < (L5[i].h + L5[j].h) / 2 - 1) ov.push(L5[i].n + '/' + L5[j].n);
+  t('globe: no two names overlap', ov.length === 0, ov.join());
+  await page.evaluate(() => window.__rhGlobe._ctx.setLayer('t_int', false)); await frame(4); await page.waitForTimeout(300);
+  const noInt = (await read()).length; await page.evaluate(() => window.__rhGlobe._ctx.setLayer('t_int', true)); await frame(4); await page.waitForTimeout(500);
+  t('globe: switching the territory layer off removes the names, on brings them back', noInt === 0 && (await stable()).length >= 8, String(noInt));
+  await page.evaluate(() => window.__rhGlobe._ctx.setLayer('labels', false)); await frame(4); await page.waitForTimeout(300);
+  const noLbl = (await read()).length; await page.evaluate(() => window.__rhGlobe._ctx.setLayer('labels', true)); await frame(4);
+  t('globe: the labels layer switches the names with the other labels', noLbl === 0, String(noLbl));
+  const noise = ev.console.filter((m) => !/willReadFrequently/.test(m));
+  t('globe: no console errors', ev.errors.length === 0 && noise.length === 0, JSON.stringify([ev.errors, noise]));
+  await ctx.close();
+});
+
+await run('Interregna names, dual-disk working map: names on their polygons, hover and click reach the polygon', async () => {
+  const { ctx, page, ev } = await newPage(browser, { viewport: { width: 1440, height: 900 } });
+  await page.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+  await page.goto(srv.url + '?view=disk', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__rhDisk && window.__rhDisk.isShown() && window.__rhDisk.info().sheet, null, { timeout: 90000 });
+  const frame = (n = 3) => page.evaluate((k) => new Promise((res) => { let i = 0; const f = () => (++i >= k ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+  const look = async (k) => { await page.evaluate(async (kk) => { const d = window.__rhDisk; await d.show({ lat: -18, lon: -1.5, zoom: 3 }); d._state.scale = d.info().fit * kk; d.relayout(); }, k); await frame(4); await page.waitForTimeout(500); await frame(3); };
+  const read = () => page.evaluate(() => {
+    const d = window.__rhDisk, root = document.getElementById('disk'), rr = root.getBoundingClientRect(), out = [];
+    root.querySelectorAll('.g-pin .mlbl.lbl-pol').forEach((e) => {
+      const w = e.closest('.g-pin'); if (w.style.display === 'none' || w.classList.contains('hide')) return; const r = e.getBoundingClientRect(); if (!r.width) return;
+      const x = r.left + r.width / 2, y = r.top + r.height / 2, u = d._unproject(x - rr.left, y - rr.top);
+      out.push({ n: e.textContent, x, y, w: r.width, h: r.height, lat: u && u.lat, lon: u && u.lon, top: (document.elementFromPoint(x, y) || {}).tagName || null, pe: getComputedStyle(e).pointerEvents, prop: e.classList.contains('lbl-proposal') });
+    });
+    return out;
+  });
+  const stable = async () => { let prev = null, cur = [], same = 0; for (let k = 0; k < 24; k++) { cur = await read(); const key = cur.map((q) => q.n).sort().join('|'); if (key === prev) { if (++same >= 2) return cur; } else same = 0; prev = key; await page.waitForTimeout(250); } return cur; };
+  await look(2); const n2 = (await stable()).length;
+  await look(9); const L9 = await stable();
+  t(`disk: names appear as the polygons grow (${n2} at 2× fit, ${L9.length} at 9×, at least 8)`, L9.length >= 8 && L9.length > n2, `${n2} → ${L9.length}`);
+  t('disk: every drawn name is a mosaic polity name with the "usulan" underline', L9.every((q) => NAME_ID[q.n] && q.prop));
+  const off = L9.filter((q) => q.lat == null || !inTerr(T(NAME_ID[q.n]), q.lat, q.lon)).map((q) => q.n);
+  t(`disk: each name sits on its own polygon (${L9.length - off.length}/${L9.length})${off.length ? ' — off: ' + off.join() : ''}`, off.length === 0);
+  const ov = []; for (let i = 0; i < L9.length; i++) for (let j = i + 1; j < L9.length; j++) if (Math.abs(L9[i].x - L9[j].x) < (L9[i].w + L9[j].w) / 2 - 1 && Math.abs(L9[i].y - L9[j].y) < (L9[i].h + L9[j].h) / 2 - 1) ov.push(L9[i].n + '/' + L9[j].n);
+  t('disk: no two names overlap', ov.length === 0, ov.join());
+  const tip = async (x, y) => { await page.mouse.move(5, 5); await page.mouse.move(x, y); await page.waitForTimeout(150); await frame(2); return page.evaluate(() => { const e = document.querySelector('#disk .g-tip'); return e.hidden ? null : e.textContent; }); };
+  const probe = L9.filter((q) => q.lat != null && q.top === 'CANVAS' && topIdAt(q.lat, q.lon) === NAME_ID[q.n]).slice(0, 3); const bad = [];
+  for (const q of probe) { const got = await tip(q.x, q.y); if (got !== q.n) bad.push(`${q.n} → ${got}`); }
+  t(`disk: hovering on a name shows that polity's tooltip, not a label's (${probe.length - bad.length}/${probe.length})${bad.length ? ' — ' + bad.join(' | ') : ''}`, probe.length >= 1 && bad.length === 0);
+  if (probe.length) { await page.mouse.move(5, 5); await page.mouse.click(probe[0].x, probe[0].y); await page.waitForTimeout(300);
+    const card = await page.evaluate(() => document.getElementById('g-card').innerText); t('disk: clicking on a name opens the card of the polygon under it', card.includes(probe[0].n), card.slice(0, 60)); await page.keyboard.press('Escape'); }
+  await page.evaluate(() => window.__rhDisk._ctx.setLayer('t_int', false)); await frame(4); await page.waitForTimeout(300);
+  const noInt = (await read()).length; await page.evaluate(() => window.__rhDisk._ctx.setLayer('t_int', true)); await frame(4); await page.waitForTimeout(300);
+  t('disk: switching the territory layer off removes the names, on brings them back', noInt === 0 && (await stable()).length >= 8, String(noInt));
+  const noise = ev.console.filter((m) => !/willReadFrequently/.test(m));
+  t('disk: no console errors', ev.errors.length === 0 && noise.length === 0, JSON.stringify([ev.errors, noise]));
+  await ctx.close();
+});
+
 await browser.close(); await srv.close();
 console.log(`\npolitics: ${pass} passed, ${fail} failed${fail ? '\nFAILED: ' + failures.join(' | ') : ''}`);
 process.exit(fail ? 1 : 0);

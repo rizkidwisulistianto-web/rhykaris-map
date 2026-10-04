@@ -231,6 +231,12 @@ DK.init = function (ctx) {
     var el = document.createElement('div'); el.innerHTML = ctx.labelHTML(p); w.appendChild(el); pinsEl.appendChild(w);
     lbls.push({ p: p, wrap: w, el: el, shown: false, sx: 0, sy: 0, obstacle: !(p.cat === 'continent' || p.id === 'tamtu') });
   });
+  // nama polity Interregna (v2.0.1): label di atas poligon, tidak interaktif (klik dan hover jatuh ke poligon di bawahnya), prioritas terendah
+  (ctx.POLY || []).forEach(function (p) {
+    var w = document.createElement('div'); w.className = 'g-pin'; w.style.display = 'none';
+    var el = document.createElement('div'); el.innerHTML = ctx.labelHTML(p); w.appendChild(el); pinsEl.appendChild(w);
+    lbls.push({ p: p, wrap: w, el: el, shown: false, sx: 0, sy: 0, obstacle: false, polity: true });
+  });
   var anoms = ctx.DATA.anomalies.map(function (a) { var w = document.createElement('div'); w.className = 'g-anom'; w.style.display = 'none'; w.innerHTML = '<b></b><i></i>'; pinsEl.appendChild(w); return { a: a, wrap: w, shown: false, sx: 0, sy: 0 }; });
   function on(k) { return LAY[k] && LAY[k].on; }
   // empat busur Scar (layer 'arcs'): penanda batas di α = ±25° dan ±135°, ditarik melintang pita (rim ± 6,5° ± 1,5°) — sama dengan peta datar dan globe
@@ -567,14 +573,18 @@ DK.init = function (ctx) {
       if (best) { s2 = toScreen(best.x, best.y); if (s2.x < fb.l - 60 || s2.x > W + 60 || s2.y < -30 || s2.y > fb.h + 30) best = null; }
       if (!best) { if (n.shown) { n.wrap.style.display = 'none'; n.shown = false; } return; }
       n.sx = s2.x; n.sy = s2.y; n.wrap.style.transform = 'translate(' + s2.x.toFixed(1) + 'px,' + s2.y.toFixed(1) + 'px)';
+      if (n.polity) {   // lebar bebas poligon di layar: lebar bebas (derajat bujur) × panjang 1° sepanjang paralel di titik label (cakram yang sama)
+        n.fit = null;
+        if (n.p.room != null) { var q1 = M.project(n.p.lat, n.p.lon + 1, L).filter(function (c) { return c.disk === best.disk; })[0]; if (q1) { var s3 = toScreen(q1.x, q1.y); n.fit = n.p.room * Math.hypot(s3.x - s2.x, s3.y - s2.y); } }
+      }
       if (!n.shown) { n.wrap.style.display = ''; n.shown = true; }
     });
     // label saling bertumpuk di layar kecil: yang berprioritas lebih tinggi (benua, perairan, wilayah, lalu label kecil) menang; yang bentrok disembunyikan.
     // Semua transform sudah ditulis, jadi pembacaan tata letak di bawah hanya memicu satu reflow.
-    var cr = pinsEl.getBoundingClientRect(), vl = lbls.filter(function (n) { return n.shown; }), placed = [];
+    var cr = pinsEl.getBoundingClientRect(), va = lbls.filter(function (n) { return n.shown; }), vl = va.filter(function (n) { return !n.polity; }), vp = va.filter(function (n) { return n.polity; }), placed = [];
     function lp(n) { var c = n.p.cat; return n.el.firstChild && n.el.firstChild.classList.contains('minor') ? 3 : c === 'continent' ? 0 : c === 'water' ? 1 : 2; }
-    vl.forEach(function (n) { n.wrap.classList.remove('hide'); });
-    vl.forEach(function (n) { var e = n.el.firstChild, r = e && e.getBoundingClientRect(); n.rc = r && r.width ? [r.left - cr.left - 2, r.top - cr.top - 1, r.right - cr.left + 2, r.bottom - cr.top + 1] : null; });
+    va.forEach(function (n) { n.wrap.classList.remove('hide'); });
+    va.forEach(function (n) { var e = n.el.firstChild, r = e && e.getBoundingClientRect(); n.rc = r && r.width ? [r.left - cr.left - 2, r.top - cr.top - 1, r.right - cr.left + 2, r.bottom - cr.top + 1] : null; });
     vl.sort(function (a, b) { return lp(a) - lp(b); }).forEach(function (n) {
       if (!n.rc) return;
       var hit = function (q) { return n.rc[0] < q[2] && n.rc[2] > q[0] && n.rc[1] < q[3] && n.rc[3] > q[1]; };
@@ -583,6 +593,10 @@ DK.init = function (ctx) {
       if (bad) { n.wrap.classList.add('hide'); n.rc = null; } else { placed.push(n.rc); if (n.obstacle) obst.push([n.rc[0], n.rc[1], n.rc[2], n.rc[3], null]); }
     });
     C.declutterNames(items, obst, ctx.DECL);
+    if (vp.length) {   // nama polity: sesudah semuanya; bentrok dengan ikon, nama marker, label wilayah, atau anotasi kanvas → sembunyi (yang lebih luas menang)
+      var nmr = []; items.forEach(function (n) { if (n.nm.classList.contains('hide')) return; var q = n.nm.getBoundingClientRect(); if (q.width) nmr.push([q.left - cr.left, q.top - cr.top, q.right - cr.left, q.bottom - cr.top]); });
+      C.declutterPolity(vp.filter(function (n) { return n.rc; }).map(function (n) { return { rc: [n.rc[0] + 2, n.rc[1] + 1, n.rc[2] - 2, n.rc[3] - 1], px: n.p.px, fit: n.fit, hide: function (b) { n.wrap.classList.toggle('hide', b); } }; }), obst.concat(placed, nmr));
+    }
   }
 
   // ---------------------------------------------------------------- hover / klik / kompas
@@ -598,7 +612,7 @@ DK.init = function (ctx) {
   function lblAt(px, py, mult) {
     var cr = pinsEl.getBoundingClientRect(), best = null, area = 1e12, pad = 2 * (mult || 1);
     lbls.forEach(function (n) {
-      if (!n.shown) return; var e = n.el.firstChild; if (!e) return; var r = e.getBoundingClientRect(); if (!r.width) return;
+      if (!n.shown || n.polity) return; var e = n.el.firstChild; if (!e) return; var r = e.getBoundingClientRect(); if (!r.width) return;   // nama polity tak mencegat klik
       if (px >= r.left - cr.left - pad && px <= r.right - cr.left + pad && py >= r.top - cr.top - pad && py <= r.bottom - cr.top + pad && r.width * r.height < area) { area = r.width * r.height; best = { type: 'place', id: n.p.id, name: n.p.name }; }
     });
     return best;

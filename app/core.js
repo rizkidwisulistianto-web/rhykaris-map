@@ -50,6 +50,106 @@ C.terrOrder = function (list) {
   return list.map(function (t, i) { return { t: t, g: C.TGROUPS.indexOf(C.tgroupOf(t)), i: i }; })
     .sort(function (a, b) { return (a.g - b.g) || (a.i - b.i); }).map(function (o) { return o.t; });
 };
+// ------------------------------------------------------------------ nama polity Interregna di atas poligon (v2.0.1)
+/* Mosaik Interregna (ir_*) sengaja tidak punya marker, tempat, atau ibukota (Kontrak Data: ibukota belum ditempatkan), jadi namanya (usulan Draft) tidak ikut
+   DATA.places dan sebelumnya hanya muncul sebagai tooltip. Di sini namanya diturunkan menjadi LABEL di atas poligon — bukan marker, supaya tak terbaca sebagai lokasi
+   kota. Titik label DIHITUNG dari geometri, tidak disimpan: bila mosaik digambar ulang, label ikut pindah. Satu fungsi untuk peta datar, globe, dan cakram. */
+function ringArea(r) { var s = 0; for (var i = 0, j = r.length - 1; i < r.length; j = i++) s += r[j][1] * r[i][0] - r[i][1] * r[j][0]; return Math.abs(s) / 2; }
+/** Cincin [[lat, lon], …] → {x, y} Float64Array (x = bujur × k, k = cos lintang, supaya jarak mendekati isotropik). Larik datar: pencarian titik label memanggilnya ribuan kali. */
+function flatRing(r, k) { var n = r.length, x = new Float64Array(n), y = new Float64Array(n); for (var i = 0; i < n; i++) { x[i] = r[i][1] * k; y[i] = r[i][0]; } return { x: x, y: y, n: n }; }
+function inFlat(px, py, f) {
+  var c = false, x = f.x, y = f.y;
+  for (var i = 0, j = f.n - 1; i < f.n; j = i++) { var yi = y[i], yj = y[j]; if ((yi > py) !== (yj > py) && px < (x[j] - x[i]) * (py - yi) / (yj - yi) + x[i]) c = !c; }
+  return c;
+}
+function distFlat(px, py, f) {
+  var best = Infinity, x = f.x, y = f.y;
+  for (var i = 0, j = f.n - 1; i < f.n; j = i++) {
+    var ax = x[j], ay = y[j], dx = x[i] - ax, dy = y[i] - ay, l2 = dx * dx + dy * dy, t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t; var ex = px - (ax + t * dx), ey = py - (ay + t * dy), d = ex * ex + ey * ey; if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+}
+/** Titik di dalam cincin (bujur diskalakan k)? Dipakai untuk menyaring kantong; satu panggilan per titik cincin, bukan per kisi. */
+function inRingK(x, y, r, k) {
+  var c = false;
+  for (var i = 0, j = r.length - 1; i < r.length; j = i++) {
+    var xi = r[i][1] * k, yi = r[i][0], xj = r[j][1] * k, yj = r[j][0];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+/**
+ * Titik label sebuah poligon: titik terdalam (jarak terjauh ke tepi mana pun) di dalam `ring`, di luar semua `holes` (cincin yang digambar di atasnya: enklaf, eksklave).
+ * Pencarian kisi lalu penghalusan, deterministik. Mengembalikan {lat, lon, depth (derajat), room (lebar horizontal bebas di titik itu, derajat bujur)}.
+ */
+C.labelPoint = function (ring, holes) {
+  holes = holes || [];
+  var la0 = Infinity, la1 = -Infinity, lo0 = Infinity, lo1 = -Infinity, i, j, d;
+  ring.forEach(function (p) { la0 = Math.min(la0, p[0]); la1 = Math.max(la1, p[0]); lo0 = Math.min(lo0, p[1]); lo1 = Math.max(lo1, p[1]); });
+  var k = Math.cos((la0 + la1) / 2 * D2R), F = flatRing(ring, k), HF = holes.map(function (r) { return flatRing(r, k); });
+  var hb = HF.map(function (f) { var b = [Infinity, -Infinity, Infinity, -Infinity]; for (var q = 0; q < f.n; q++) { b[0] = Math.min(b[0], f.x[q]); b[1] = Math.max(b[1], f.x[q]); b[2] = Math.min(b[2], f.y[q]); b[3] = Math.max(b[3], f.y[q]); } return b; });
+  function depth(x, y) {
+    if (!inFlat(x, y, F)) return -1;
+    var m = distFlat(x, y, F);
+    for (var h = 0; h < HF.length; h++) {
+      var b = hb[h]; if (x < b[0] - m || x > b[1] + m || y < b[2] - m || y > b[3] + m) continue;   // lubang di luar jangkauan: tak memuat titik ini, tak lebih dekat dari tepi terdekat
+      if (inFlat(x, y, HF[h])) return -1; m = Math.min(m, distFlat(x, y, HF[h]));
+    }
+    return m;
+  }
+  var N = 20, x0 = lo0 * k, y0 = la0, sx = (lo1 * k - x0) / N, sy = (la1 - y0) / N, best = { x: x0 + sx * N / 2, y: y0 + sy * N / 2, d: -1 };
+  for (i = 0; i <= N; i++) for (j = 0; j <= N; j++) { d = depth(x0 + i * sx, y0 + j * sy); if (d > best.d) best = { x: x0 + i * sx, y: y0 + j * sy, d: d }; }
+  var half = Math.max(sx, sy);
+  for (var it = 0; it < 6; it++) {   // penghalusan: kisi 5 × 5 di sekitar yang terbaik, jendela dan langkah dipangkas dua tiap putaran
+    var cx = best.x, cy = best.y, st = half / 2;
+    for (i = -2; i <= 2; i++) for (j = -2; j <= 2; j++) { d = depth(cx + i * st, cy + j * st); if (d > best.d) best = { x: cx + i * st, y: cy + j * st, d: d }; }
+    half = st;
+  }
+  // lebar bebas horizontal di garis lintang titik label: persimpangan garis itu dengan tepi poligon dan lubang; ambil yang terdekat di kiri dan kanan titik
+  var xl = -Infinity, xr = Infinity;
+  [F].concat(HF).forEach(function (f) {
+    for (var a = 0, b = f.n - 1; a < f.n; b = a++) {
+      if ((f.y[a] > best.y) !== (f.y[b] > best.y)) { var x = (f.x[b] - f.x[a]) * (best.y - f.y[a]) / (f.y[b] - f.y[a]) + f.x[a]; if (x <= best.x && x > xl) xl = x; if (x > best.x && x < xr) xr = x; }
+    }
+  });
+  return { lat: best.y, lon: best.x / k, depth: best.d, room: isFinite(xl) && isFinite(xr) ? (xr - xl) / k : 0 };
+};
+/** Jenis polity dari teks jenis faksi: k kerajaan, a wilayah adat, c kota merdeka, m mikro-polity. */
+function polityType(kind) { kind = String(kind || ''); return /wilayah adat/i.test(kind) ? 'a' : /kota/i.test(kind) ? 'c' : /mikro/i.test(kind) ? 'm' : 'k'; }
+/** Jenjang ukuran label menurut luas (piksel grid 12,7 km, tanpa kantong): 1 besar … 4 terkecil. Hanya menentukan ukuran huruf (CSS); kapan sebuah label tampil diputuskan aturan muat di `C.declutterPolity`, bukan jenjang. */
+C.POLITY_TIER = [2000, 600, 250];
+function polityTier(px) { var t = 1; C.POLITY_TIER.forEach(function (lim) { if (px < lim) t++; }); return t; }
+/**
+ * Label nama polity Interregna (ir_*) sebagai objek mirip-tempat, TANPA masuk DATA.places (tidak ikut pencarian, hitungan entri, atau kartu tempat).
+ * Setiap objek: {id, fid (faksi untuk kartu), name, cat:'polity', label_only, polity, tg (kelompok layer wilayahnya), epi, proposal, ptype, tier, px, lat, lon, room, depth}.
+ * `proposal` mengikuti teks jenis faksi ("nama usulan (Draft)"): bila nama kelak dikunci, garis bawah putus-putus hilang sendiri.
+ * Lubang = polity yang digambar sesudahnya (urutan C.terrOrder) dan berada di dalamnya, supaya label induk tidak jatuh di atas enklaf.
+ */
+C.polityLabels = function (DATA) {
+  if (C._pl && C._pl.src === DATA) return C._pl.out;   // satu kali hitung untuk peta datar, globe, dan cakram (hasil tidak boleh diubah pemanggil)
+  var FAC = DATA.factions || {}, ord = C.terrOrder(DATA.territories || []), out = [];
+  function bbox(r) { var b = [Infinity, -Infinity, Infinity, -Infinity]; r.forEach(function (p) { b[0] = Math.min(b[0], p[0]); b[1] = Math.max(b[1], p[0]); b[2] = Math.min(b[2], p[1]); b[3] = Math.max(b[3], p[1]); }); return b; }
+  ord.forEach(function (t, idx) {
+    if (t.of || t.id.indexOf('ir_') !== 0 || !FAC[t.id]) return;
+    // tempat label = cincin terbesar (polity berkantong, mis. eksklave, punya lebih dari satu cincin)
+    var main = t.rings.slice().sort(function (a, b) { return ringArea(b) - ringArea(a); })[0], k = Math.cos(main[0][0] * D2R), mb = bbox(main), holes = [];
+    ord.slice(idx + 1).forEach(function (u) {
+      if (C.tgroupOf(u) !== 'int') return;
+      u.rings.forEach(function (r) {
+        var b = bbox(r); if (b[0] > mb[1] || b[1] < mb[0] || b[2] > mb[3] || b[3] < mb[2]) return;
+        var n = 0; r.forEach(function (p) { if (inRingK(p[1] * k, p[0], main, k)) n++; });
+        if (n >= 0.6 * r.length) holes.push(r);   // mayoritas titiknya di dalam = kantong yang digambar di atas induknya; tetangga yang cuma bersentuhan tidak ikut
+      });
+    });
+    var lp = C.labelPoint(main, holes), f = FAC[t.id];
+    out.push({ id: t.id, fid: t.id, name: f.name, cat: 'polity', label_only: true, polity: true, tg: C.tgroupOf(t), epi: f.epi || 'inferensi', proposal: /usulan|draft/i.test(f.kind || ''), ptype: polityType(f.kind),
+      tier: polityTier(t.px || 0), px: t.px || 0, lat: lp.lat, lon: lp.lon, room: lp.room > 0 ? lp.room : null, depth: lp.depth });
+  });
+  C._pl = { src: DATA, out: out };
+  return out;
+};
+
 /* Gaya per kunci `style` di faksi (data.json). Tanpa `style` = tampilan lama (isian rata 26 % atau arsir 9 px). `tiers` = jenjang kepadatan pola titik
    (rekaman wilayah dengan `tier` n memakai baris n; wilayah induk jenjang 0). Pola: {k:'hatch', a1, a2, g, b, rot} garis miring; {k:'dots', a, g, r}
    bintik selang-seling berjarak g piksel layar — kepadatan konstan di layar, tidak ikut zoom. `stroke:null` = tanpa garis tepi (zona difus). */
@@ -219,6 +319,25 @@ C.declutterNames = function (items, obst, DEC) {
       if (!hit) ok = cand[i];
     }
     if (ok) { placed.push(ok[1]); it.nm.classList.toggle('l', ok[0] === 'l'); } else it.nm.classList.add('hide');
+  });
+};
+
+/**
+ * Penyaring nama polity Interregna (v2.0.1), dipakai peta datar, globe, dan cakram. Prioritas terendah di antara semua tulisan.
+ * Sebuah nama disembunyikan bila (1) tak muat di dalam poligonnya: lebar tulisan > lebar bebas poligon di titik label (`fit`, piksel) × 1,12 — nama baru muncul ketika zoom
+ * cukup dekat, jadi tak pernah tumpah ke poligon tetangga; (2) menimpa penghalang (ikon dan nama marker, label wilayah, anotasi); atau (3) menimpa nama polity lain yang
+ * lebih luas. Yang disembunyikan tidak memblokir apa pun.
+ * items: [{rc: [x0, y0, x1, y1] (piksel layar), px (luas polity), fit (piksel, atau null = tanpa uji muat), hide: function (bool)}]; blockers: [[x0, y0, x1, y1, …]].
+ */
+C.POLITY_FIT = 1.12;
+C.declutterPolity = function (items, blockers) {
+  function ov(a, b) { return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; }
+  var placed = [];
+  items.slice().sort(function (a, b) { return b.px - a.px; }).forEach(function (it) {
+    var r = [it.rc[0] - 2, it.rc[1] - 1, it.rc[2] + 2, it.rc[3] + 1];
+    var bad = it.fit != null && (it.rc[2] - it.rc[0]) > it.fit * C.POLITY_FIT;
+    if (!bad) bad = blockers.some(function (q) { return ov(r, q); }) || placed.some(function (q) { return ov(r, q); });
+    it.hide(bad); if (!bad) placed.push(r);
   });
 };
 
