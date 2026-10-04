@@ -1,0 +1,15 @@
+# tag<TAB>commit<TAB>title — one line per release, oldest first. The last line becomes Latest.
+v1.4.0	8bd851e0e3661d8c818cfd6c001b0059e1be4c2a	Viewer v1.4 — public edition
+v1.6.0	99daa42ca15ab1ce9845285aa734ad2a6c618dde	Viewer v1.6 — Stage 2: 3D globe
+v1.6.1	48e953fc243840d912e2a574f2a6f5b289250448	Viewer v1.6.1
+v1.6.2	e1c792b896ecb1fdb384b5d69660a61fc7684913	Viewer v1.6.2
+v1.6.3	c92da1784c3a6f0603e70c23302a5126678214e2	Viewer v1.6.3
+v1.6.4	421b96d0333aa56778f72a063f220f533c834065	Viewer v1.6.4
+v1.6.5	37f1565c9fe0a6c274cfa2b6c57fc7e6444dc322	Viewer v1.6.5
+v1.7.0	8b1093412287286ae470d0d219e8573753e558d8	Viewer v1.7.0 — political layer v3
+v1.7.1	d373977e0289af34fd0a3642057e2dfb037e53c4	Viewer v1.7.1
+v1.8.0	d85d019dc3f884a13ee10525e9e86be867df1889	Viewer v1.8.0 — Imperial Commonwealth
+v2.0.0	3b55b63475d2db989656ce5d692e0d9f7740d336	Viewer v2.0.0 — Stage 2 milestone
+v2.0.1	d489f91a6fd5fbe9f51e46fa11a5409269943e19	Viewer v2.0.1
+v2.0.2	f087ff8e31a6f1aac12d05739dae7146ce1f93f8	Viewer v2.0.2
+v2.0.3	f51cd90a9a39a43f1a459def611ef8924a0be77a	Viewer v2.0.3

@@ -1,0 +1,38 @@
+name: Releases
+
+# Creates a git tag and a GitHub release for every line in
+# .github/release-notes/index.tsv that has no release yet.
+# Notes come from .github/release-notes/<tag>.md.
+# Run it by hand from the Actions tab after adding a new line and notes file.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create missing tags and releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest=$(grep -v '^#' .github/release-notes/index.tsv | grep -v '^$' | tail -n 1 | cut -f1)
+          grep -v '^#' .github/release-notes/index.tsv | grep -v '^$' | while IFS=$'\t' read -r tag sha title; do
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "skip  $tag (release exists)"
+              continue
+            fi
+            if [ "$tag" = "$latest" ]; then flag=--latest; else flag=--latest=false; fi
+            gh release create "$tag" --target "$sha" --title "$title" \
+              --notes-file ".github/release-notes/$tag.md" $flag
+            echo "made  $tag -> $sha"
+            sleep 2
+          done
