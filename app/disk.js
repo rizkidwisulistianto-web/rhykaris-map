@@ -285,7 +285,7 @@ DK.init = function (ctx) {
     GEO.regions = DATA.regions.filter(function (r) { return ST.REG_STYLE[r.id]; }).map(function (r) { return { id: r.id, st: ST.REG_STYLE[r.id], rings: r.rings.map(function (q) { return mkRing(q, true); }) }; });
     GEO.banks = DATA.banks.map(function (b) { var q = []; for (var i = 0; i <= 72; i++) q.push(C.destination(b.lat, b.lon, i * 5, b.r)); return mkRing(q, true); });
     GEO.mand = DATA.mandala.map(function (m) { return { ring: m.ring, rings: m.rings.map(function (q) { return mkRing(q, true); }) }; });
-    GEO.terr = C.terrOrder(DATA.territories.filter(function (t) { return t.id !== 'anusarri'; })).map(function (t) { var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }; return { t: t, f: f, ts: C.terrStyle(f, t), grp: C.tgroupOf(t), rings: t.rings.map(function (q) { return mkRing(q, true); }) }; });   // urutan gambar = kelompok C.TGROUPS lalu urutan data
+    GEO.terr = C.terrOrder(DATA.territories.filter(function (t) { return t.id !== 'anusarri'; })).map(function (t) { var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }; return { t: t, f: f, ts: C.terrStyle(f, t), grp: C.tgroupOf(t), rings: C.drawRings(t).map(function (q) { return mkRing(q, true); }) }; });   // urutan gambar = kelompok C.TGROUPS lalu urutan data
     GEO.routes = DATA.routes.map(function (r) { return { r: r, parts: [r.pts].concat(r.pts2 ? [r.pts2] : []).map(function (q) { return mkRing(q, false); }) }; });
     GEO.fronts = DATA.fronts.map(function (f) {
       var fl = f.id === 'front_florian', last = f.pts[f.pts.length - 1], from = fl ? f.pts[Math.floor(f.pts.length / 2)] : last;

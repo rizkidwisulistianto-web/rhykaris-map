@@ -306,5 +306,29 @@ t('moons.json top-level epi is inferensi', MOONS.epi === 'inferensi');
   t('declutterPolity: an obstacle (marker name, region label) hides the polity name, never the reverse', log.blocked === true);
 }
 
+// ---------------------------------------------------------------- rings that are drawn (viewer v2.0.3; shared by flat map, globe and disk)
+{
+  const inR = (lat, lon, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const yi = r[i][0], xi = r[i][1], yj = r[j][0], xj = r[j][1]; if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const png = PNG.sync.read(fs.readFileSync(path.join(ROOT, 'assets/datagrid.png')));
+  const T = (id) => DATA.territories.find((x) => x.id === id);
+  const inside = (r, o) => r.every((p) => inR(p[0], p[1], o));
+  const DR = DATA.territories.map((x) => [x, C.drawRings(x)]);
+  t('drawRings: a territory with one ring is returned as it is (same array)', DR.filter(([x]) => x.rings.length === 1).every(([x, d]) => d === x.rings));
+  t('drawRings: every territory keeps its rings that are drawn, in data order, and at least one', DR.every(([x, d]) => d.length >= 1 && d.every((r) => x.rings.includes(r)) && d.every((r, i) => i === 0 || x.rings.indexOf(d[i - 1]) < x.rings.indexOf(r))));
+  const dropped = DR.filter(([x, d]) => d.length < x.rings.length).map(([x]) => x.id);
+  t(`drawRings: the only territories that lose a ring are Hesperia and the Imperial Commonwealth umbrella (${dropped.join()}); a new case would need a decision`, dropped.length === 2 && dropped.includes('hesperia') && dropped.includes('imperial_commonwealth'));
+  ['hesperia', 'imperial_commonwealth'].forEach((id) => {
+    const x = T(id), d = C.drawRings(x), lake = x.rings[1];
+    t(`drawRings: ${id} is drawn as its outer ring only, and the data still holds both rings`, d.length === 1 && d[0] === x.rings[0] && x.rings.length === 2);
+    t(`drawRings: ${id} — the dropped ring lies wholly inside the drawn one (the polygon covers the lake)`, inside(lake, d[0]));
+    const la = lake.reduce((s, p) => s + p[0], 0) / lake.length, lo = lake.reduce((s, p) => s + p[1], 0) / lake.length, g = C.terrainFrom(png.data, png.width, png.height, la, lo);
+    t(`drawRings: ${id} — the dropped ring encloses water in the physical layer (datagrid: ${g && g.b})`, g && /laut|Paparan|Danau|Teluk/i.test(g.b), JSON.stringify(g));
+  });
+  t('drawRings: separate parts are all drawn — the exclave of Akṣata and the other multi-part territories keep every ring', ['ir_14', 'anabasim', 'andura'].every((id) => C.drawRings(T(id)).length === T(id).rings.length));
+  t('drawRings: the same array every time (cached) and the data itself is not modified', C.drawRings(T('hesperia')) === C.drawRings(T('hesperia')) && T('hesperia').rings.length === 2 && T('imperial_commonwealth').rings.length === 2);
+  const sq = { rings: [[[0, 0], [0, 10], [10, 10], [10, 0]], [[4, 4], [4, 6], [6, 6], [6, 4]], [[20, 0], [20, 3], [23, 3], [23, 0]], [[1, 1], [1, 11], [2, 11], [2, 1]]] };
+  t('drawRings: a ring wholly inside a larger one is dropped, a separate ring is kept, a ring that only overlaps the edge is kept', JSON.stringify(C.drawRings(sq).map((r) => sq.rings.indexOf(r))) === '[0,2,3]');
+}
+
 console.log(`unit: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

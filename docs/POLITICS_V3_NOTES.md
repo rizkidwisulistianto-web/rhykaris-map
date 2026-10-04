@@ -197,3 +197,22 @@ python <repo>/scripts/build_index.py
 **Open (not decided here; questions for the Worldbuilding space).** How many vassal kingdoms there are and who they are; whether any vassal land lies beyond the *marka* belt; whether the umbrella has a capital or any other seat than the Paramount. Until then the umbrella's outer edge on the vassal side is the placeholder belt.
 
 **Records after this change.** places 44 → **45**, factions 46 → **47**, territories 49 → **50** records (46 drawn polygons + 4 tier records), audit cards 20 → **21** (*Payung Imperial Commonwealth = Hesperia (paramount) + kerajaan vassal, bukan satu wilayah*). `data/data.json` and `data/politics.json` are re-pinned in `tests/canon-hashes.json`; the six physical-layer hashes are unchanged. As in §9, Ktonia (2940) and Pylora (1140) keep the committed elevations.
+
+## 11. Update 4 Oct 2026 — the lake inside Hesperia (viewer v2.0.3)
+
+**The report.** From a phone, zoomed in near 19° S · 16° W: a red polygon in the middle of Hesperia, with no name and no card of its own ("what is this?").
+
+**What it was.** Not an entry and not a polity. It is the **second ring of `hesperia`** (8 points, about 7,000 km²) and of `imperial_commonwealth` (10 points, about 5,200 km²): the outline of an unnamed lake where several rivers meet, wholly inside both outer rings. It entered the data as a by-product of the land mask the polygons were cut from (§5.1): this one water body is coded as sea in the physical grid, while every other lake inside a polygon is coded land with the biome *Danau*, so only this one left a hole. The viewers draw each ring of a territory as its own filled shape, so the hole came out as a second, stacked red polygon.
+
+**The decision.** A polygon is a nominal jurisdiction (#215) and is not cut by water; the other 14 or so lakes inside polygons are covered by them. So the lake is covered here too: **a ring that lies wholly inside another ring of the same territory is not drawn.** Two alternatives were rejected: drawing it as a true hole (a hole would claim "no jurisdiction here" for one lake out of fifteen, which is a Worldbuilding statement, and it would break the rule that rings are never holes, see the Interregna notes §10), and editing the geometry (the generator cannot run outside the author's machine, and `data/politics.json` would need a re-pin for a display-only reason).
+
+**How.** `C.drawRings(territory)` in `app/core.js` returns the rings to draw: the territory's own array when it has one ring, otherwise the rings that are not wholly inside a larger ring of the same territory (cached per territory). The flat map, the globe overlay and the working map call it instead of reading `t.rings`. Today it drops exactly two rings, the two lake rings; `ir_14`, `anabasim` and `andura` keep every ring because their extra rings are separate parts. A unit test fails if any other territory starts to lose a ring, so a new case needs a decision.
+
+**What did not change.** `data/` and the geometry are byte-identical, the validator still requires the umbrella to have as many rings as Hesperia, and the hit-test is unchanged (a click on the lake gives the Hesperia card, as before). Other readers of `rings` (the mandala, the regions, zoom-to-faction bounds) are untouched. No canon parameter is added and none changes status; the display convention is logged in the Data Contract (D2).
+
+**Left open.**
+
+- *The lake has no name.* There is no canon entry for it in the Atlas. Whether it gets a name or an Atlas entry is a Worldbuilding decision; the map has not invented one.
+- *The readout.* The position readout over the lake still says "Paparan / laut dangkal, −101 m", because the physical datagrid codes the lake as shallow sea. The physical layer is canon-stable (v4), so the correction waits for the next physical version.
+
+**Tests.** `tests/unit.mjs`: `C.drawRings` (only Hesperia and the umbrella lose a ring, the dropped ring lies inside the drawn one and encloses water in the datagrid, separate parts keep all rings, data not modified; fails on v2.0.2). `tests/politics.mjs`: flat map (two polygons over the lake centre, three world copies each, Akṣata still six, a click gives the Hesperia card), globe and working map (canvas path calls of one repaint: lake vertices absent, outer rings and the exclave present). Four of these fail against the v2.0.2 build.

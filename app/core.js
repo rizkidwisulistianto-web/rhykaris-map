@@ -50,6 +50,26 @@ C.terrOrder = function (list) {
   return list.map(function (t, i) { return { t: t, g: C.TGROUPS.indexOf(C.tgroupOf(t)), i: i }; })
     .sort(function (a, b) { return (a.g - b.g) || (a.i - b.i); }).map(function (o) { return o.t; });
 };
+// ------------------------------------------------------------------ cincin yang digambar (v2.0.3)
+/* Datanya memuat satu "lubang": cincin kedua milik Hesperia dan payung Imperial Commonwealth mengelilingi sebuah danau. Badan air itu tercatat sebagai laut di peta fisik,
+   jadi raster daratan melubanginya; danau lain di dalam poligon tercatat sebagai daratan dan tidak berlubang. Semua renderer menggambar tiap cincin sebagai poligon sendiri,
+   tanpa lubang, jadi cincin itu tampil sebagai bentuk merah berisi dan bergaris di atas danau, terbaca sebagai wilayah tanpa nama. Poligon wilayah = yurisdiksi nominal (#215),
+   jadi danau di dalamnya ikut tertutup poligon induknya, seperti danau lain. Datanya tidak diubah; renderer cukup tidak menggambar cincin yang berada di dalam cincin lain. */
+var DRAW_RINGS = typeof WeakMap === 'function' ? new WeakMap() : null;
+/**
+ * Cincin yang digambar untuk wilayah t, urutan data dipertahankan. Cincin yang SELURUH titiknya berada di dalam cincin lain yang lebih luas milik wilayah yang sama (lubang danau
+ * Hesperia dan payung) dibuang; cincin yang berdiri sendiri (eksklave Akṣata) tetap digambar. Wilayah bercincin satu mengembalikan t.rings apa adanya.
+ */
+C.drawRings = function (t) {
+  var rs = t.rings; if (rs.length < 2) return rs;
+  var hit = DRAW_RINGS && DRAW_RINGS.get(t); if (hit) return hit;
+  var ar = rs.map(ringArea);
+  var keep = rs.filter(function (r, i) {
+    return !rs.some(function (o, j) { return j !== i && ar[j] > ar[i] && r.every(function (p) { return inRingK(p[1], p[0], o, 1); }); });
+  });
+  if (DRAW_RINGS) DRAW_RINGS.set(t, keep);
+  return keep;
+};
 // ------------------------------------------------------------------ nama polity Interregna di atas poligon (v2.0.1)
 /* Mosaik Interregna (ir_*) sengaja tidak punya marker, tempat, atau ibukota (Kontrak Data: ibukota belum ditempatkan), jadi namanya (usulan Draft) tidak ikut
    DATA.places dan sebelumnya hanya muncul sebagai tooltip. Di sini namanya diturunkan menjadi LABEL di atas poligon — bukan marker, supaya tak terbaca sebagai lokasi

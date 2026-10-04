@@ -870,7 +870,7 @@ DK.init = function (ctx) {
     GEO.regions = DATA.regions.filter(function (r) { return ST.REG_STYLE[r.id]; }).map(function (r) { return { id: r.id, st: ST.REG_STYLE[r.id], rings: r.rings.map(function (q) { return mkRing(q, true); }) }; });
     GEO.banks = DATA.banks.map(function (b) { var q = []; for (var i = 0; i <= 72; i++) q.push(C.destination(b.lat, b.lon, i * 5, b.r)); return mkRing(q, true); });
     GEO.mand = DATA.mandala.map(function (m) { return { ring: m.ring, rings: m.rings.map(function (q) { return mkRing(q, true); }) }; });
-    GEO.terr = C.terrOrder(DATA.territories.filter(function (t) { return t.id !== 'anusarri'; })).map(function (t) { var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }; return { t: t, f: f, ts: C.terrStyle(f, t), grp: C.tgroupOf(t), rings: t.rings.map(function (q) { return mkRing(q, true); }) }; });   // urutan gambar = kelompok C.TGROUPS lalu urutan data
+    GEO.terr = C.terrOrder(DATA.territories.filter(function (t) { return t.id !== 'anusarri'; })).map(function (t) { var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }; return { t: t, f: f, ts: C.terrStyle(f, t), grp: C.tgroupOf(t), rings: C.drawRings(t).map(function (q) { return mkRing(q, true); }) }; });   // urutan gambar = kelompok C.TGROUPS lalu urutan data
     GEO.routes = DATA.routes.map(function (r) { return { r: r, parts: [r.pts].concat(r.pts2 ? [r.pts2] : []).map(function (q) { return mkRing(q, false); }) }; });
     GEO.fronts = DATA.fronts.map(function (f) {
       var fl = f.id === 'front_florian', last = f.pts[f.pts.length - 1], from = fl ? f.pts[Math.floor(f.pts.length / 2)] : last;
@@ -1870,7 +1870,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       TORD.forEach(function (t) {
         if (t.id === 'anusarri' || C.tgroupOf(t) !== grp) return;
         var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }, ts = C.terrStyle(f, t), fl = ts.fill, sk = ts.stroke;
-        shape(t.rings, { fill: C.patKey(fl) ? pat(fl) : fl.col, fa: C.patKey(fl) ? 1 : fl.a, stroke: sk ? sk.col : null, sa: sk ? sk.a : 1, w: gw(C.LINE.terr * (sk ? sk.k : 1)), dash: sk && sk.dash ? sk.dash : null });
+        shape(C.drawRings(t), { fill: C.patKey(fl) ? pat(fl) : fl.col, fa: C.patKey(fl) ? 1 : fl.a, stroke: sk ? sk.col : null, sa: sk ? sk.a : 1, w: gw(C.LINE.terr * (sk ? sk.k : 1)), dash: sk && sk.dash ? sk.dash : null });
       });
     } });
   });
@@ -2551,7 +2551,7 @@ RH.globe = {
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
-window.RH = { version: "2.0.2" };
+window.RH = { version: "2.0.3" };
 /* Master Map Rhykaris — modul bersama (v1.5): matematika bola, geometri Scar, pembaca datagrid, label epistemik,
    util state dan pemuat three.js. Dipakai tampilan 2D (Leaflet) dan 3D (globe) — satu sumber, tanpa duplikasi.
    Modul ini murni (tanpa akses DOM saat dimuat) supaya bisa diuji di Node; bagian yang menyentuh DOM ada di fungsi tersendiri. */
@@ -2603,6 +2603,26 @@ C.tgroupOf = function (t) { var id = t.of || t.id; return C.TGROUP[id] || (id.in
 C.terrOrder = function (list) {
   return list.map(function (t, i) { return { t: t, g: C.TGROUPS.indexOf(C.tgroupOf(t)), i: i }; })
     .sort(function (a, b) { return (a.g - b.g) || (a.i - b.i); }).map(function (o) { return o.t; });
+};
+// ------------------------------------------------------------------ cincin yang digambar (v2.0.3)
+/* Datanya memuat satu "lubang": cincin kedua milik Hesperia dan payung Imperial Commonwealth mengelilingi sebuah danau. Badan air itu tercatat sebagai laut di peta fisik,
+   jadi raster daratan melubanginya; danau lain di dalam poligon tercatat sebagai daratan dan tidak berlubang. Semua renderer menggambar tiap cincin sebagai poligon sendiri,
+   tanpa lubang, jadi cincin itu tampil sebagai bentuk merah berisi dan bergaris di atas danau, terbaca sebagai wilayah tanpa nama. Poligon wilayah = yurisdiksi nominal (#215),
+   jadi danau di dalamnya ikut tertutup poligon induknya, seperti danau lain. Datanya tidak diubah; renderer cukup tidak menggambar cincin yang berada di dalam cincin lain. */
+var DRAW_RINGS = typeof WeakMap === 'function' ? new WeakMap() : null;
+/**
+ * Cincin yang digambar untuk wilayah t, urutan data dipertahankan. Cincin yang SELURUH titiknya berada di dalam cincin lain yang lebih luas milik wilayah yang sama (lubang danau
+ * Hesperia dan payung) dibuang; cincin yang berdiri sendiri (eksklave Akṣata) tetap digambar. Wilayah bercincin satu mengembalikan t.rings apa adanya.
+ */
+C.drawRings = function (t) {
+  var rs = t.rings; if (rs.length < 2) return rs;
+  var hit = DRAW_RINGS && DRAW_RINGS.get(t); if (hit) return hit;
+  var ar = rs.map(ringArea);
+  var keep = rs.filter(function (r, i) {
+    return !rs.some(function (o, j) { return j !== i && ar[j] > ar[i] && r.every(function (p) { return inRingK(p[1], p[0], o, 1); }); });
+  });
+  if (DRAW_RINGS) DRAW_RINGS.set(t, keep);
+  return keep;
 };
 // ------------------------------------------------------------------ nama polity Interregna di atas poligon (v2.0.1)
 /* Mosaik Interregna (ir_*) sengaja tidak punya marker, tempat, atau ibukota (Kontrak Data: ibukota belum ditempatkan), jadi namanya (usulan Draft) tidak ikut
@@ -3456,7 +3476,7 @@ function main() {
     var f = FAC[fid] || { name: t.name, color: '#cccccc', kind: '' };
     var ts = C.terrStyle(f, t), fl = ts.fill, sk = ts.stroke, pk = C.patKey(fl);
     if (pk) PATS[pk] = fl;
-    t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
+    C.drawRings(t).forEach(function (ring) { OFFS.forEach(function (dx) {   // cincin lubang danau (Hesperia, payung) tidak digambar: danau ikut tertutup poligon induknya (v2.0.3)
       var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, stroke: !!sk, color: sk ? sk.col : f.color, weight: C.LINE.terr * (sk ? sk.k : 1), opacity: sk ? sk.a : 0, dashArray: sk && sk.dash ? sk.dash : null,
         fillColor: pk ? 'url(#' + pk + ')' : fl.col, fillOpacity: pk ? 1 : fl.a, smoothFactor: 1 });
       if (sk) {   // zona difus tanpa garis tepi (sabuk, inti, bintik) tidak punya tebal garis untuk diskalakan atau disorot

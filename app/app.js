@@ -334,7 +334,7 @@ function main() {
     var f = FAC[fid] || { name: t.name, color: '#cccccc', kind: '' };
     var ts = C.terrStyle(f, t), fl = ts.fill, sk = ts.stroke, pk = C.patKey(fl);
     if (pk) PATS[pk] = fl;
-    t.rings.forEach(function (ring) { OFFS.forEach(function (dx) {
+    C.drawRings(t).forEach(function (ring) { OFFS.forEach(function (dx) {   // cincin lubang danau (Hesperia, payung) tidak digambar: danau ikut tertutup poligon induknya (v2.0.3)
       var pl = L.polygon(shift(ring, dx), { renderer: svgTerr, stroke: !!sk, color: sk ? sk.col : f.color, weight: C.LINE.terr * (sk ? sk.k : 1), opacity: sk ? sk.a : 0, dashArray: sk && sk.dash ? sk.dash : null,
         fillColor: pk ? 'url(#' + pk + ')' : fl.col, fillOpacity: pk ? 1 : fl.a, smoothFactor: 1 });
       if (sk) {   // zona difus tanpa garis tepi (sabuk, inti, bintik) tidak punya tebal garis untuk diskalakan atau disorot

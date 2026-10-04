@@ -222,7 +222,7 @@ G.createLayers = function (S, ctx, labelsEl) {
       TORD.forEach(function (t) {
         if (t.id === 'anusarri' || C.tgroupOf(t) !== grp) return;
         var f = FAC[t.of || t.id] || { name: t.name, color: '#cccccc' }, ts = C.terrStyle(f, t), fl = ts.fill, sk = ts.stroke;
-        shape(t.rings, { fill: C.patKey(fl) ? pat(fl) : fl.col, fa: C.patKey(fl) ? 1 : fl.a, stroke: sk ? sk.col : null, sa: sk ? sk.a : 1, w: gw(C.LINE.terr * (sk ? sk.k : 1)), dash: sk && sk.dash ? sk.dash : null });
+        shape(C.drawRings(t), { fill: C.patKey(fl) ? pat(fl) : fl.col, fa: C.patKey(fl) ? 1 : fl.a, stroke: sk ? sk.col : null, sa: sk ? sk.a : 1, w: gw(C.LINE.terr * (sk ? sk.k : 1)), dash: sk && sk.dash ? sk.dash : null });
       });
     } });
   });
