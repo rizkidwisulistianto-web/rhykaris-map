@@ -233,7 +233,7 @@ await run('in-map audit cards and the "Catok tiga rahang" card', async () => {
 
 // ================================================================== 7. flat map (Leaflet)
 const srv = await startServer(), browser = await launch();
-const expectSeq = (on) => C.terrOrder(TERR).filter((x) => x.id !== 'anusarri' && on.has(C.tgroupOf(x))).flatMap((x) => { const f = FAC[x.of || x.id], ts = C.terrStyle(f, x), pk = C.patKey(ts.fill); return x.rings.flatMap(() => [-360, 0, 360].map(() => `${pk ? 'url(#' + pk + ')' : ts.fill.col}|${ts.stroke ? ts.stroke.col : 'none'}`)); });
+const expectSeq = (on) => C.terrOrder(TERR).filter((x) => x.id !== 'anusarri' && on.has(C.tgroupOf(x))).flatMap((x) => { const f = FAC[x.of || x.id], ts = C.terrStyle(f, x), pk = C.patKey(ts.fill); return C.drawRings(x).flatMap(() => [-360, 0, 360].map(() => `${pk ? 'url(#' + pk + ')' : ts.fill.col}|${ts.stroke ? ts.stroke.col : 'none'}`)); });
 const domSeq = (page) => page.evaluate(() => Array.from(document.querySelectorAll('.leaflet-terr-pane svg g path')).map((p) => `${p.getAttribute('fill')}|${p.getAttribute('stroke')}`));
 const open2D = async (o = {}) => { const { ctx, page, ev } = await newPage(browser, { viewport: o.viewport || { width: 1500, height: 950 }, reducedMotion: 'reduce' }); await page.goto(srv.url + '?view=2d', { waitUntil: 'load' }); await waitForMap(page); return { ctx, page, ev }; };
 const ALL = new Set(C.TGROUPS), DEFAULT_ON = new Set(C.TGROUPS.filter((g) => g !== 'hesb'));
@@ -556,6 +556,93 @@ await run('Interregna names, dual-disk working map: names on their polygons, hov
   await page.evaluate(() => window.__rhDisk._ctx.setLayer('t_int', false)); await frame(4); await page.waitForTimeout(300);
   const noInt = (await read()).length; await page.evaluate(() => window.__rhDisk._ctx.setLayer('t_int', true)); await frame(4); await page.waitForTimeout(300);
   t('disk: switching the territory layer off removes the names, on brings them back', noInt === 0 && (await stable()).length >= 8, String(noInt));
+  const noise = ev.console.filter((m) => !/willReadFrequently/.test(m));
+  t('disk: no console errors', ev.errors.length === 0 && noise.length === 0, JSON.stringify([ev.errors, noise]));
+  await ctx.close();
+});
+
+// ---------------------------------------------------------------- the unnamed lake inside Hesperia (viewer v2.0.3)
+// The data keeps a second ring for Hesperia and for the Imperial Commonwealth umbrella: the outline of an unnamed lake (about 7,000 km²) that lies wholly inside both.
+// Every other lake inside a polygon is covered by it; this one was drawn as its own red shape. Since v2.0.3 a ring that lies wholly inside another ring of the same
+// territory is not drawn (C.drawRings), so the polygon covers the lake like it covers the others. The data, the card and the hit-test are unchanged.
+const HES = T('hesperia'), UMB = T('imperial_commonwealth'), LAKE = HES.rings[1];
+const LAKE_C = [LAKE.reduce((s, q) => s + q[0], 0) / LAKE.length, LAKE.reduce((s, q) => s + q[1], 0) / LAKE.length];
+const WORLD = [-360, 0, 360];
+
+await run('Hesperia lake, flat map: no separate shape over the lake, the polygon covers it, a click still gives the Hesperia card (v2.0.3)', async () => {
+  t('the lake ring is the second ring of Hesperia and of the umbrella, and its centre lies inside it and inside both outer rings', UMB.rings.length === 2 && inRing(LAKE_C[0], LAKE_C[1], LAKE) && inRing(LAKE_C[0], LAKE_C[1], HES.rings[0]) && inRing(LAKE_C[0], LAKE_C[1], UMB.rings[0]));
+  const { ctx, page, ev } = await open2D();
+  const fence = () => page.evaluate(() => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 80)))));
+  await page.evaluate(([la, lo]) => window.__rhMap.setView([la, lo], 5, { animate: false }), LAKE_C); await fence(); await fence();
+  const R = await page.evaluate(([la, lo, names]) => {
+    const inR = (pt, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const a = r[i], b = r[j]; if ((a.lat > pt.lat) !== (b.lat > pt.lat) && pt.lng < (b.lng - a.lng) * (pt.lat - a.lat) / (b.lat - a.lat) + a.lng) c = !c; } return c; };
+    const P = L.latLng(la, lo), under = [], count = {}; let polys = 0;
+    window.__rhMap.eachLayer((l) => {
+      if (!(l instanceof L.Polygon) || !l.getTooltip || !l.getTooltip()) return;
+      const nm = String(l.getTooltip().getContent()).replace(/<[^>]+>/g, '').trim(); if (!names.includes(nm)) return;
+      polys++; count[nm] = (count[nm] || 0) + 1;
+      let r = l.getLatLngs(); if (r.length && !Array.isArray(r[0])) r = [r]; if (inR(P, r[0])) under.push(nm);
+    });
+    return { under: under.sort(), count, polys };
+  }, [LAKE_C[0], LAKE_C[1], [FAC.hesperia.name, FAC.imperial_commonwealth.name, FAC.ir_14.name]]);
+  t(`over the lake centre only the two polygons that contain it are drawn, once each: ${FAC.hesperia.name} and ${FAC.imperial_commonwealth.name} (${R.under.join(' + ')})`, JSON.stringify(R.under) === JSON.stringify([FAC.hesperia.name, FAC.imperial_commonwealth.name].sort()), JSON.stringify(R));
+  t(`Hesperia and the umbrella are one polygon per world copy (3 each) and the two parts of Akṣata are still both drawn (6): ${JSON.stringify(R.count)}`, R.count[FAC.hesperia.name] === 3 && R.count[FAC.imperial_commonwealth.name] === 3 && R.count[FAC.ir_14.name] === 6);
+  // a click on the lake gives the card of the topmost polygon drawn there, as for any other point of Hesperia (the optional "Sabuk Pedalaman" proposal is off by default)
+  const want = FAC.hesperia.name;
+  const box = await page.evaluate(() => { const r = window.__rhMap.getContainer().getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.mouse.click(box.x, box.y); await page.waitForSelector('.leaflet-popup .pp h2', { timeout: 5000 }).catch(() => {});
+  const h2 = await page.evaluate(() => { const e = document.querySelector('.leaflet-popup .pp h2'); return e ? e.textContent : null; });
+  t(`clicking on the lake opens the card of the polygon around it ("${want}"; got "${h2}")`, !!h2 && h2.includes(want));
+  t('no console errors or failed requests', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
+  await ctx.close();
+});
+
+// The 3D globe and the dual-disk map draw every ring of a territory as its own path on a canvas. To see which rings are drawn without comparing pixels of a base map that
+// differs between lake and land, the canvas path calls are recorded for one repaint: a ring is drawn if its vertices appear as path points at their projected position.
+const SPY = `(() => { const rec = [], P = CanvasRenderingContext2D.prototype, mt = P.moveTo, lt = P.lineTo;
+  P.moveTo = function (x, y) { rec.push(x, y); return mt.apply(this, arguments); }; P.lineTo = function (x, y) { rec.push(x, y); return lt.apply(this, arguments); };
+  window.__spy = { rec, stop() { P.moveTo = mt; P.lineTo = lt; return rec; } }; })()`;
+const FIND = (rec, pts, tol) => pts.filter(([x, y]) => { for (let i = 0; i < rec.length; i += 2) if (Math.abs(rec[i] - x) <= tol && Math.abs(rec[i + 1] - y) <= tol) return true; return false; }).length;
+
+await run('Hesperia lake, globe 3D: the lake ring is not painted, the outer rings and the other parts are (v2.0.3)', async () => {
+  const { ctx, page, ev } = await newPage(browser, { viewport: { width: 1440, height: 900 } });
+  await page.goto(srv.url + '?view=3d', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__rhGlobe && window.__rhGlobe.isShown(), null, { timeout: 90000 });
+  await page.waitForFunction(() => window.__rhGlobe.info().frames >= 6, null, { timeout: 90000 });
+  const pts = (ring) => ring.flatMap(([la, lo]) => WORLD.map((dx) => [lo + dx, la]));   // [lon, lat] per world copy, mapped to texture pixels below
+  const got = await page.evaluate(async ([SPYSRC, sets]) => {
+    const g = window.__rhGlobe, img = g._S.overlayTex.image, OW = img.width, OH = img.height;
+    (0, eval)(SPYSRC); g._layers.repaint(); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const rec = window.__spy.stop(); const px = (a) => a.map(([lon, lat]) => [(lon + 180) / 360 * OW, (90 - lat) / 180 * OH]);
+    return { n: rec.length / 2, rec, sets: Object.fromEntries(Object.entries(sets).map(([k, a]) => [k, px(a)])) };
+  }, [SPY, { hesLake: pts(LAKE), umbLake: pts(UMB.rings[1]), hesOuter: pts(HES.rings[0]), umbOuter: pts(UMB.rings[0]), akEx: pts(AK_EX) }]);
+  const S = got.sets, f = (k) => FIND(got.rec, S[k], 0.6);
+  t(`globe: the repaint was recorded (${got.n} path points)`, got.n > 1000);
+  t(`globe: the outer rings are painted — every vertex of Hesperia and of the umbrella, in all three world copies (${f('hesOuter')}/${S.hesOuter.length}, ${f('umbOuter')}/${S.umbOuter.length})`, f('hesOuter') === S.hesOuter.length && f('umbOuter') === S.umbOuter.length);
+  t(`globe: the exclave of Akṣata is still painted (${f('akEx')}/${S.akEx.length})`, f('akEx') === S.akEx.length);
+  t(`globe: no vertex of the lake ring is painted, for Hesperia or for the umbrella (${f('hesLake')} + ${f('umbLake')} of ${S.hesLake.length + S.umbLake.length})`, f('hesLake') === 0 && f('umbLake') === 0);
+  const noise = ev.console.filter((m) => !/willReadFrequently/.test(m));
+  t('globe: no console errors', ev.errors.length === 0 && noise.length === 0, JSON.stringify([ev.errors, noise]));
+  await ctx.close();
+});
+
+await run('Hesperia lake, dual-disk working map: the lake ring is not painted, the outer rings and the other parts are (v2.0.3)', async () => {
+  const { ctx, page, ev } = await newPage(browser, { viewport: { width: 1440, height: 900 } });
+  await page.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+  await page.goto(srv.url + '?view=disk', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__rhDisk && window.__rhDisk.isShown() && window.__rhDisk.info().sheet, null, { timeout: 90000 });
+  const frame = (n = 3) => page.evaluate((k) => new Promise((res) => { let i = 0; const f = () => (++i >= k ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+  await page.evaluate(async ([a, o]) => { const d = window.__rhDisk; await d.show({ lat: a, lon: o, zoom: 3 }); d._state.scale = d.info().fit * 2.2; d.relayout(); }, LAKE_C); await frame(4); await page.waitForTimeout(400);
+  const sets = { hesLake: LAKE, umbLake: UMB.rings[1], hesOuter: HES.rings[0], umbOuter: UMB.rings[0] };
+  const got = await page.evaluate(async ([SPYSRC, sets]) => {
+    const d = window.__rhDisk; (0, eval)(SPYSRC); d.relayout(); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const rec = window.__spy.stop(), proj = (ring) => ring.flatMap(([la, lo]) => d._project(la, lo).map((p) => [p.x, p.y]));
+    return { n: rec.length / 2, rec, sets: Object.fromEntries(Object.entries(sets).map(([k, r]) => [k, proj(r)])) };
+  }, [SPY, sets]);
+  const S = got.sets, f = (k) => FIND(got.rec, S[k], 0.75);
+  t(`disk: the repaint was recorded (${got.n} path points)`, got.n > 1000);
+  t(`disk: the outer rings are painted — vertices of Hesperia and of the umbrella are found as path points (${f('hesOuter')}/${S.hesOuter.length}, ${f('umbOuter')}/${S.umbOuter.length})`, f('hesOuter') >= Math.ceil(S.hesOuter.length * 0.5) && f('umbOuter') >= Math.ceil(S.umbOuter.length * 0.5));
+  t(`disk: no vertex of the lake ring is painted, for Hesperia or for the umbrella (${f('hesLake')} + ${f('umbLake')} of ${S.hesLake.length + S.umbLake.length})`, S.hesLake.length > 0 && f('hesLake') === 0 && f('umbLake') === 0);
   const noise = ev.console.filter((m) => !/willReadFrequently/.test(m));
   t('disk: no console errors', ev.errors.length === 0 && noise.length === 0, JSON.stringify([ev.errors, noise]));
   await ctx.close();
