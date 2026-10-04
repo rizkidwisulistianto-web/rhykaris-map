@@ -251,5 +251,52 @@ t('moons.json top-level epi is inferensi', MOONS.epi === 'inferensi');
   t('layout sizes: landscape 2·ρmaxR + gap + 2·ρmaxA by 2·ρmaxA', (() => { const L = K.layout('h'); return near(L.W, 2 * L.rhoMaxR + L.gap + 2 * L.rhoMaxA, 1e-12) && near(L.H, 2 * L.rhoMaxA, 1e-12); })());
 }
 
+// ---------------------------------------------------------------- Interregna polity names as map labels (viewer v2.0.1; shared by flat map, globe and disk)
+{
+  const inR = (lat, lon, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const yi = r[i][0], xi = r[i][1], yj = r[j][0], xj = r[j][1]; if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const sq = [[0, 0], [0, 10], [10, 10], [10, 0]], hole = [[4, 4], [4, 6], [6, 6], [6, 4]];
+  const a = C.labelPoint(sq, []);
+  t('labelPoint: the label point of a square is its centre, with the full width as free room', near(a.lat, 5, 0.05) && near(a.lon, 5, 0.05) && near(a.room, 10, 0.05) && near(a.depth, 5, 0.1), JSON.stringify(a));
+  const b = C.labelPoint(sq, [hole]);
+  t('labelPoint: never inside a pocket drawn on top (enclave) and never on its edge', !inR(b.lat, b.lon, hole) && b.depth > 0.5 && inR(b.lat, b.lon, sq), JSON.stringify(b));
+  const Lsh = [[0, 0], [0, 10], [2, 10], [2, 2], [10, 2], [10, 0]];   // L-shape: the centre of its bounding box is outside the shape
+  const c = C.labelPoint(Lsh, []);
+  t('labelPoint: concave shape — the point is inside the polygon (not the bounding-box centre)', inR(c.lat, c.lon, Lsh) && c.depth > 0.5, JSON.stringify(c));
+  t('labelPoint: deterministic', JSON.stringify(C.labelPoint(Lsh, [])) === JSON.stringify(c));
+
+  const PL = C.polityLabels(DATA), IRS = DATA.territories.filter((x) => /^ir_\d+$/.test(x.id));
+  t(`polityLabels: one label per Interregna polity (${IRS.length}), in drawing order`, PL.length === IRS.length && IRS.length >= 20 && PL.every((p) => /^ir_\d+$/.test(p.id)), `${PL.length}/${IRS.length}`);
+  t('polityLabels: the result is cached (same object for flat map, globe and disk)', C.polityLabels(DATA) === PL);
+  t('polityLabels: the name is the faction name, nothing invented', PL.every((p) => p.name === DATA.factions[p.id].name && p.fid === p.id && p.cat === 'polity' && p.label_only === true && p.polity === true));
+  t('polityLabels: names are not places — none is in DATA.places (no search hit, no entry count, no card)', PL.every((p) => !DATA.places.some((q) => q.id === p.id || q.name === p.name)));
+  t('polityLabels: the epistemic status and the "usulan" flag follow the faction (kind says "nama usulan (Draft)")', PL.every((p) => p.epi === DATA.factions[p.id].epi && p.proposal === /usulan|draft/i.test(DATA.factions[p.id].kind || '')));
+  t('polityLabels: layer group is the territory group of the polygon (the label follows that layer)', PL.every((p) => p.tg === C.tgroupOf(IRS.find((x) => x.id === p.id))) && PL.every((p) => p.tg === 'int'));
+  let onOwn = 0, covered = [];
+  const order = C.terrOrder(DATA.territories);
+  PL.forEach((p) => {
+    const own = IRS.find((x) => x.id === p.id), idx = order.indexOf(own);
+    if (own.rings.some((r) => inR(p.lat, p.lon, r))) onOwn++;
+    const over = order.slice(idx + 1).filter((u) => C.tgroupOf(u) === 'int' && u.rings.some((r) => inR(p.lat, p.lon, r))).map((u) => u.id);
+    if (over.length) covered.push(`${p.id} under ${over.join()}`);
+  });
+  t(`polityLabels: every label point lies on its own polygon (${onOwn}/${PL.length})`, onOwn === PL.length);
+  t(`polityLabels: no label point is covered by a polygon drawn later (the label sits on the visible part)${covered.length ? ' — ' + covered.join(' | ') : ''}`, covered.length === 0);
+  t('polityLabels: depth and free room are positive and finite', PL.every((p) => p.depth > 0 && isFinite(p.depth) && (p.room == null || (p.room > 0 && isFinite(p.room)))));
+  t('polityLabels: size tier never grows with a smaller polygon (1 = largest … 4 = smallest)', PL.every((p) => p.tier >= 1 && p.tier <= 4) && PL.every((p) => PL.every((q) => p.px <= q.px || p.tier <= q.tier)));
+  t('polityLabels: polity kind follows the faction kind text (adat / kota / mikro / other)', PL.every((p) => { const k = DATA.factions[p.id].kind || ''; return p.ptype === (/wilayah adat/i.test(k) ? 'a' : /kota/i.test(k) ? 'c' : /mikro/i.test(k) ? 'm' : 'k'); }));
+  const t0 = performance.now(); C._pl = null; C.polityLabels(DATA); const ms = performance.now() - t0;
+  t(`polityLabels: computed once at start-up in well under a second (${ms.toFixed(0)} ms)`, ms < 1000);
+
+  // declutter: the larger polygon wins, a name that does not fit its polygon or hits an obstacle is hidden, and a hidden name blocks nothing
+  const log = {}, mk = (id, rc, px, fit) => ({ rc, px, fit, hide: (h) => { log[id] = h; } });
+  C.declutterPolity([mk('big', [0, 0, 50, 10], 100, null), mk('small', [20, 0, 70, 10], 50, null), mk('apart', [200, 0, 250, 10], 10, null),
+    mk('wide', [300, 0, 400, 10], 200, 40), mk('under', [310, 0, 360, 10], 1, null), mk('blocked', [500, 0, 550, 10], 5, null), mk('snug', [600, 0, 640, 10], 3, 40)], [[480, -5, 520, 15]]);
+  t('declutterPolity: the larger polygon keeps its name, the smaller one that overlaps it is hidden', log.big === false && log.small === true);
+  t('declutterPolity: a name clear of everything stays', log.apart === false);
+  t('declutterPolity: a name wider than its polygon (fit × 1.12) is hidden', log.wide === true && log.snug === false);
+  t('declutterPolity: a hidden name blocks nothing (the name under it is shown)', log.under === false);
+  t('declutterPolity: an obstacle (marker name, region label) hides the polity name, never the reverse', log.blocked === true);
+}
+
 console.log(`unit: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

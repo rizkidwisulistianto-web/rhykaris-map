@@ -106,18 +106,30 @@ G.createLayers = function (S, ctx, labelsEl) {
   var DEC = ctx.DECL;
   function declutter() {   // sama dengan peta datar (C.declutterNames): ikon selalu tampil; nama marker kanan/kiri menurut prioritas, disembunyikan bila bentrok
     declT = 0; lastDecl = performance.now();
-    var cr = labelsEl.getBoundingClientRect(), obst = [], items = [];
+    var cr = labelsEl.getBoundingClientRect(), obst = [], items = [], pol = [], pp = [];
     pins.forEach(function (n) {
       if (!n.shown) return;
       if (n.kind === 'marker') {
         var s = n.size; obst.push([n.sx - s / 2, n.sy - s / 2, n.sx + s / 2, n.sy + s / 2, n]);
         if (n.nm) { n.nm.classList.remove('hide'); items.push(n); }
+      } else if (n.kind === 'label' && n.polity) {   // nama polity Interregna (v2.0.1): bukan penghalang, disaring sesudah nama marker
+        n.wrap.classList.remove('hide'); pp.push(n);
       } else if (n.kind === 'label' && n.obstacle) {
         var lb = n.el.firstChild; if (!lb || !lb.getBoundingClientRect) return; var r = lb.getBoundingClientRect(); if (!r.width) return;
         obst.push([r.left - cr.left, r.top - cr.top, r.right - cr.left, r.bottom - cr.top, null]);
       }
     });
     C.declutterNames(items, obst, DEC);
+    pp.forEach(function (n) {   // diukur setelah semua 'hide' lama dilepas (satu reflow, bukan satu per label)
+      var pb = n.el.firstChild; if (!pb || !pb.getBoundingClientRect) return; var q = pb.getBoundingClientRect(); if (!q.width) return;
+      var fit = null;   // lebar bebas poligon di layar: lebar bebas (derajat bujur) × panjang 1° sepanjang paralel di titik label, dari proyeksi dua titik
+      if (n.p.room != null) { var a = n.vec, b = G.vec(n.p.lat, n.p.lon + 1); S.toScreen(a[0], a[1], a[2], tmp); var ax = tmp.x, ay = tmp.y; S.toScreen(b[0], b[1], b[2], tmp); fit = n.p.room * Math.hypot(tmp.x - ax, tmp.y - ay); }
+      pol.push({ rc: [q.left - cr.left, q.top - cr.top, q.right - cr.left, q.bottom - cr.top], px: n.p.px, fit: fit, hide: function (b) { n.wrap.classList.toggle('hide', b); } });
+    });
+    if (pol.length) {
+      var nmr = []; items.forEach(function (n) { if (n.nm.classList.contains('hide')) return; var q = n.nm.getBoundingClientRect(); if (q.width) nmr.push([q.left - cr.left, q.top - cr.top, q.right - cr.left, q.bottom - cr.top]); });
+      C.declutterPolity(pol, obst.concat(nmr));
+    }
   }
   function queueDeclutter() { if (declT) return; var wait = Math.max(0, 140 - (performance.now() - lastDecl)); declT = setTimeout(declutter, wait); }
   S.afterRender(function () {
@@ -280,6 +292,10 @@ G.createLayers = function (S, ctx, labelsEl) {
       mp.nm = mk.querySelector('.mk-name'); markerPins.push(mp);
     }
   });
+  // nama polity Interregna (v2.0.1): label di atas poligon, elemen yang sama dengan peta datar; tidak interaktif (klik dan hover jatuh ke poligon di bawahnya)
+  (ctx.POLY || []).forEach(function (p) {
+    labelPins.push(pin({ el: G.el('div', null, ctx.labelHTML(p)), vec: G.vec(p.lat, p.lon), layer: 'labels', p: p, kind: 'label', polity: true, minCos: 0.3, fade: 0.2, obstacle: false }));
+  });
   DATA.anomalies.forEach(function (a) {
     var el = G.el('div', 'g-anom', '<b></b><i role="button" tabindex="0" aria-label="' + C.esc(a.name) + '"></i>');
     var ring = el.querySelector('i'); ring.title = a.name;
@@ -383,7 +399,7 @@ G.createLayers = function (S, ctx, labelsEl) {
     if (best) return best;
     var cr = labelsEl.getBoundingClientRect(), area = 1e12;
     for (i = 0; i < pins.length; i++) {
-      n = pins[i]; if (!n.shown || n.kind !== 'label') continue;
+      n = pins[i]; if (!n.shown || n.kind !== 'label' || n.polity) continue;   // nama polity tak mencegat klik: jatuh ke poligon di bawahnya
       var lb = n.el.firstChild; if (!lb || !lb.getBoundingClientRect) continue; var r = lb.getBoundingClientRect(), pad = 2 * mult;
       if (px >= r.left - cr.left - pad && px <= r.right - cr.left + pad && py >= r.top - cr.top - pad && py <= r.bottom - cr.top + pad && r.width * r.height < area) { area = r.width * r.height; best = { type: 'place', id: n.p.id, name: n.p.name }; }
     }

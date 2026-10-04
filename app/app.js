@@ -97,7 +97,13 @@ function main() {
   function reg(key, group, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: group, adapter2D: group, adapter3D: null, adapterDisk: null, only3D: false, onlyDisk: false, on: on }; if (on && group) group.addTo(map); return group; }
   function reg3D(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, adapterDisk: null, only3D: true, onlyDisk: false, on: on }; }
   function regDisk(key, def) { var on = key in saved ? saved[key] : def; LAYERS[key] = { key: key, group: null, adapter2D: null, adapter3D: null, adapterDisk: null, only3D: false, onlyDisk: true, on: on }; }
-  function setLayer(key, on) { var L0 = LAYERS[key]; if (!L0) return; L0.on = on; if (L0.group) { if (on) { L0.group.addTo(map); if (L0.after) L0.after(); } else map.removeLayer(L0.group); } saved[key] = on; LS.set('rh-layers-v1', saved); refreshLegend(); emitLayer('layer', key, on); }
+  function setLayer(key, on) { var L0 = LAYERS[key]; if (!L0) return; L0.on = on; if (L0.group) { if (on) { L0.group.addTo(map); if (L0.after) L0.after(); } else map.removeLayer(L0.group); } saved[key] = on; LS.set('rh-layers-v1', saved); refreshLegend(); if (key.indexOf('t_') === 0) syncPolyLabels(); emitLayer('layer', key, on); }
+  /** Nama polity Interregna ikut layer wilayahnya: dipasang/dilepas dari gLabels menurut visible() (peta datar; globe dan cakram memeriksa visible() tiap gambar). */
+  function syncPolyLabels() {
+    if (!POLY) return;
+    POLY.forEach(function (p) { var v = visible(p); entries['poly:' + p.id].layers.forEach(function (m) { if (v && !gLabels.hasLayer(m)) gLabels.addLayer(m); if (!v && gLabels.hasLayer(m)) gLabels.removeLayer(m); }); });
+    if (typeof queueDeclutter === 'function') queueDeclutter();
+  }
 
   // ================================================================ graticule & meridian
   var gGrat = L.layerGroup(), gMer = L.layerGroup(), gGratLbl = L.layerGroup().addTo(map);
@@ -215,6 +221,7 @@ function main() {
     if (c === 'water') return 'lbl-water' + (p.id === 'tamtu' ? ' big' : '');
     if (c === 'arc' || c === 'scar') return 'lbl-arc';
     if (c === 'blank') return 'lbl-blank';
+    if (c === 'polity') return 'lbl-pol t' + p.tier + ' pk-' + p.ptype;   // v2.0.1: nama polity Interregna (ir_*): kecil, bertingkat menurut luas poligon
     return 'lbl-region';
   }
   function labelHTML(p) {
@@ -246,6 +253,17 @@ function main() {
       });
     }
   });
+  // Nama polity Interregna (ir_*, v2.0.1): label di atas poligon, bukan marker (mosaik sengaja tanpa ibukota/tempat). Mirip-tempat tetapi di luar DATA.places, jadi tidak ikut
+  // pencarian atau hitungan entri; ikut layer "labels" dan filter (kategori wilayah, status koordinat, usulan). Tidak interaktif: klik dan hover jatuh ke poligon di bawahnya
+  // (kartu faksi + tooltip), sehingga label tak pernah mencegat poligon tetangga.
+  var POLY = C.polityLabels(DATA);
+  POLY.forEach(function (p) {
+    var e = { p: p, layers: [] }; entries['poly:' + p.id] = e;
+    OFFS.forEach(function (dx) {
+      var m = L.marker([p.lat, p.lon + dx], { pane: 'lbl', interactive: false, keyboard: false, icon: L.divIcon({ className: '', iconSize: null, html: labelHTML(p) }) });
+      m._rhPoly = p; gLabels.addLayer(m); e.layers.push(m);
+    });
+  });
   DATA.anomalies.forEach(function (a) {
     var p = { id: a.id, name: a.name, cat: 'anomaly', epi: a.epi, lat: a.lat, lon: a.lon, isAnomaly: true, note: a.note, d: a.d };
     placeById[a.id] = p; var e = { p: p, layers: [] }; entries[a.id] = e;
@@ -259,6 +277,7 @@ function main() {
   reg('markers', gMarkers, true); reg('labels', gLabels, true); reg('zone', gZone, true); reg('anom', gAnom, true);
   function visible(p) {
     if (p.isAnomaly) return true;
+    if (p.polity) { var tl = LAYERS['t_' + p.tg]; if (tl && !tl.on) return false; }   // nama polity hanya tampil selama layer wilayahnya (Mozaik Interregna) menyala
     if (fCat.indexOf(groupOf(p)) < 0) return false;
     if (fEpi.indexOf(p.epi) < 0) return false;
     if (p.proposal && !fProp) return false;
@@ -338,6 +357,7 @@ function main() {
     pl.bindTooltip('Mandala Kemurnian · Ring ' + m.ring, { sticky: true, className: 'rt', direction: 'top', offset: [0, -8] });
     pl.on('click', function (e) { openMandala(m.ring, e.latlng); }); gMand.addLayer(pl); }); }); });
   C.TGROUPS.forEach(function (k) { var d = C.TDEFAULT[k]; reg('t_' + k, TG[k], d === undefined ? true : d); LAYERS['t_' + k].after = restack; });
+  syncPolyLabels();   // keadaan layer tersimpan (mis. Mozaik Interregna mati) berlaku sejak muat: nama polity tak melayang tanpa poligonnya
   reg('mandala', gMand, true);
   // pola SVG (hatch & hutan) — disuntik ke kontainer renderer setelah ada
   function injectDefs() {
@@ -617,7 +637,7 @@ function main() {
       ['t_int', legFlat('#e0a33a'), 'Interregna'], ['t_ana', legFlat('#ff6a2b'), 'Anabasim'], ['mandala', legFlat('#e6d47a'), 'Anušarri (gradasi)'], ['t_elv', legFlat('#4cc3a8'), 'Andurā'],
       ['t_lain', legSw('kloaka'), 'Kloaka: klaim nominal'], ['t_lain', legSw('kloaka_zona', 2), 'Kloaka: zona kontrol bergeser (usulan)'], ['t_lain', legFlat('#9b6fd6'), 'Faksi lain']]
       .filter(function (a) { return LAYERS[a[0]] && LAYERS[a[0]].on; });
-    if (act.length) { h += '<h3>Wilayah kuasa</h3>'; act.forEach(function (a) { h += '<div class="li">' + a[1] + a[2] + '</div>'; }); h += '<div class="li" style="font-size:11px">Arsir = klaim luas / contested / dianeksasi / vasal · bintik = zona difus tanpa garis tepi</div>'; }
+    if (act.length) { h += '<h3>Wilayah kuasa</h3>'; act.forEach(function (a) { h += '<div class="li">' + a[1] + a[2] + '</div>'; }); h += '<div class="li" style="font-size:11px">Arsir = klaim luas / contested / dianeksasi / vasal · bintik = zona difus tanpa garis tepi · nama bergaris bawah putus-putus = usulan (belum dikunci)</div>'; }
     h += '<h3>Rute</h3>';
     [['#f6e7bd', '8 7', 'Penyeberangan bersejarah'], ['#e79a6a', '2 6', 'Jalur darat Sutura'], ['#ffd35c', '', 'Rute Arc 1'], ['#7fe0ec', '12 5 2 5', 'Koridor angin (usulan)']].forEach(function (r) {
       h += '<div class="li"><svg width="30" height="12"><rect width="30" height="12" rx="3" fill="#1d2a33"/><path d="M3 6h24" stroke="' + r[0] + '" stroke-width="2.2"' + (r[1] ? ' stroke-dasharray="' + r[1] + '"' : '') + '/></svg>' + r[2] + '</div>'; });
@@ -746,9 +766,11 @@ function main() {
   var dclQ = false;
   function declutter() {
     dclQ = false;
-    if (!map.hasLayer(gMarkers)) return;
-    var size = map.getSize(), pad = 60, obst = [], items = [], cr = map.getContainer().getBoundingClientRect();
-    gMarkers.eachLayer(function (m) {
+    var hasM = map.hasLayer(gMarkers), hasL = map.hasLayer(gLabels);
+    if (!hasM && !hasL) return;
+    var size = map.getSize(), pad = 60, obst = [], items = [], pol = [], cr = map.getContainer().getBoundingClientRect();
+    var ppd = map.latLngToContainerPoint([0, 1]).x - map.latLngToContainerPoint([0, 0]).x;   // piksel per derajat bujur (peta datar: sama di semua lintang)
+    if (hasM) gMarkers.eachLayer(function (m) {
       var el = m.getElement(); if (!el || !m._rh) return;
       var pt = map.latLngToContainerPoint(m.getLatLng());
       if (pt.x < -pad || pt.y < -pad || pt.x > size.x + pad || pt.y > size.y + pad) return;
@@ -756,13 +778,16 @@ function main() {
       obst.push([pt.x - s / 2, pt.y - s / 2, pt.x + s / 2, pt.y + s / 2, m]);
       if (nm) { nm.classList.remove('hide'); items.push({ m: m, p: m._rh, pt: pt, s: s, nm: nm }); }
     });
-    if (map.hasLayer(gLabels)) gLabels.eachLayer(function (m) {
+    if (hasL) gLabels.eachLayer(function (m) {
       var el = m.getElement(); if (!el) return; var lb = el.querySelector('.mlbl');
       if (!lb || lb.classList.contains('lbl-continent') || lb.classList.contains('big')) return;
       var r = lb.getBoundingClientRect(); if (!r.width) return;
       var x0 = r.left - cr.left, y0 = r.top - cr.top;
       if (x0 > size.x || y0 > size.y || x0 + r.width < 0 || y0 + r.height < 0) return;
-      obst.push([x0, y0, x0 + r.width, y0 + r.height, null]);
+      var rc = [x0, y0, x0 + r.width, y0 + r.height];
+      // nama polity Interregna (v2.0.1): prioritas terendah. Bukan penghalang bagi nama marker (Aventalia, Tarvenna, … tetap tampil); disaring sesudah nama marker ditempatkan.
+      if (m._rhPoly) pol.push({ rc: rc, px: m._rhPoly.px, fit: m._rhPoly.room != null ? m._rhPoly.room * ppd : null, hide: function (b) { lb.classList.toggle('hide', b); } });
+      else obst.push(rc.concat([null]));
     });
     items.sort(function (a, b) { var pa = PRI[a.p.cat] != null ? PRI[a.p.cat] : 4, pb = PRI[b.p.cat] != null ? PRI[b.p.cat] : 4;
       return (pa - pb) || ((EPR[a.p.epi] || 0) - (EPR[b.p.epi] || 0)); });
@@ -780,6 +805,7 @@ function main() {
       }
       if (ok) { placed.push(ok[1]); it.nm.classList.toggle('l', ok[0] === 'l'); } else it.nm.classList.add('hide');
     });
+    if (pol.length) C.declutterPolity(pol, obst.concat(placed));
   }
   function queueDeclutter() { if (dclQ) return; dclQ = true; requestAnimationFrame(declutter); }
   map.on('zoomend moveend', queueDeclutter);
@@ -864,7 +890,7 @@ function main() {
       DATA: DATA, MOONS: MOONS, C: C, LAYERS: LAYERS, placeById: placeById, FAC: FAC, BASE: BASE, TERR: TERR, REDUCED: REDUCED, LS: LS, version: RH.version,
       styles: { REG_STYLE: REG_STYLE, TGROUP: C.TGROUP, MOP: MOP, RST: RST, CST: CST, MER: MER, ARCS: ARCS, SC: SC, tgroupOf: C.tgroupOf },
       scar: { outer: outer, inner: inner, curve: curve },
-      visible: visible, groupOf: groupOf, markerHTML: markerHTML, lblClass: lblClass, breakName: breakName, LBL_BREAK: LBL_BREAK, LBL_MINOR: LBL_MINOR,
+      visible: visible, groupOf: groupOf, markerHTML: markerHTML, lblClass: lblClass, breakName: breakName, LBL_BREAK: LBL_BREAK, LBL_MINOR: LBL_MINOR, POLY: POLY,
       labelHTML: labelHTML, DECL: { LBL_SIDE: LBL_SIDE, PRI: PRI, EPR: EPR }, cardAction: cardAction, closePanel: function () { setPanel(false); }, card: card,
       cards: { place: placeHTML, faction: factionHTML, mandala: mandalaHTML, route: routeHTML, bank: BANK_HTML },
       readout: function (ll) { lastLL = ll; updRO(ll); }, compass: compass, insets: insets, panelOpen: function () { return panelOpen; },

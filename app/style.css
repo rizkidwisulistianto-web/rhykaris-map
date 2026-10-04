@@ -159,6 +159,15 @@ body.panel-closed #readout{left:var(--gut)}
 .lbl-blank{font:italic 600 15px/1.15 var(--f-water);color:#f2d9a0;letter-spacing:.06em}
 .lbl-blank small{display:block;font:500 10px/1.2 var(--f-mono);letter-spacing:.04em;opacity:.9;font-style:normal}
 .lbl-proposal{border-bottom:1px dashed rgba(244,238,225,.55)}
+/* v2.0.1: nama polity Interregna (ir_*) = label turunan di atas poligon, bukan marker. Ukuran menurut luas poligon (t1 terluas … t4 terkecil). Tidak interaktif di ketiga
+   tampilan (klik dan hover jatuh ke poligon di bawahnya). Tak ada jenjang zoom di CSS: nama muncul sendiri begitu poligonnya cukup lebar untuk memuatnya (aturan muat di JS,
+   C.declutterPolity); .hide memakai visibility supaya kotak label tetap terukur dan bisa muncul lagi. */
+.mlbl.lbl-pol{pointer-events:none;cursor:default;font:600 11px/1.1 var(--f-ui);letter-spacing:.04em}
+.lbl-pol.pk-k,.lbl-pol.pk-a{font-family:var(--f-display);letter-spacing:.12em;text-transform:uppercase}
+.lbl-pol.t1{font-size:12px}
+.lbl-pol.t2{font-size:11px}
+.lbl-pol.t3,.lbl-pol.t4{font-size:10px}
+.mlbl.lbl-pol.hide{visibility:hidden}
 .grat-lbl{font:500 10px/1 var(--f-mono);color:rgba(244,238,225,.78);text-shadow:0 0 3px var(--lbl-halo),0 0 6px var(--lbl-halo);white-space:nowrap;pointer-events:none}
 .grat-lbl.special{color:#ffd9a8}
 #map[data-z="0"] .lbl-region, #map[data-z="1"] .lbl-region{display:none}
