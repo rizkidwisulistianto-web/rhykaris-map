@@ -26,7 +26,7 @@
 
 <br>
 
-[Overview](#overview) · [Features](#interactive-features) · [3D globe](#3d-globe-and-working-map-viewer-v15--v20) · [Quick start](#quick-start) · [How it's built](#how-its-built) · [Roadmap](#worldbuilding-progress--roadmap) · [Tech stack](#tech-stack--credits) · [License](#license)
+[Overview](#overview) · [Features](#interactive-features) · [3D globe](#3d-globe-and-working-map-viewer-v15--v20) · [Quick start](#quick-start) · [How it's built](#how-its-built) · [Roadmap](#status--roadmap) · [Tech stack](#tech-stack--credits) · [License](#license)
 
 </div>
 
@@ -302,93 +302,106 @@ The Python pipeline in [`src/`](src/) needs Python 3.11 with `numpy`, `scipy`, `
 
 ---
 
-## Worldbuilding Progress / Roadmap
+## Status & Roadmap
 
-Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **29 Sep 2026**, mirrored from the world's own development backlog; the interactive-map roadmap below was refreshed on **3 Oct 2026**.
+Rhykaris is **not finished — and the map says so.** This is a living status board, not a release schedule. Snapshot: **4 Oct 2026**. What has already shipped is in [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+
+### Where things stand
 
 | Area | Status | Notes |
 |---|---|---|
-| Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
-| Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond. Polities are measured from the capital, physical regions from the centroid; a continent or ocean that crosses several rings gets no single value |
-| Interactive viewer | ✅ **v2.0.3** · flat map + 3D globe + dual-disk | Search, filters, layers, measure tool, audit tab, mobile layout; since v1.5 the globe with rotation, two moons, compass and (v1.6) relief. v2.0.0 marked Stage 2 of Interactive Map v2 as complete; v2.0.1 draws the names of the 23 Interregna polities on the map in all three views (they used to show only on hover); v2.0.2 names every separate part of a polity (the Akṣata exclave inside Novalia had none); v2.0.3 covers the unnamed lake inside Hesperia with the polygon instead of drawing it as a separate red shape. |
-| Political layer — territories, borders, fronts | 🟡 Snapshot **AS 1647** | May grow and shift without touching the physical layer. Since 2 Oct 2026 a polygon is nominal jurisdiction, not settled land; the Commonwealth's numbered vassals are retired; every non-canon number is a labelled placeholder. Individual Interregna kingdoms are added when the story needs them |
-| Coordinates | 🟡 8 canon · 11 derived · 25 AI-inferred · 1 open *(of 45)* | Ratified entry by entry. The one open position (Castra Birath) is open **by design** — in-world, nobody knows exactly where it is |
-| Proposals | 🟡 11 of 45 entries | On the map with a Draft atlas entry, but the position is not locked — flagged with an amber badge. Most of them sit in open ledger slots or backlog items |
-| Atlas ↔ map v4 reconciliation | 🟠 In progress | Scar rings and the Zona Ambang Ellumāt settled on 29 Sep 2026; coordinates and the sea corridor are the next gates |
-| Location-debt ledger | 🟠 14 open of 22 slots | Ports, market hubs, faction HQs, regional communities … tracked in the Audit tab |
-| Audit findings | 🟠 17 awaiting a decision · 4 closed | 3 frictions · 7 blank spots · 7 patterns — see the Audit tab |
+| Physical layer — coast, relief, rivers, biomes, bathymetry, Scar geometry | ✅ Canon-stable · **Master Map v4** | Ratified 29 Sep 2026. Changes only through a new map version (v5 …) with a change-log entry — never silently |
+| Scar Proximity rings | ✅ Ratified | Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5° · Unaffected beyond |
+| Interactive viewer | ✅ **v2.0.3** | Flat map, 3D globe and dual-disk working map; search, filters, 29 layers, measure tool, audit tab, mobile layout. Interactive Map v2 Stage 2 is complete |
+| Political layer | 🟡 Snapshot **AS 1647** (political layer v3) | A polygon is nominal jurisdiction, not settled land; every non-canon number is a labelled placeholder |
+| Coordinates | 🟡 8 canon · 11 derived · 25 AI-inferred · 1 open *(of 45)* | Castra Birath is open **by design** — in-world, nobody knows exactly where it is |
+| Audit and location debt | 🟠 17 audit findings awaiting a decision · 14 open ledger slots | Tracked in the viewer's Audit tab |
 
-**Done**
+### Version numbers
 
-- [x] Physical layer v4 ratified as canon (29 Sep 2026)
-- [x] Viewer v1.4 — search · filters · layers · measure · audit · dark/light
-- [x] Viewer v1.5 — 3D globe, auto-rotation, two moons *(AI-inferred)*, working compass, all 25 layers in 3D
-- [x] Viewer v1.6 — relief from a regenerated 16-bit heightmap *(Turunan)*, vertical-exaggeration slider, dual-disk Lambert working map
-- [x] Viewer v1.6.1 — the measure tool works on the globe and on the working map (it was flat-map only in v1.6)
-- [x] Viewer v1.6.2 — pressed toolbar buttons reach WCAG AA contrast in both themes
-- [x] Viewer v1.6.3 — the two moons get working names, *Ferrea* and *Errans* *(AI-inferred)*; the chip strip under the coordinate readout is gone from the globe
-- [x] Viewer v1.6.4 — the *Empat busur* layer now works on the dual-disk working map (it was switched on in the panel but drew nothing and could not be hovered or clicked)
-- [x] Viewer v1.6.5 — all flat-map layers on the dual-disk working map: contours, regions, banks, territories, Mandala, routes, fronts and labels, with hover and cards (they were listed as *tak ada di peta kerja*)
-- [x] Viewer v1.7.0 — political layer v3 (2 Oct 2026): the three numbered Vasal Commonwealth polygons retired; a narrow *kerajaan marka* belt; the Satvan Pedalaman dispersal zone (dots, no border); Hesperia's ~50 provinces as three optional belts (24 · 19 · 7), the polygon itself unclipped; Foedera's claim and inhabited core; Kloaka's nominal claim and shifting zone; the vocabulary rule for *provinsi*; nine new audit cards; 27 layers; one shared territory style and order for the flat map, the globe and the working map
-- [x] Viewer v1.7.1 — the compass can be switched off or minimized to a small dial, so it stops covering the map; the choice is remembered. Display control only: no canon parameter involved
-- [x] Viewer v1.8.0 — *Imperial Commonwealth* (3 Oct 2026): the big label that read "Hesperia" now reads **Imperial Commonwealth** and sits on a new umbrella polygon that is exactly Hesperia + the *marka* belt (nominal jurisdiction, drawn beneath both, dashed outline, no new land). **Hesperia** keeps its own polygon, now labelled **Paramount** (the directly ruled land); the *marka* belt moves to its own layer, *Kerajaan-kerajaan Commonwealth* (usulan). 27 → 29 layers; one new audit card. No new canon parameter: the umbrella's name and Hesperia's paramount role are quoted from the vault; the umbrella's *edge* on the vassal side stays a placeholder
-- [x] Viewer v2.0.0 — version milestone (3 Oct 2026): Stage 2 of Interactive Map v2 (3D globe, relief, rotation, two moons, compass, working map) is complete, so the viewer's major version now matches the roadmap. Nothing in the code, the data or the canon files changed; see *Version numbers* below
-- [x] Viewer v2.0.1 — Interregna names on the map (4 Oct 2026): the 23 mosaic polities now show their names as labels on the flat map, the globe and the working map, the way other entries do (they used to appear only as a hover tooltip). The labels are drawn at run time from the polygons — not map entries, not in search, no new marker or capital — in the *usulan* style (dashed underline), shown once the polygon is wide enough to hold the name, and they never cover a marker name or take a click. Display only: no canon parameter, no data and no geometry changed; see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md) §10
-- [x] Viewer v2.0.2 — the exclave gets its name (4 Oct 2026): Akṣata is the one polity made of two separate parts, and v2.0.1 named only its largest part, so the exclave inside Novalia stayed a nameless shape (reported from a phone at high zoom). Every part of a polity now carries the name, with its own label point, fit test and size class; 23 polities, 24 labels. Display only: no canon parameter, no data and no geometry changed; see [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md) §10
-- [x] Viewer v2.0.3 — the lake inside Hesperia (4 Oct 2026): a red polygon in the middle of Hesperia, with no name and no card, turned out to be the second ring of Hesperia and of the Imperial Commonwealth umbrella — the outline of an unnamed lake that the land mask left as a hole. A polygon is a nominal jurisdiction and is not cut by water (the other lakes inside polygons are covered), so a ring that lies wholly inside another ring of the same territory is no longer drawn (`C.drawRings`, used by the flat map, the globe and the working map). Display only: no canon parameter, no data and no geometry changed; the lake itself stays unnamed (a Worldbuilding question) and its readout still says shallow sea (physical layer, next physical version); see [`docs/POLITICS_V3_NOTES.md`](docs/POLITICS_V3_NOTES.md) §11
-- [x] 45 map entries · 46 territories · 4 routes · 3 fronts · 3 anomaly pockets
-- [x] Interregna redrawn as a varied mosaic (2 Oct 2026) — large and small kingdoms, free cities, tribal lands, micro-polities, nested enclaves and an exclave, all unnamed placeholders at the time; the count and borders stay open knobs
-- [x] Interregna names (3 Oct 2026) — the 23 mosaic polities now carry proposed names and short lore cards from the vault's Atlas drafts (*Inferensi AI*, approved by the author but not locked). Names and popup text only: no territory geometry changed, the count and the borders stay open knobs; the viewer version is unchanged (data-only change, like the *Pylora* and umbrella updates). See [`docs/INTERREGNA_V2_NOTES.md`](docs/INTERREGNA_V2_NOTES.md)
-- [x] Scar Proximity rings ratified as canon (Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°)
-- [x] Three audit items closed on 29 Sep 2026 — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
-- [x] Public edition on GitHub, ready for GitHub Pages
-
-**Next — reconcile the atlas with map v4**
-
-In the author's order. 🔒 marks a gate: other work waits on it.
-
-- [ ] 🔒 **Ratify coordinates for the macro atlas entries.** Only four carry coordinates so far (Sinus Adventus, Litus Primum, Vastitas, Corona Glacialis). The map proposes the rest, and each stays *AI-inferred* until the author confirms it. This includes the longitude of the official meridian (proposed through Aurelia at ≈ 8.31° W) and where the Zona Ambang Ellumāt point sits. Castra Birath is deliberately skipped.
-- [ ] 🔒 **Ratify the main sea corridor of Tâmtu, the world ocean.** The sea route drawn on the map is a proposal. Several sea-facing ledger slots — trade waypoints, the neutral market hub, coastal communities — wait on it.
-- [ ] **Mare Internum, the inland sea west of the gulf.** Its body of water became physical canon with v4; its name, its atlas entry and how Hesperia's north coast relates to it are still open. *(Closes one of the two open frictions.)*
-- [ ] **Mass-anomaly pockets.** Three are mapped; up to two more are possible. Their positions wait on the coordinate pass, and the wider question is deliberately deferred (review due 31 Dec 2026).
-- [ ] **Clean-up of pre-v4 atlas entries** — two of six sub-tasks done. Next: move the west boundary of Latus Occidentale to azimuth −166°, which can close the second open friction (the west end of Ima Cicatricis).
-
-**Also open**
-
-- [ ] **Close the 14 open location-debt slots** — ports (Portus, the main port of Peratēs), the neutral market hub Emporys, faction HQs, regional communities, religious sites …
-- [ ] **The aquatic segment of The Scar** — about 62 % of the curve crosses sea. The ledger slot was unblocked on 29 Sep 2026; still to decide: an atlas entry of its own, or just an attribute of Tâmtu.
-- [ ] **The trans-suture supercontinent** (≈ 7.6 % of the surface) — the largest landmass without a name or an atlas entry. Who lives there is a major lore decision; parked.
-- [ ] **The ocean on the antimeridian side of the Rhykar cap** (≈ 9 %) — flagged by the audit; no sub-entry yet.
-- [ ] **Extend the political layer** — name and settle the Interregna placeholders (count, names, borders, who is next on Florian's list), and add more as the story calls for them. The map deliberately leaves open: how many kingdoms the *marka* belt holds, whether the Satvan living inside a jurisdiction count in law, and the three open questions on Kloaka.
-
-**Interactive Map v2** *(in progress — Stage 2 done, Stage 3 next)*
-
-The flat viewer stays the baseline; stages are numbered as in the author's backlog. v2 stays on the current stack (three.js r160 and Leaflet, i.e. WebGL) and is for exploring features and writing lore in bulk; shader and tile work that a renderer rewrite would throw away is deliberately left to v3. Stage 3 is therefore built on the current stack, as viewer v2.x.
-
-**Version numbers.** Three different things carry a number here, and they move independently — always read the prefix:
+Three different things carry a number here, and they move independently — always read the prefix:
 
 | Written as | What it is | Changes when |
 |---|---|---|
 | **Master Map v4** | The map of Rhykaris itself: the physical layer, canon-stable | The vault ratifies a new physical map (v5 …), with a change-log entry |
-| **Viewer v2.x · v3.x** | This interactive viewer. Major = the Interactive Map generation of the roadmap (v2 = globe and layers, v3 = WebGPU and tiles); minor and patch = shipped changes | The viewer ships a feature or a fix |
+| **Viewer v2.x · v3.x** | This interactive viewer. Major = the Interactive Map generation of the roadmap (v2 = globe and layers, v3 = tiled map data); minor and patch = shipped changes | The viewer ships a feature or a fix |
 | **Political layer v3** | The AS 1647 territory snapshot (data) | The snapshot is redrawn; it may shift without a new physical map |
 
-- [x] **Stage 2 — 3D globe:** 2D/3D toggle, rotation, two moons, compass, and the existing v1.4 layer toggles (2a); relief from a regenerated 16-bit heightmap (2b); an optional dual-disk Lambert working map. Built on `feat/stage-2-globe` and merged to `main` in pull request #1 (1 Oct 2026). Moon parameters stay *AI-inferred* until ratified. Layer presets moved to Stage 3.
-- [ ] **Stage 3 — layer presets and new layers:** presets (Physical, Biomes, Ecology & Zones, Scar Proximity, Politics, Culture, Audit), hotspots, habitats, cover, day/night terminator, tides. Needs the coordinate pass, Stage 2, an open consistency question about monster habitats and, for the terminator, night side and seasons, the astronomy decision below.
-- [ ] 🔒 **Canon prerequisite — the astronomy decision.** Axial tilt (already open, *Terbuka*), star type and orbital eccentricity are not set; canon fixes only a 424-day year with four axial seasons. Before the star is locked, also check that both moons stay comfortably inside the planet's Hill sphere — it is not yet known whether the moon-stability simulation included a star. This gates the terminator, night side, seasons and city lights, in Stage 3 now and in v3 later.
+v2 stages follow the numbering of the author's backlog (Stage 2 = the globe, done; Stage 3 = next). v3 uses phases (A, B), so the two never collide.
 
-**Later still — Interactive Map v3** *(long-term direction — not a commitment)*
+### Rules every item below follows
 
-A possible rewrite on a WebGPU renderer with tiled map data, so that zoom detail is no longer limited to one HTML file.
+- **The map consumes canon; it never creates it.** A feature that needs a new canon decision stops and goes to the worldbuilding vault as a request.
+- **Every new number is labelled** — *Inferensi AI*, *PLACEHOLDER, bukan kanon* or *ilustrasi* — until the author ratifies it. A derived result inherits the weakest label of its inputs.
+- **The world moves, history does not.** Anything animated is a recurring cycle inside AS 1647 (day, tide, weather). Nothing on the map runs events, grows cities, moves armies or predicts the Great Wave.
+- **The flat map stays the baseline.** It keeps working on any phone and never pays for 3D or animation.
 
-- [ ] **Stage 1 — foundation:** a renderer-neutral tile format; a check of three.js's WebGL2 fallback and of GitHub Pages size and bandwidth limits (neither verified yet); then a WebGPU renderer that reads the tiles. Starting v3 does not wait for the astronomy decision.
-- [ ] **Stage 2 — fine detail** for chosen regions: rivers, trees, smooth coastlines and an optional realism shader (atmosphere glow, sea glint, procedural clouds — illustrative, switchable). Proposed first regions: Sinus Adventus, Hesperia, Ellumāt. Comes last, and fine detail does not become canon unless the author ratifies it. Anything that depends on the star and the axis (terminator, night side, seasons, city lights, moon phases, eclipses, sky colour) waits on the astronomy decision; effects lit by a camera-attached light do not.
+### Next — Interactive Map v2, Stage 3 *(viewer v2.x, current stack: Leaflet + three.js on WebGL)*
 
-Detail would keep coming from the deterministic seed-1647 generator, re-evaluated per region. The whole planet at 100 m per pixel would be roughly 135 gigapixels (a rough AI estimate), so close detail stays regional.
+**3a · Foundation** — first, because everything after it builds on it.
 
-Every new parameter — moons, axial tilt, tides, fine detail — stays *AI-inferred* until ratified. Not in Stage 2 on purpose: layer presets, hotspots, habitats, cover, the day/night terminator and tides (Stage 3), and regional detail, rivers and trees (v3 Stage 2).
+- [ ] **Canon lint in CI.** Mirror the map's canon contract as a machine-readable file (`data/contract.json`: value, status, source, dependent features). A GitHub Actions workflow runs the test suite on every push and fails the build when a non-canon value is shown without its label, or when `data.json` disagrees with the contract.
+- [ ] **Reproducible pipeline.** Move the remaining Python scripts to repo-relative paths, so "same seed, same planet" can be checked by anyone.
 
-**Known limitations**
+**3b · Layers**
+
+- [ ] **Layer presets** — Physical, Biomes, Ecology & Zones, Scar Proximity, Politics, Culture, Audit. Needs no undecided parameter.
+- [ ] **Hotspots, habitats and cover.** Habitats wait on an open consistency question about monster habitats.
+- [ ] **Tides** from the big moon. The moon parameters are *Inferensi AI*, so the tide layer is labelled the same way.
+- [ ] **Daily day/night terminator.** The 28-hour day is canon; the axis is a labelled placeholder (upright) until the astronomy decision. Moon phases shown with it carry the same placeholder label.
+
+**3c · A living world** — recurring motion only; it pauses when the map is idle and respects *reduce motion*.
+
+- [ ] **Illustrative atmosphere and sea** — drifting clouds, sea glint, ripples. Procedural, tied to no date or place, labelled *ilustrasi*, switchable. Moved forward from v3: WebGL is enough.
+- [ ] **Tidal motion** — the tide layer animated through the big moon's cycle.
+- [ ] **Currents and winds** — flow fields computed once, offline, in the seed-1647 pipeline and animated as particles in the viewer. Waits on the astronomy decision (circulation depends on tilt and star) and on the Tâmtu sea corridor, because a visible current favouring one route would read as an answer to that open gate. Its parameters must enter the canon contract first.
+
+**3d · Tools for readers and writers**
+
+- [ ] **Image export that carries its labels.** One button saves the current view with the epistemic status of everything visible, the viewer version and a deep link (view, camera, layers) stamped on the image — so a cropped screenshot never loses its *bukan kanon*.
+- [ ] **Terrain-aware travel time.** The measure tool today gives the great-circle line. A route search over the existing 1024 × 512 elevation and biome grid (A\* in a Web Worker) would avoid mountains and great rivers and give days on foot, on horseback and by ship. Results are labelled *Turunan* (estimate), never a canon route.
+- [ ] **Guided tours.** Three to five steps for a first visit (The Scar, the two hemispheres, the political snapshot). The text quotes the vault only; tours add no new sentence of lore.
+- [ ] **Offline use.** A service worker caches Leaflet, fonts and relief textures, so the map opens without a connection after the first visit.
+
+### 🔒 Gate — the astronomy decision
+
+Axial tilt (*Terbuka*), star type and orbital eccentricity are not set; canon fixes only a 28-hour day and a 424-day year with four axial seasons. Before the star is locked, check that both moons stay comfortably inside the planet's Hill sphere (the moon-stability simulation assumed a Sun-like star at ≈ 1.22 AU). The decision itself belongs to the worldbuilding vault, not to this repository.
+
+| Waits on it | Does not wait on it |
+|---|---|
+| Seasonal terminator, accurate night side, city lights, seasons, sky colour, eclipses, currents and winds, a sky view from the surface | Daily terminator (placeholder axis), tides, layer presets, illustrative clouds and sea, everything in 3a and 3d, all of v3 Phase A |
+
+### Canon still owed to the map
+
+The map draws these as proposals until the vault decides. Details live in the Audit tab.
+
+| Decision | What waits on it |
+|---|---|
+| 🔒 Coordinates for the macro atlas entries (incl. the official meridian, ≈ 8.31° W through Aurelia) | Most *AI-inferred* pins, anomaly pockets, Stage 3 hotspots |
+| 🔒 The main sea corridor of Tâmtu | The drawn sea route, sea-facing ledger slots, currents |
+| Mare Internum — name, atlas entry, Hesperia's north coast | One of the two open frictions |
+| Clean-up of pre-v4 atlas entries — next: the west boundary of Latus Occidentale at azimuth −166° | The other open friction (the west end of Ima Cicatricis) |
+| Mass-anomaly pockets — up to two more; the wider question is deferred (review due 31 Dec 2026) | Their positions also wait on the coordinate pass |
+| The trans-suture supercontinent, the antimeridian ocean, the Scar's aquatic segment | Labels and entries for the largest unnamed areas |
+| Interregna count, names and borders; the *marka* kingdoms; Kloaka's open knobs | The political layer beyond the AS 1647 placeholders |
+
+### Later — Interactive Map v3 *(long-term direction, not a commitment)*
+
+Tiled map data, so that zoom detail is no longer limited to one HTML file. The renderer is a means, not the goal.
+
+- [ ] **Phase A — foundation**
+  - A **renderer-neutral tile format**. The whole planet at 100 m per pixel is ≈ 135 gigapixels as an equirectangular raster but only ≈ 86 gigapixels of real surface; the difference is wasted at the poles, so the tile scheme should not be plain equirectangular.
+  - **Verify GitHub Pages size and bandwidth limits** before committing to hosting tiles there (not verified yet).
+  - A **renderer behind a thin interface**, with WebGL2 as the baseline. WebGPU is an opt-in upgrade, adopted only once a simulation proves too heavy for a Web Worker or WebAssembly; before that, verify three.js's WebGPU-to-WebGL2 fallback on the release in use (the viewer pins r160 today).
+  - Proposed: the single-file flat map stays as the baseline edition that opens anywhere; tiles add depth, they do not replace it.
+- [ ] **Phase B — fine detail** for chosen regions: rivers, trees, smooth coastlines. Proposed first regions: Sinus Adventus, Hesperia, Ellumāt. Detail keeps coming from the deterministic seed-1647 generator, re-evaluated per region, and does not become canon unless the author ratifies it.
+
+### Not planned, on purpose
+
+- **Simulations that run history** — agents, growing cities, moving armies, political layers per era. Every result would be a new event, and the map does not write lore.
+- **Decorative restyling** (an ink-and-parchment look, say). A visual change needs a physical or canon reason.
+
+### Known limitations
 
 - The viewer needs an internet connection (Leaflet and fonts come from CDNs; 3D also needs three.js, with a vendored fallback).
 - The 3D views need WebGL and a web origin (`http(s)://`, i.e. GitHub Pages or a local server) — not `file://`. The first entry into 3D downloads ≈ 9 MB of relief textures plus three.js (≈ 0.67 MB); the flat map never does.

@@ -1,0 +1,30 @@
+# Changelog — Master Map Rhykaris
+
+What has shipped, newest first. The roadmap (what comes next) lives at the bottom of the [README](../README.md#status--roadmap). Version prefixes are explained there too: **Master Map v4** is the physical map, **Viewer v2.x** is this interactive viewer, **Political layer v3** is the AS 1647 territory snapshot.
+
+## Viewer
+
+- **v2.0.3** — the lake inside Hesperia (4 Oct 2026): a red polygon in the middle of Hesperia, with no name and no card, turned out to be the second ring of Hesperia and of the Imperial Commonwealth umbrella — the outline of an unnamed lake that the land mask left as a hole. A polygon is a nominal jurisdiction and is not cut by water (the other lakes inside polygons are covered), so a ring that lies wholly inside another ring of the same territory is no longer drawn (`C.drawRings`, used by the flat map, the globe and the working map). Display only: no canon parameter, no data and no geometry changed; the lake itself stays unnamed (a Worldbuilding question) and its readout still says shallow sea (physical layer, next physical version); see [`POLITICS_V3_NOTES.md`](POLITICS_V3_NOTES.md) §11
+- **v2.0.2** — the exclave gets its name (4 Oct 2026): Akṣata is the one polity made of two separate parts, and v2.0.1 named only its largest part, so the exclave inside Novalia stayed a nameless shape (reported from a phone at high zoom). Every part of a polity now carries the name, with its own label point, fit test and size class; 23 polities, 24 labels. Display only: no canon parameter, no data and no geometry changed; see [`INTERREGNA_V2_NOTES.md`](INTERREGNA_V2_NOTES.md) §10
+- **v2.0.1** — Interregna names on the map (4 Oct 2026): the 23 mosaic polities now show their names as labels on the flat map, the globe and the working map, the way other entries do (they used to appear only as a hover tooltip). The labels are drawn at run time from the polygons — not map entries, not in search, no new marker or capital — in the *usulan* style (dashed underline), shown once the polygon is wide enough to hold the name, and they never cover a marker name or take a click. Display only: no canon parameter, no data and no geometry changed; see [`INTERREGNA_V2_NOTES.md`](INTERREGNA_V2_NOTES.md) §10
+- **v2.0.0** — version milestone (3 Oct 2026): Stage 2 of Interactive Map v2 (3D globe, relief, rotation, two moons, compass, working map) is complete, so the viewer's major version now matches the roadmap. Nothing in the code, the data or the canon files changed
+- **v1.8.0** — *Imperial Commonwealth* (3 Oct 2026): the big label that read "Hesperia" now reads **Imperial Commonwealth** and sits on a new umbrella polygon that is exactly Hesperia + the *marka* belt (nominal jurisdiction, drawn beneath both, dashed outline, no new land). **Hesperia** keeps its own polygon, now labelled **Paramount** (the directly ruled land); the *marka* belt moves to its own layer, *Kerajaan-kerajaan Commonwealth* (usulan). 27 → 29 layers; one new audit card. No new canon parameter: the umbrella's name and Hesperia's paramount role are quoted from the vault; the umbrella's *edge* on the vassal side stays a placeholder
+- **v1.7.1** — the compass can be switched off or minimized to a small dial, so it stops covering the map; the choice is remembered. Display control only: no canon parameter involved
+- **v1.7.0** — political layer v3 (2 Oct 2026): the three numbered Vasal Commonwealth polygons retired; a narrow *kerajaan marka* belt; the Satvan Pedalaman dispersal zone (dots, no border); Hesperia's ~50 provinces as three optional belts (24 · 19 · 7), the polygon itself unclipped; Foedera's claim and inhabited core; Kloaka's nominal claim and shifting zone; the vocabulary rule for *provinsi*; nine new audit cards; 27 layers; one shared territory style and order for the flat map, the globe and the working map
+- **v1.6.5** — all flat-map layers on the dual-disk working map: contours, regions, banks, territories, Mandala, routes, fronts and labels, with hover and cards (they were listed as *tak ada di peta kerja*)
+- **v1.6.4** — the *Empat busur* layer now works on the dual-disk working map (it was switched on in the panel but drew nothing and could not be hovered or clicked)
+- **v1.6.3** — the two moons get working names, *Ferrea* and *Errans* *(AI-inferred)*; the chip strip under the coordinate readout is gone from the globe
+- **v1.6.2** — pressed toolbar buttons reach WCAG AA contrast in both themes
+- **v1.6.1** — the measure tool works on the globe and on the working map (it was flat-map only in v1.6)
+- **v1.6** — relief from a regenerated 16-bit heightmap *(Turunan)*, vertical-exaggeration slider, dual-disk Lambert working map
+- **v1.5** — 3D globe, auto-rotation, two moons *(AI-inferred)*, working compass, all 25 layers in 3D. Stage 2 was built on `feat/stage-2-globe` and merged to `main` in pull request #1 (1 Oct 2026)
+- **v1.4** — search · filters · layers · measure · audit · dark/light
+
+## Data and canon
+
+- **Interregna names** (3 Oct 2026) — the 23 mosaic polities carry proposed names and short lore cards from the vault's Atlas drafts (*Inferensi AI*, approved by the author but not locked). Names and popup text only: no territory geometry changed, the count and the borders stay open knobs; the viewer version was unchanged (data-only change, like the *Pylora* and umbrella updates). See [`INTERREGNA_V2_NOTES.md`](INTERREGNA_V2_NOTES.md)
+- **Interregna redrawn as a varied mosaic** (2 Oct 2026) — large and small kingdoms, free cities, tribal lands, micro-polities, nested enclaves and an exclave, all unnamed placeholders at the time; the count and borders stay open knobs
+- **Three audit items closed** (29 Sep 2026) — the Zona Ambang Ellumāt (now *Unaffected*), the position notes for Ellumāt, and the Dies Ignis Site's distance (it stays *Adjacent*, ≈ 2,640 km from the curve)
+- **Scar Proximity rings ratified as canon** (29 Sep 2026) — Within ≤ 6.5° · Adjacent ≤ 19.5° · Peripheral ≤ 32.5°
+- **Physical layer v4 ratified as canon** (29 Sep 2026)
+- **Public edition on GitHub**, ready for GitHub Pages
