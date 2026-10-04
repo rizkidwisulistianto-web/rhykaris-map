@@ -264,8 +264,9 @@ t('moons.json top-level epi is inferensi', MOONS.epi === 'inferensi');
   t('labelPoint: concave shape — the point is inside the polygon (not the bounding-box centre)', inR(c.lat, c.lon, Lsh) && c.depth > 0.5, JSON.stringify(c));
   t('labelPoint: deterministic', JSON.stringify(C.labelPoint(Lsh, [])) === JSON.stringify(c));
 
-  const PL = C.polityLabels(DATA), IRS = DATA.territories.filter((x) => /^ir_\d+$/.test(x.id));
-  t(`polityLabels: one label per Interregna polity (${IRS.length}), in drawing order`, PL.length === IRS.length && IRS.length >= 20 && PL.every((p) => /^ir_\d+$/.test(p.id)), `${PL.length}/${IRS.length}`);
+  const PL = C.polityLabels(DATA), IRS = DATA.territories.filter((x) => /^ir_\d+$/.test(x.id)), PARTS = IRS.reduce((s, x) => s + x.rings.length, 0);
+  t(`polityLabels: one label per part of each Interregna polity (${IRS.length} polities, ${PARTS} parts), in drawing order`, PL.length === PARTS && IRS.length >= 20 && PL.every((p) => /^ir_\d+$/.test(p.id)) && IRS.every((x) => PL.filter((p) => p.id === x.id).length === x.rings.length), `${PL.length}/${PARTS}`);
+  t('polityLabels: keys are unique; part 0 (the largest) has key = id, the others id#2, id#3 …', new Set(PL.map((p) => p.key)).size === PL.length && PL.every((p) => p.key === (p.part ? `${p.id}#${p.part + 1}` : p.id)) && IRS.every((x) => PL.filter((p) => p.id === x.id).map((p) => p.part).sort().join() === x.rings.map((_, i) => i).join()));
   t('polityLabels: the result is cached (same object for flat map, globe and disk)', C.polityLabels(DATA) === PL);
   t('polityLabels: the name is the faction name, nothing invented', PL.every((p) => p.name === DATA.factions[p.id].name && p.fid === p.id && p.cat === 'polity' && p.label_only === true && p.polity === true));
   t('polityLabels: names are not places — none is in DATA.places (no search hit, no entry count, no card)', PL.every((p) => !DATA.places.some((q) => q.id === p.id || q.name === p.name)));
@@ -280,6 +281,13 @@ t('moons.json top-level epi is inferensi', MOONS.epi === 'inferensi');
     if (over.length) covered.push(`${p.id} under ${over.join()}`);
   });
   t(`polityLabels: every label point lies on its own polygon (${onOwn}/${PL.length})`, onOwn === PL.length);
+  // a shape that stands alone is never left without its name: every ring (part) of every polity holds exactly one label of that polity (v2.0.2: the Akṣata exclave inside Novalia)
+  const ringsAll = []; IRS.forEach((x) => x.rings.forEach((r) => ringsAll.push({ id: x.id, r })));
+  const unnamed = ringsAll.filter((q) => PL.filter((p) => p.id === q.id && inR(p.lat, p.lon, q.r)).length !== 1).map((q) => q.id);
+  t(`polityLabels: every part of every polity holds exactly one label of its own (${ringsAll.length - unnamed.length}/${ringsAll.length})${unnamed.length ? ' — ' + unnamed.join() : ''}`, unnamed.length === 0);
+  t('polityLabels: the rings of a polity are separate parts, never a hole inside another ring of the same polity (the assumption behind "one ring = one named part")', IRS.every((x) => x.rings.every((r, i) => x.rings.every((q, j) => i === j || !inR(r[0][0], r[0][1], q)))));
+  const AK = PL.filter((p) => p.id === 'ir_14');   // data is pinned by canon-hashes.json: if the exclave is ever removed, this test is the one to update
+  t('polityLabels: Akṣata (ir_14) has an exclave and both parts are named; the exclave\'s label is smaller (size class never larger) and has its own key', AK.length === 2 && AK[0].part === 0 && AK[1].part === 1 && AK[1].key === 'ir_14#2' && AK[1].px < AK[0].px && AK[1].tier >= AK[0].tier && AK[0].name === AK[1].name);
   t(`polityLabels: no label point is covered by a polygon drawn later (the label sits on the visible part)${covered.length ? ' — ' + covered.join(' | ') : ''}`, covered.length === 0);
   t('polityLabels: depth and free room are positive and finite', PL.every((p) => p.depth > 0 && isFinite(p.depth) && (p.room == null || (p.room > 0 && isFinite(p.room)))));
   t('polityLabels: size tier never grows with a smaller polygon (1 = largest … 4 = smallest)', PL.every((p) => p.tier >= 1 && p.tier <= 4) && PL.every((p) => PL.every((q) => p.px <= q.px || p.tier <= q.tier)));
