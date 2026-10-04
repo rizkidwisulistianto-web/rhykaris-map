@@ -101,7 +101,7 @@ function main() {
   /** Nama polity Interregna ikut layer wilayahnya: dipasang/dilepas dari gLabels menurut visible() (peta datar; globe dan cakram memeriksa visible() tiap gambar). */
   function syncPolyLabels() {
     if (!POLY) return;
-    POLY.forEach(function (p) { var v = visible(p); entries['poly:' + p.id].layers.forEach(function (m) { if (v && !gLabels.hasLayer(m)) gLabels.addLayer(m); if (!v && gLabels.hasLayer(m)) gLabels.removeLayer(m); }); });
+    POLY.forEach(function (p) { var v = visible(p); entries['poly:' + p.key].layers.forEach(function (m) { if (v && !gLabels.hasLayer(m)) gLabels.addLayer(m); if (!v && gLabels.hasLayer(m)) gLabels.removeLayer(m); }); });
     if (typeof queueDeclutter === 'function') queueDeclutter();
   }
 
@@ -258,7 +258,7 @@ function main() {
   // (kartu faksi + tooltip), sehingga label tak pernah mencegat poligon tetangga.
   var POLY = C.polityLabels(DATA);
   POLY.forEach(function (p) {
-    var e = { p: p, layers: [] }; entries['poly:' + p.id] = e;
+    var e = { p: p, layers: [] }; entries['poly:' + p.key] = e;   // key unik per bagian poligon (eksklave punya label sendiri)
     OFFS.forEach(function (dx) {
       var m = L.marker([p.lat, p.lon + dx], { pane: 'lbl', interactive: false, keyboard: false, icon: L.divIcon({ className: '', iconSize: null, html: labelHTML(p) }) });
       m._rhPoly = p; gLabels.addLayer(m); e.layers.push(m);

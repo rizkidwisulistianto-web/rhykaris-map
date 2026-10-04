@@ -2551,7 +2551,7 @@ RH.globe = {
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
-window.RH = { version: "2.0.1" };
+window.RH = { version: "2.0.2" };
 /* Master Map Rhykaris — modul bersama (v1.5): matematika bola, geometri Scar, pembaca datagrid, label epistemik,
    util state dan pemuat three.js. Dipakai tampilan 2D (Leaflet) dan 3D (globe) — satu sumber, tanpa duplikasi.
    Modul ini murni (tanpa akses DOM saat dimuat) supaya bisa diuji di Node; bagian yang menyentuh DOM ada di fungsi tersendiri. */
@@ -2607,7 +2607,7 @@ C.terrOrder = function (list) {
 // ------------------------------------------------------------------ nama polity Interregna di atas poligon (v2.0.1)
 /* Mosaik Interregna (ir_*) sengaja tidak punya marker, tempat, atau ibukota (Kontrak Data: ibukota belum ditempatkan), jadi namanya (usulan Draft) tidak ikut
    DATA.places dan sebelumnya hanya muncul sebagai tooltip. Di sini namanya diturunkan menjadi LABEL di atas poligon — bukan marker, supaya tak terbaca sebagai lokasi
-   kota. Titik label DIHITUNG dari geometri, tidak disimpan: bila mosaik digambar ulang, label ikut pindah. Satu fungsi untuk peta datar, globe, dan cakram. */
+   kota. Titik label DIHITUNG dari geometri, tidak disimpan: bila mosaik digambar ulang, label ikut pindah. Satu label per bagian poligon (eksklave ikut dinamai, v2.0.2). Satu fungsi untuk peta datar, globe, dan cakram. */
 function ringArea(r) { var s = 0; for (var i = 0, j = r.length - 1; i < r.length; j = i++) s += r[j][1] * r[i][0] - r[i][1] * r[j][0]; return Math.abs(s) / 2; }
 /** Cincin [[lat, lon], …] → {x, y} Float64Array (x = bujur × k, k = cos lintang, supaya jarak mendekati isotropik). Larik datar: pencarian titik label memanggilnya ribuan kali. */
 function flatRing(r, k) { var n = r.length, x = new Float64Array(n), y = new Float64Array(n); for (var i = 0; i < n; i++) { x[i] = r[i][1] * k; y[i] = r[i][0]; } return { x: x, y: y, n: n }; }
@@ -2676,9 +2676,14 @@ C.POLITY_TIER = [2000, 600, 250];
 function polityTier(px) { var t = 1; C.POLITY_TIER.forEach(function (lim) { if (px < lim) t++; }); return t; }
 /**
  * Label nama polity Interregna (ir_*) sebagai objek mirip-tempat, TANPA masuk DATA.places (tidak ikut pencarian, hitungan entri, atau kartu tempat).
- * Setiap objek: {id, fid (faksi untuk kartu), name, cat:'polity', label_only, polity, tg (kelompok layer wilayahnya), epi, proposal, ptype, tier, px, lat, lon, room, depth}.
+ * SATU LABEL PER BAGIAN: tiap cincin `t.rings` adalah bagian terpisah dari polity (ir_* tidak punya lubang sendiri; tes unit menjaga asumsi itu), misalnya eksklave Akṣata
+ * di dalam Novalia. Setiap bagian diberi nama di titiknya sendiri, jadi bentuk yang berdiri sendiri tidak pernah tampil tanpa nama (v2.0.2). Bagian terbesar lebih dulu
+ * (part 0, key = id), lalu yang lebih kecil (part 1…, key = id#2, …); polity berbagian satu tidak berubah.
+ * Setiap objek: {id (polity), key (unik per label), part, fid (faksi untuk kartu), name, cat:'polity', label_only, polity, tg (kelompok layer wilayahnya), epi, proposal, ptype,
+ * tier, px, lat, lon, room, depth}. `px` dan `tier` mengikuti luas BAGIAN itu (px polity × porsi luas cincin, berbobot cos lintang): ukuran huruf dan prioritas label
+ * mengikuti poligon yang ditempatinya.
  * `proposal` mengikuti teks jenis faksi ("nama usulan (Draft)"): bila nama kelak dikunci, garis bawah putus-putus hilang sendiri.
- * Lubang = polity yang digambar sesudahnya (urutan C.terrOrder) dan berada di dalamnya, supaya label induk tidak jatuh di atas enklaf.
+ * Lubang = polity yang digambar sesudahnya (urutan C.terrOrder) dan berada di dalam bagian itu, supaya label induk tidak jatuh di atas enklaf.
  */
 C.polityLabels = function (DATA) {
   if (C._pl && C._pl.src === DATA) return C._pl.out;   // satu kali hitung untuk peta datar, globe, dan cakram (hasil tidak boleh diubah pemanggil)
@@ -2686,19 +2691,23 @@ C.polityLabels = function (DATA) {
   function bbox(r) { var b = [Infinity, -Infinity, Infinity, -Infinity]; r.forEach(function (p) { b[0] = Math.min(b[0], p[0]); b[1] = Math.max(b[1], p[0]); b[2] = Math.min(b[2], p[1]); b[3] = Math.max(b[3], p[1]); }); return b; }
   ord.forEach(function (t, idx) {
     if (t.of || t.id.indexOf('ir_') !== 0 || !FAC[t.id]) return;
-    // tempat label = cincin terbesar (polity berkantong, mis. eksklave, punya lebih dari satu cincin)
-    var main = t.rings.slice().sort(function (a, b) { return ringArea(b) - ringArea(a); })[0], k = Math.cos(main[0][0] * D2R), mb = bbox(main), holes = [];
-    ord.slice(idx + 1).forEach(function (u) {
-      if (C.tgroupOf(u) !== 'int') return;
-      u.rings.forEach(function (r) {
-        var b = bbox(r); if (b[0] > mb[1] || b[1] < mb[0] || b[2] > mb[3] || b[3] < mb[2]) return;
-        var n = 0; r.forEach(function (p) { if (inRingK(p[1] * k, p[0], main, k)) n++; });
-        if (n >= 0.6 * r.length) holes.push(r);   // mayoritas titiknya di dalam = kantong yang digambar di atas induknya; tetangga yang cuma bersentuhan tidak ikut
+    var f = FAC[t.id];
+    var parts = t.rings.map(function (r) { return { r: r, a: ringArea(r) * Math.cos(r[0][0] * D2R) }; }).sort(function (a, b) { return b.a - a.a; });
+    var tot = parts.reduce(function (s, q) { return s + q.a; }, 0);
+    parts.forEach(function (pt, pi) {
+      var main = pt.r, k = Math.cos(main[0][0] * D2R), mb = bbox(main), holes = [];
+      ord.slice(idx + 1).forEach(function (u) {
+        if (C.tgroupOf(u) !== 'int') return;
+        u.rings.forEach(function (r) {
+          var b = bbox(r); if (b[0] > mb[1] || b[1] < mb[0] || b[2] > mb[3] || b[3] < mb[2]) return;
+          var n = 0; r.forEach(function (p) { if (inRingK(p[1] * k, p[0], main, k)) n++; });
+          if (n >= 0.6 * r.length) holes.push(r);   // mayoritas titiknya di dalam = kantong yang digambar di atas induknya; tetangga yang cuma bersentuhan tidak ikut
+        });
       });
+      var lp = C.labelPoint(main, holes), px = parts.length === 1 || !(tot > 0) ? (t.px || 0) : Math.round((t.px || 0) * pt.a / tot);
+      out.push({ id: t.id, key: pi ? t.id + '#' + (pi + 1) : t.id, part: pi, fid: t.id, name: f.name, cat: 'polity', label_only: true, polity: true, tg: C.tgroupOf(t), epi: f.epi || 'inferensi',
+        proposal: /usulan|draft/i.test(f.kind || ''), ptype: polityType(f.kind), tier: polityTier(px), px: px, lat: lp.lat, lon: lp.lon, room: lp.room > 0 ? lp.room : null, depth: lp.depth });
     });
-    var lp = C.labelPoint(main, holes), f = FAC[t.id];
-    out.push({ id: t.id, fid: t.id, name: f.name, cat: 'polity', label_only: true, polity: true, tg: C.tgroupOf(t), epi: f.epi || 'inferensi', proposal: /usulan|draft/i.test(f.kind || ''), ptype: polityType(f.kind),
-      tier: polityTier(t.px || 0), px: t.px || 0, lat: lp.lat, lon: lp.lon, room: lp.room > 0 ? lp.room : null, depth: lp.depth });
   });
   C._pl = { src: DATA, out: out };
   return out;
@@ -3214,7 +3223,7 @@ function main() {
   /** Nama polity Interregna ikut layer wilayahnya: dipasang/dilepas dari gLabels menurut visible() (peta datar; globe dan cakram memeriksa visible() tiap gambar). */
   function syncPolyLabels() {
     if (!POLY) return;
-    POLY.forEach(function (p) { var v = visible(p); entries['poly:' + p.id].layers.forEach(function (m) { if (v && !gLabels.hasLayer(m)) gLabels.addLayer(m); if (!v && gLabels.hasLayer(m)) gLabels.removeLayer(m); }); });
+    POLY.forEach(function (p) { var v = visible(p); entries['poly:' + p.key].layers.forEach(function (m) { if (v && !gLabels.hasLayer(m)) gLabels.addLayer(m); if (!v && gLabels.hasLayer(m)) gLabels.removeLayer(m); }); });
     if (typeof queueDeclutter === 'function') queueDeclutter();
   }
 
@@ -3371,7 +3380,7 @@ function main() {
   // (kartu faksi + tooltip), sehingga label tak pernah mencegat poligon tetangga.
   var POLY = C.polityLabels(DATA);
   POLY.forEach(function (p) {
-    var e = { p: p, layers: [] }; entries['poly:' + p.id] = e;
+    var e = { p: p, layers: [] }; entries['poly:' + p.key] = e;   // key unik per bagian poligon (eksklave punya label sendiri)
     OFFS.forEach(function (dx) {
       var m = L.marker([p.lat, p.lon + dx], { pane: 'lbl', interactive: false, keyboard: false, icon: L.divIcon({ className: '', iconSize: null, html: labelHTML(p) }) });
       m._rhPoly = p; gLabels.addLayer(m); e.layers.push(m);

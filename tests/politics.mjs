@@ -379,6 +379,10 @@ await run('globe 3D: new layers, painting and hit-test follow the shared rules',
 // The 23 mosaic polities have no marker, place or capital (Data Contract), so their names used to show only as a hover tooltip. They are now drawn as non-interactive labels
 // derived at run time from the polygons (C.polityLabels): not in DATA.places, not in search, no new canon. See docs/INTERREGNA_V2_NOTES.md §10.
 const NAME_ID = Object.fromEntries(IR.map((i) => [FAC[i].name, i]));
+// one label per part (ring) of a polity: Akṣata has an exclave inside Novalia, so 23 polities carry 24 labels (v2.0.2)
+const partsOf = (id) => T(id).rings.length, NPARTS = IR.reduce((n, id) => n + partsOf(id), 0);
+const shoe = (r) => Math.abs(r.reduce((sum, q, i) => { const o = r[(i + r.length - 1) % r.length]; return sum + (o[1] * q[0] - q[1] * o[0]); }, 0)) / 2;
+const AKR = T('ir_14').rings.slice().sort((a, b) => shoe(b) - shoe(a)), AK_EX = AKR[1], AK_EXC = [AK_EX.reduce((sum, q) => sum + q[0], 0) / AK_EX.length, AK_EX.reduce((sum, q) => sum + q[1], 0) / AK_EX.length];   // [main, exclave], exclave centroid
 const topIdAt = (la, lo) => { const ord = C.terrOrder(TERR).filter((x) => x.id !== 'anusarri'); for (let i = ord.length - 1; i >= 0; i--) if (inTerr(ord[i], la, lo)) return ord[i].of || ord[i].id; return null; };
 
 await run('Interregna names, flat map: labels that fit their polygon, follow zoom, filters and layers, and never take a click', async () => {
@@ -399,11 +403,16 @@ await run('Interregna names, flat map: labels that fit their polygon, follow zoo
   await at(3); const n3 = (await stable()).length;
   await at(5); const L5 = await stable();
   t(`names appear only as the polygons grow: ${n3} names fit at zoom 3, ${L5.length} at zoom 5 (at least 8)`, L5.length >= 8 && L5.length > n3, `${n3} → ${L5.length}`);
-  t('every drawn name is a mosaic polity name, shown once, with the dashed "usulan" underline and the name as title', L5.every((q) => NAME_ID[q.n] && q.prop && q.title === q.n) && new Set(L5.map((q) => q.n)).size === L5.length);
+  t('every drawn name is a mosaic polity name, at most once per part of its polygon, with the dashed "usulan" underline and the name as title', L5.every((q) => NAME_ID[q.n] && q.prop && q.title === q.n && L5.filter((r) => r.n === q.n).length <= partsOf(NAME_ID[q.n])));
   const off = L5.filter((q) => { const id = NAME_ID[q.n]; return !inTerr(T(id), q.lat, q.lon); }).map((q) => q.n);
   t(`each name sits on its own polygon (${L5.length - off.length}/${L5.length})${off.length ? ' — off: ' + off.join() : ''}`, off.length === 0);
   const ov = []; for (let i = 0; i < L5.length; i++) for (let j = i + 1; j < L5.length; j++) if (Math.abs(L5[i].x - L5[j].x) < (L5[i].w + L5[j].w) / 2 - 1 && Math.abs(L5[i].y - L5[j].y) < (L5[i].h + L5[j].h) / 2 - 1) ov.push(L5[i].n + '/' + L5[j].n);
   t('no two names overlap', ov.length === 0, ov.join());
+  // the exclave of Akṣata (a separate part inside Novalia) is named too: at zoom 6 on it, a name sits on the exclave itself — no shape that stands alone is left unnamed
+  await page.evaluate(([la, lo]) => new Promise((res) => { window.__rhMap.setView([la, lo], 6, { animate: false }); requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 50))); }), AK_EXC);
+  const atEx = await stable(), onEx = atEx.filter((q) => q.n === FAC.ir_14.name && inRing(q.lat, q.lon, AK_EX));
+  t(`the exclave of Akṣata has its own name: at zoom 6 centred on it, "${FAC.ir_14.name}" is drawn on the exclave (${onEx.length})`, onEx.length === 1, JSON.stringify(atEx.map((q) => q.n)));
+  await at(5); await stable();   // back to the common view for the checks below
   t('labels are pass-through: pointer-events none, and the element under every name is never a label', L5.every((q) => q.pe === 'none' && q.top !== 'label'), JSON.stringify(L5.filter((q) => q.top === 'label' || q.pe !== 'none').map((q) => q.n)));
   // marker names keep their place: every marker name that was visible without the polity names is still visible with them (they never hide a canon marker's name)
   const mk = await page.evaluate(() => Array.from(document.querySelectorAll('.mk .mk-name')).filter((e) => !e.classList.contains('hide') && e.getBoundingClientRect().width > 0).map((e) => e.textContent));
@@ -426,7 +435,7 @@ await run('Interregna names, flat map: labels that fit their polygon, follow zoo
   const nDom = () => page.evaluate(() => document.querySelectorAll('.mlbl.lbl-pol').length);
   const full = await nDom();
   const chip = async (txt) => page.evaluate((x) => { const b = Array.from(document.querySelectorAll('#fepi .chip, .chips .chip, .chip')).find((e) => e.textContent.trim().startsWith(x)); if (b) b.click(); return !!b; }, txt);
-  t('all three world copies of each of the 23 names exist in the label layer by default', full === IR.length * 3, String(full));
+  t(`all three world copies of each name part exist in the label layer by default (${NPARTS} labels for ${IR.length} polities)`, full === NPARTS * 3, String(full));
   await chip('Usulan'); await page.waitForTimeout(300); const noProp = await nDom(); await chip('Usulan'); await page.waitForTimeout(300);
   t('the "Usulan (belum dikunci)" chip hides the names (all are proposals) and brings them back', noProp === 0 && (await nDom()) === full, `${noProp} / ${await nDom()}`);
   await chip('Inferensi AI'); await page.waitForTimeout(300); const noInf = await nDom(); await chip('Inferensi AI'); await page.waitForTimeout(300);
@@ -446,13 +455,37 @@ await run('Interregna names, flat map: labels that fit their polygon, follow zoo
   await ctx.close();
 });
 
+await run('Interregna names, phone layout: the exclave of Akṣata is named at high zoom (v2.0.2)', async () => {
+  // the report that led to v2.0.2: on a phone, zoomed in on the separate part of Akṣata inside Novalia, the shape had no name while every other shape did
+  const { ctx, page, ev } = await open2D({ viewport: { width: 360, height: 780 } });
+  const read = () => page.evaluate(() => {
+    const m = window.__rhMap, cr = m.getContainer().getBoundingClientRect(), out = [];
+    document.querySelectorAll('.mlbl.lbl-pol').forEach((e) => {
+      if (e.classList.contains('hide')) return; const r = e.getBoundingClientRect(); if (!r.width) return;
+      const x = r.left + r.width / 2, y = r.top + r.height / 2; if (x < cr.left || x > cr.right || y < cr.top || y > cr.bottom) return;
+      const ll = m.containerPointToLatLng([x - cr.left, y - cr.top]); out.push({ n: e.textContent, lat: ll.lat, lon: ll.lng });
+    });
+    return out;
+  });
+  const stable = async () => { let prev = null, cur = [], same = 0; for (let k = 0; k < 24; k++) { cur = await read(); const key = cur.map((q) => q.n).sort().join('|'); if (key === prev) { if (++same >= 2) return cur; } else same = 0; prev = key; await page.waitForTimeout(250); } return cur; };
+  const info = await page.evaluate(() => ({ w: window.innerWidth, z: window.__rhMap.getMaxZoom() }));
+  await page.evaluate(([la, lo]) => new Promise((res) => { window.__rhMap.setView([la, lo], 6.25, { animate: false }); requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 50))); }), AK_EXC);
+  const L = await stable(), onEx = L.filter((q) => q.n === FAC.ir_14.name && inRing(q.lat, q.lon, AK_EX));
+  t(`phone (${info.w} px wide), zoom 6.25 on the exclave: the exclave carries its own name "${FAC.ir_14.name}" (${onEx.length})`, onEx.length === 1, JSON.stringify(L));
+  await page.evaluate(([la, lo, z]) => new Promise((res) => { window.__rhMap.setView([la, lo], z, { animate: false }); requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 50))); }), [AK_EXC[0], AK_EXC[1], info.z]);
+  const Lm = await stable();
+  t('phone, at the maximum zoom: the exclave still carries its name, and the polygon around it (Novalia) is not mistaken for it', Lm.filter((q) => q.n === FAC.ir_14.name && inRing(q.lat, q.lon, AK_EX)).length === 1 && Lm.every((q) => NAME_ID[q.n]), JSON.stringify(Lm));
+  t('phone: no console errors', ev.errors.length === 0 && ev.console.length === 0, JSON.stringify([ev.errors, ev.console]));
+  await ctx.close();
+});
+
 await run('Interregna names, globe 3D: names sit on their polygons, fit before they show, and pass clicks through', async () => {
   const { ctx, page, ev } = await newPage(browser, { viewport: { width: 1440, height: 900 } });
   await page.goto(srv.url + '?view=3d', { waitUntil: 'load' });
   await page.waitForFunction(() => window.__rhGlobe && window.__rhGlobe.isShown(), null, { timeout: 90000 });
   await page.waitForFunction(() => window.__rhGlobe.info().frames >= 6, null, { timeout: 90000 });
   const frame = (n = 3) => page.evaluate((k) => new Promise((res) => { let i = 0; const f = () => (++i >= k ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
-  const look = async (z) => { await page.evaluate((zz) => { const g = window.__rhGlobe, S = g._S; g._state.spin = false; S.cancelFly(); S.inertia = null; S.view.lat = -18; S.view.lon = -1.5; S.view.dist = S.distOf(zz); S.dirty(); }, z); await frame(4); await page.waitForTimeout(450); await frame(3); };
+  const look = async (z, la = -18, lo = -1.5) => { await page.evaluate(([zz, a, o]) => { const g = window.__rhGlobe, S = g._S; g._state.spin = false; S.cancelFly(); S.inertia = null; S.view.lat = a; S.view.lon = o; S.view.dist = S.distOf(zz); S.dirty(); }, [z, la, lo]); await frame(4); await page.waitForTimeout(450); await frame(3); };
   const read = () => page.evaluate(() => {
     const g = window.__rhGlobe, S = g._S, out = [];
     document.querySelectorAll('#globe .g-pin .mlbl.lbl-pol').forEach((e) => {
@@ -472,6 +505,9 @@ await run('Interregna names, globe 3D: names sit on their polygons, fit before t
   t('globe: the label hit-test never returns a polity name (pass-through; hover and click reach the polygon)', L5.every((q) => q.pe === 'none' && !(q.pin && NAME_ID[q.pin])), JSON.stringify(L5.filter((q) => q.pin).map((q) => q.n + '→' + q.pin)));
   const ov = []; for (let i = 0; i < L5.length; i++) for (let j = i + 1; j < L5.length; j++) if (Math.abs(L5[i].x - L5[j].x) < (L5[i].w + L5[j].w) / 2 - 1 && Math.abs(L5[i].y - L5[j].y) < (L5[i].h + L5[j].h) / 2 - 1) ov.push(L5[i].n + '/' + L5[j].n);
   t('globe: no two names overlap', ov.length === 0, ov.join());
+  await look(6, AK_EXC[0], AK_EXC[1]); const LXg = await stable();   // the exclave of Akṣata is named as well (v2.0.2)
+  t('globe: the exclave of Akṣata has its own name (zoom 6 centred on it)', LXg.filter((q) => q.n === FAC.ir_14.name && q.lat != null && inRing(q.lat, q.lon, AK_EX)).length === 1, JSON.stringify(LXg.map((q) => q.n + '@' + (q.lat == null ? '?' : q.lat.toFixed(1) + ',' + q.lon.toFixed(1)))));
+  await look(5); await stable();
   await page.evaluate(() => window.__rhGlobe._ctx.setLayer('t_int', false)); await frame(4); await page.waitForTimeout(300);
   const noInt = (await read()).length; await page.evaluate(() => window.__rhGlobe._ctx.setLayer('t_int', true)); await frame(4); await page.waitForTimeout(500);
   t('globe: switching the territory layer off removes the names, on brings them back', noInt === 0 && (await stable()).length >= 8, String(noInt));
@@ -489,7 +525,7 @@ await run('Interregna names, dual-disk working map: names on their polygons, hov
   await page.goto(srv.url + '?view=disk', { waitUntil: 'load' });
   await page.waitForFunction(() => window.__rhDisk && window.__rhDisk.isShown() && window.__rhDisk.info().sheet, null, { timeout: 90000 });
   const frame = (n = 3) => page.evaluate((k) => new Promise((res) => { let i = 0; const f = () => (++i >= k ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
-  const look = async (k) => { await page.evaluate(async (kk) => { const d = window.__rhDisk; await d.show({ lat: -18, lon: -1.5, zoom: 3 }); d._state.scale = d.info().fit * kk; d.relayout(); }, k); await frame(4); await page.waitForTimeout(500); await frame(3); };
+  const look = async (k, la = -18, lo = -1.5) => { await page.evaluate(async ([kk, a, o]) => { const d = window.__rhDisk; await d.show({ lat: a, lon: o, zoom: 3 }); d._state.scale = d.info().fit * kk; d.relayout(); }, [k, la, lo]); await frame(4); await page.waitForTimeout(500); await frame(3); };
   const read = () => page.evaluate(() => {
     const d = window.__rhDisk, root = document.getElementById('disk'), rr = root.getBoundingClientRect(), out = [];
     root.querySelectorAll('.g-pin .mlbl.lbl-pol').forEach((e) => {
@@ -508,6 +544,9 @@ await run('Interregna names, dual-disk working map: names on their polygons, hov
   t(`disk: each name sits on its own polygon (${L9.length - off.length}/${L9.length})${off.length ? ' — off: ' + off.join() : ''}`, off.length === 0);
   const ov = []; for (let i = 0; i < L9.length; i++) for (let j = i + 1; j < L9.length; j++) if (Math.abs(L9[i].x - L9[j].x) < (L9[i].w + L9[j].w) / 2 - 1 && Math.abs(L9[i].y - L9[j].y) < (L9[i].h + L9[j].h) / 2 - 1) ov.push(L9[i].n + '/' + L9[j].n);
   t('disk: no two names overlap', ov.length === 0, ov.join());
+  await look(12, AK_EXC[0], AK_EXC[1]); const LXd = await stable();   // the exclave of Akṣata is named as well (v2.0.2)
+  t('disk: the exclave of Akṣata has its own name (12× fit, centred on it)', LXd.filter((q) => q.n === FAC.ir_14.name && q.lat != null && inRing(q.lat, q.lon, AK_EX)).length === 1, JSON.stringify(LXd.map((q) => q.n + '@' + (q.lat == null ? '?' : q.lat.toFixed(1) + ',' + q.lon.toFixed(1)))));
+  await look(9); await stable();
   const tip = async (x, y) => { await page.mouse.move(5, 5); await page.mouse.move(x, y); await page.waitForTimeout(150); await frame(2); return page.evaluate(() => { const e = document.querySelector('#disk .g-tip'); return e.hidden ? null : e.textContent; }); };
   const probe = L9.filter((q) => q.lat != null && q.top === 'CANVAS' && topIdAt(q.lat, q.lon) === NAME_ID[q.n]).slice(0, 3); const bad = [];
   for (const q of probe) { const got = await tip(q.x, q.y); if (got !== q.n) bad.push(`${q.n} → ${got}`); }
